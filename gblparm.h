@@ -1,0 +1,5 @@
+!     parameter (nnx=720)
+!     parameter (nny=361)
+      parameter (nnx=360)
+      parameter (nny=181)
+      parameter (nmax=nnx*nny)

@@ -1,0 +1,17 @@
+ &gnml
+  zsfil="top48_18_9.790_43.719_.3.ff"   inzs=15
+  inf="avn_0605.nc"
+  have_gp=t
+  vfil="g-avn_0605-top48_18_9.790_43.719_.3.nc"
+  io_out=1
+  inzsavn=-1  inlsavn=-1
+  ntimes=1
+  nrh=0 mxcyc=20 debug=f nvsig=4 in=40 iout=20 notop=f
+  sgml= 0.00445816 0.0216049  0.0541838  0.100137  0.157407  0.223937
+        0.297668   0.376543   0.458505   0.541495  0.623457  0.702332
+        0.776063   0.842593   0.899863   0.945816  0.978395  0.995542
+  oesig=f ptop=0.
+  in=40 ints=0
+  splineu=f splinev=f splinet=f
+  zerowinds=f
+ &end

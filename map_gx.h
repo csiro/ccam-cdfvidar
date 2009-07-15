@@ -1,0 +1,6 @@
+      common/map/em(il,jl),emu(il,jl),emv(il,jl)
+     .          ,f(il,jl),fu(il,jl),fv(il,jl)
+     .          ,dmdx(il,jl),dmdy(il,jl),dmdxv(il,jl),dmdyu(il,jl)
+     .          ,dpsldt(il,jl,kl)
+      real omgf(il,jl,kl)
+      equivalence (omgf,dpsldt)
