@@ -1,8 +1,10 @@
 c=======================================================================
       subroutine outcdf(ihr,idy,imon,iyr,iout,nt,time,mtimer
-     &                 ,sig,cdffile,ddss)
+     &                 ,sig,cdffile,ddss,il,kl)
+     
+      integer il,jl,kl,ifull
 
-      include 'newmpar.h'
+      !include 'newmpar.h'
 !     include 'darcdf.h'   ! idnc,ncid,idifil  - stuff for netcdf
 !     include 'dates.h' ! ktime,kdate,timer,timeg,xg,yg,mtimer
 !     include 'filnames.h'  ! list of files, read in once only
@@ -42,6 +44,9 @@ c=======================================================================
       data idnc1/0/, idnc0/0/, idncm1/0/
       data nspare/0/
       data rundate/"ncepavnanl"/
+
+      jl=6*il
+      ifull=il*jl
 
       write(6,*)"outcdf ihr,idy,imon,iyr,iout=",ihr,idy,imon,iyr,iout
       write(6,*)"time=",time
@@ -226,7 +231,8 @@ c create the attributes of the header record of the file
       endif ! ( iarch=1 ) then
 
       write(6,*)'call openhist for itype= ',itype
-      call openhist(idnc,iarch,itype,dim,sig,kdate,ktime,time,mtimer)
+      call openhist(idnc,iarch,itype,dim,sig,kdate,ktime,time,mtimer,
+     &              il,kl)
 
       call ncsnc(idnc,ier)
       if(ier.ne.0)write(6,*)"ncsnc idnc,ier=",idnc,ier
@@ -246,11 +252,17 @@ c       itype=-1 restfile
       end
 c=======================================================================
       subroutine openhist(idnc,iarch,itype,dim,sig
-     &            ,kdate,ktime,time,mtimer)
+     &            ,kdate,ktime,time,mtimer,il,kl)
+
+      use cll_m
+      use sigdata_m
+      use xyzinfo_m, only : em,f
 
 c     this routine creates attributes and writes output
 
-      include 'newmpar.h'
+      integer il,jl,kl,ifull
+
+      !include 'newmpar.h'
 !     include 'aalat.h'
 !     include 'arrays.h'
 !     include 'darcdf.h'   ! idnc,ncid,idifil  - stuff for netcdf
@@ -259,12 +271,12 @@ c     this routine creates attributes and writes output
 !     include 'filnames.h' ! list of files, read in once only
 !     include 'kuocom.h'
 !     include 'liqwpar.h'  ! ifullw
-      include 'map.h'
+      !include 'map.h'
 !     include 'mapproj.h'
 !     include 'morepbl.h'
       include 'netcdf.inc'
 !     include 'nsibd.h' ! rsmin,ivegt,sigmf,tgg,tgf,ssdn,res,rmc,isoilm,ico2em
-      include 'parm.h'
+      !include 'parm.h'
 !     include 'parmdyn.h'
 !     include 'parmvert.h'
 !     include 'pbl.h'
@@ -272,9 +284,9 @@ c     this routine creates attributes and writes output
 !     include 'scamdim.h'
 !     include 'screen.h'
 !     include 'sigs.h'
-      common/cll/clon(ifull),clat(ifull)
+      !common/cll/clon(ifull),clat(ifull)
 
-      include 'sigdata.h'
+      !include 'sigdata.h'
 !n    common/sigdata/pmsl(ifull),sfct(ifull),zs(ifull),ps(ifull)
 !n   &             ,us(ifull,kl)    ,vs(ifull,kl)    ,ts(ifull,kl)
 !n   &             ,rs(ifull,kl)    ,hs(ifull,kl)    ,psg_m(ifull)
@@ -286,14 +298,17 @@ c     this routine creates attributes and writes output
       character lname*50,expdesc*50
       integer dim(4)
       integer idim2(3)
-      real xpnt(il),ypnt(jl)
+      real xpnt(il),ypnt(6*il)
       real sig(kl)
 
       common/cdfind/ixp,iyp,idlev,idnt
-      common/tmpout/tst(ifull),tsb(ifull)
+      real tst(6*il*il),tsb(6*il*il)
 !       *** qscrn_ave not presently written     
-      common/work4/aa(ifull),bb(ifull),cc(ifull)
-      common/work3f/cfrac(ifull,kl)
+      real aa(6*il*il),bb(6*il*il),cc(6*il*il)
+      real cfrac(6*il*il,kl)
+
+      jl=6*il
+      ifull=il*jl
 
 !     character*3 mon(12)
 !     data mon/'JAN','FEB','MAR','APR','MAY','JUN'
@@ -511,16 +526,16 @@ c     set time to number of minutes since start
 
       if(ktau.eq.0.or.itype.eq.-1)then  ! also for restart file
 !       write time-invariant fields      
-        call histwrt3(em,'map',idnc,iarch)
-        call histwrt3(f,'cor',idnc,iarch)
-        call histwrt3(clon,'clon',idnc,iarch)
-        call histwrt3(clat,'clat',idnc,iarch)
+        call histwrt3(em,'map',idnc,iarch,il)
+        call histwrt3(f,'cor',idnc,iarch,il)
+        call histwrt3(clon,'clon',idnc,iarch,il)
+        call histwrt3(clat,'clat',idnc,iarch,il)
       endif ! (ktau.eq.0) 
 
       do iq=1,ifull
         aa(iq)=log(ps(iq)/1.e5)
       enddo
-      call histwrt3(aa,'psf',idnc,iarch)
+      call histwrt3(aa,'psf',idnc,iarch,il)
 
       is=il/2+(il+il/2-1)*il
       xsfct=-1.
@@ -538,8 +553,8 @@ c     set time to number of minutes since start
       call prt_pan(zs,il,jl,2,'zs(m)')
       call prt_pan(zsi_m,il,jl,2,'zs*g(m2/s2)')
 
-      call histwrt3(zsi_m,'zht',idnc,iarch)   ! always from 13/9/02
-      call histwrt3(lsm_m*65.e3,'soilt',idnc,iarch)   ! always from 13/9/02
+      call histwrt3(zsi_m,'zht',idnc,iarch,il)   ! always from 13/9/02
+      call histwrt3(lsm_m*65.e3,'soilt',idnc,iarch,il)
 
       if(xpmsl.lt.500.)then
          write(6,*)"call mslp(ps,pmsl,zs,ts,sig,ifull,ifull,kl)"
@@ -547,7 +562,7 @@ c     set time to number of minutes since start
       endif!(xpmsl.lt.500.e2)then
 
       write(6,*)"pmsl=",(pmsl(is+i),i=1,5)
-      call histwrt3(pmsl,'pmsl',idnc,iarch)
+      call histwrt3(pmsl,'pmsl',idnc,iarch,il)
 
       if ( xsfct .lt. 200. ) then
          write(6,*)"###################################################"
@@ -557,42 +572,42 @@ c     set time to number of minutes since start
          enddo ! iq=1,ifull
       endif ! ( xsfct .lt. 200. ) then
 
-      call histwrt3(sfct,'tsu',idnc,iarch)
+      call histwrt3(sfct,'tsu',idnc,iarch,il)
 
-      !call histwrt3(sfct,'tgg1',idnc,iarch)
+      !call histwrt3(sfct,'tgg1',idnc,iarch,il)
 
-      !call histwrt3(ts(1,2),'tgg2',idnc,iarch)
-      !call histwrt3(ts(1,2),'tgg3',idnc,iarch)
-      !call histwrt3(ts(1,2),'tgg4',idnc,iarch)
-      !call histwrt3(ts(1,2),'tgg5',idnc,iarch)
-      !call histwrt3(ts(1,2),'tgg6',idnc,iarch)
+      !call histwrt3(ts(1,2),'tgg2',idnc,iarch,il)
+      !call histwrt3(ts(1,2),'tgg3',idnc,iarch,il)
+      !call histwrt3(ts(1,2),'tgg4',idnc,iarch,il)
+      !call histwrt3(ts(1,2),'tgg5',idnc,iarch,il)
+      !call histwrt3(ts(1,2),'tgg6',idnc,iarch,il)
 
-      call histwrt3(ts(1,2),'tb3',idnc,iarch) ! top
-      call histwrt3(ts(1,2),'tb2',idnc,iarch) ! bottom
+      call histwrt3(ts(:,2),'tb3',idnc,iarch,il) ! top
+      call histwrt3(ts(:,2),'tb2',idnc,iarch,il) ! bottom
 
       do iq=1,ifull
         aa(iq)=.14
       enddo
-      !call histwrt3(aa,'wbfshal',idnc,iarch)
-      !call histwrt3(aa,'wbfroot',idnc,iarch)
-      !call histwrt3(aa,'wbftot',idnc,iarch)
-      call histwrt3(aa,'wfg',idnc,iarch)
-      call histwrt3(aa,'wfb',idnc,iarch)
+      !call histwrt3(aa,'wbfshal',idnc,iarch,il)
+      !call histwrt3(aa,'wbfroot',idnc,iarch,il)
+      !call histwrt3(aa,'wbftot',idnc,iarch,il)
+      call histwrt3(aa,'wfg',idnc,iarch,il)
+      call histwrt3(aa,'wfb',idnc,iarch,il)
 
 !     call histwrt3(sicedep,'siced',idnc,iarch)
 !     call histwrt3(snowd,'snd',idnc,iarch)
       
       write(6,*)'netcdf save of 3d variables'
-      call histwrt4(ts,'temp',idnc,iarch)
-      call histwrt4(us,'u',idnc,iarch)
-      call histwrt4(vs,'v',idnc,iarch)
-      call histwrt4(rs,'mixr',idnc,iarch)
+      call histwrt4(ts,'temp',idnc,iarch,il,kl)
+      call histwrt4(us,'u',idnc,iarch,il,kl)
+      call histwrt4(vs,'v',idnc,iarch,il,kl)
+      call histwrt4(rs,'mixr',idnc,iarch,il,kl)
       write(6,*)"ifullw,ifull=",ifullw,ifull
 
       if(ifullw.eq.ifull)then
-        call histwrt4(qfg,'qfg',idnc,iarch)
-        call histwrt4(qlg,'qlg',idnc,iarch)
-        call histwrt4(cfrax,'cfrac',idnc,iarch)
+        call histwrt4(qfg,'qfg',idnc,iarch,il,kl)
+        call histwrt4(qlg,'qlg',idnc,iarch,il,kl)
+        call histwrt4(cfrax,'cfrac',idnc,iarch,il,kl)
       endif
 
       return ! subroutine openhist(idnc,iarch,itype,dim,sig
@@ -644,20 +659,25 @@ c     print*,'ilen=',ilen
       return
       end
 c=======================================================================
-      subroutine histwrt3(var,sname,idnc,iarch)
+      subroutine histwrt3(var,sname,idnc,iarch,il)
 c Write 2d+t fields from the savegrid array.
 
-      include 'newmpar.h'
-      include 'parm.h'
+      integer il,jl,ifull
+
+      !include 'newmpar.h'
+      !include 'parm.h'
 
       integer mid, start(3), count(3)
-      integer*2 ipack(il,jl) ! was integer*2 
+      integer*2 ipack(il,6*il) ! was integer*2 
       character* (*) sname
 c     character*8 sname
       integer*2 minv, maxv, missval ! was integer*2 
       parameter(minv = -32500, maxv = 32500, missval = -32501)
 
-      real var(il,jl)
+      real var(il,6*il)
+
+      jl=6*il
+      ifull=il*jl
 
       write(6,*)"histwrt3 sname=",sname," iarch=",iarch," idnc=",idnc
 
@@ -707,20 +727,25 @@ c find variable index
       return
       end ! histwrt3
 c=======================================================================
-      subroutine histwrt4(var,sname,idnc,iarch)
+      subroutine histwrt4(var,sname,idnc,iarch,il,kl)
 c Write 3d+t fields from the savegrid array.
 
-      include 'newmpar.h'
-      include 'parm.h'
+      integer il,jl,kl,ifull
+
+      !include 'newmpar.h'
+      !include 'parm.h'
 
       integer mid, start(4), count(4)
-      integer*2 ipack(il,jl,kl) ! was integer*2 
+      integer*2 ipack(il,6*il,kl) ! was integer*2 
       character* (*) sname
 c     character*8 sname
       integer*2 minv, maxv, missval ! was integer*2 
       parameter(minv = -32500, maxv = 32500, missval = -32501)
 
-      real var(il,jl,kl)
+      real var(il,6*il,kl)
+
+      jl=6*il
+      ifull=il*jl
 
       write(6,*)"histwrt4 sname=",sname," iarch=",iarch," idnc=",idnc
 

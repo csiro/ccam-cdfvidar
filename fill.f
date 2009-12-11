@@ -7,8 +7,10 @@ c     routine fills in interior of an array which has undefined points
       real value            ! array value denoting undefined
       real b(il,jl)
       dimension in(8), jn(8)   ! specifies neighbours
-      data in/-1,-1,-1,0,1,1,1,0/
-      data jn/-1,0,1,1,1,0,-1,-1/
+      data in/-1,-1,-1,0,1,1, 1, 0/
+      data jn/-1, 0, 1,1,1,0,-1,-1/
+
+      write(6,*)"fill il,jl,value=",il,jl,value
 
 2     nrem=0
       do 6 j=2,jl-1
@@ -37,7 +39,7 @@ c     routine fills in interior of an array which has undefined points
       enddo
       if(nrem.gt.0)go to 2
 
-c     fix up any boundary points
+!     fix up any boundary points
       do 7 i=2,il-1
       if(a(i,1).lt.value)a(i,1)=a(i,2)
       if(a(i,jl).lt.value)a(i,jl)=a(i,jl-1)

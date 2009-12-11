@@ -1,13 +1,17 @@
-      subroutine maxmin(u,char,ktau,fact)
+      subroutine maxmin(u,char,ktau,fact,il,kl)
 
 ! has more general format & scaling factor
 ! has entry maxmin0 for single level fields
 
-      include 'newmpar.h'
+      !include 'newmpar.h'
+      integer il,jl,kl,ifull
 
       character*2 char
-      dimension u(il,jl,kl)
+      dimension u(il,6*il,kl)
      & ,umin(kl),umax(kl),iumax(kl),jumax(kl),iumin(kl),jumin(kl)
+
+      jl=6*il
+      ifull=il*jl
 
       kup=kl
 
@@ -55,8 +59,10 @@ c    .              k,i,j,iumin(k),jumin(k),umin(k),u(i,j,k)
       endif
       return
 
-      entry maxmin0(u,char,ktau,fact)
+      entry maxmin0(u,char,ktau,fact,il,kl)
       kup=1
+      jl=6*il
+      ifull=il*jl      
       go to 2
 
       end

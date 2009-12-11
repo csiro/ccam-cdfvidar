@@ -1,5 +1,11 @@
       program cdfvidar
 
+      use ccinterp
+      use cll_m
+      use comsig_m      
+      use latlong_m
+      use sigdata_m
+
       character*80 inf
 
       common/mapproj/du,tanl,rnml,stl1,stl2
@@ -7,18 +13,22 @@
       common/levpre/nplev,plev(maxplev)
       real cplev(maxplev)
 
-      include 'gblparm.h' ! nnx nny nmax=nnx*nny = maximum dims for input grid 
+!     include 'gblparm.h' ! nnx nny nmax=nnx*nny = maximum dims for input grid 
 
-      include 'newmpar.h'
+      !include 'newmpar.h'
       include 'netcdf.inc'
 
-      include 'parm.h'
-      include 'xyzinfo.h'  ! x,y,z,wts
-      include 'latlong.h'  ! rlat,rlong
-      include 'vecsuv.h'
+      !include 'parm.h'
+      !include 'xyzinfo.h'  ! x,y,z,wts
+      !include 'latlong.h'  ! rlat,rlong
+      !include 'vecsuv.h'
 
       parameter ( pi=3.1415926536 )
       parameter ( g=9.80616 )
+      
+      parameter ( klmax = 100 )
+      
+      real, dimension(klmax) :: dsg,sgml
 
       common/ncdfids/dimil,dimjl,dimkl,dimtim
      &              ,idil,idjl,idkl,idnt
@@ -26,6 +36,8 @@
       integer  dimil,dimjl,dimkl,dimtim
 * variable ids
       integer  idil,idjl,idkl,idnt,ix,iy
+      integer  il,jl,kl,ifull
+      integer, dimension(2) :: ccdim
 
       common/lconther/ther
       include 'vidar.h'
@@ -41,23 +53,32 @@
 !       &             ,splineu,splinev,splinet,zerowinds
 
       logical sdiag
-      real datan(nmax*maxplev)
-      real zs_gbl(nmax)
-      real lsm_gbl(nmax)
-      common/glonlat/glon(nnx),glat(nny)
+
+!     real datan(nmax*maxplev)
+!     real zs_gbl(nmax)
+!     real lsm_gbl(nmax)
+!     common/glonlat/glon(nnx),glat(nny)
+      real dst
+      real, dimension(2) :: lonlat
+      real, dimension(:,:,:), allocatable :: rlld,xyz,axyz,bxyz      
+      real, dimension(:,:), allocatable :: grid
+      real, dimension(:), allocatable :: ax,ay,az,bx,by,bz,x,y,z
+      real, dimension(:), allocatable :: datan
+      real, dimension(:), allocatable :: zs_gbl, lsm_gbl
+      real, dimension(:), allocatable :: glon, glat
 
       real plevin    (maxplev)
-      real hgt (il,jl,maxplev)
-      real temp(il,jl,maxplev)
-      real u   (il,jl,maxplev)
-      real v   (il,jl,maxplev)
-      real rh  (il,jl,maxplev)
-      real sfcto_m(ifull)
-      real lsmg_m(ifull)
+      real, dimension(:,:,:), allocatable :: hgt
+      real, dimension(:,:,:), allocatable :: temp
+      real, dimension(:,:,:), allocatable :: u
+      real, dimension(:,:,:), allocatable :: v
+      real, dimension(:,:,:), allocatable :: rh
+      real, dimension(:), allocatable :: sfcto_m
+      real, dimension(:), allocatable :: lsmg_m
       !real lsm_m(ifull) MJT lsmask
-      real zsg(ifull)
+      real, dimension(:), allocatable :: zsg
 
-      include 'sigdata.h'
+      !include 'sigdata.h'
 !     common/sigdata/pmsl(ifull),sfct(ifull),zs(ifull),ps(ifull)
 !    &             ,us(ifull,kl)    ,vs(ifull,kl)    ,ts(ifull,kl)
 !    &             ,rs(ifull,kl)    ,hs(ifull,kl)    ,psg_m(ifull)
@@ -68,14 +89,13 @@
       character*2 moist_var
 
       logical ofirst, ogbl, orev, olsm_gbl
-      logical testa,testb ! MJT quick fix
       character*60 timorg
       character*60 cu ! MJT quick fix
       character*3 cmonth
       character*80 zsavn,lsavn
-      character*10 header
-      common / comsig / dsg(kl), sgml(kl), sg(kl+1)
-      common / cll / clon(ifull),clat(ifull)
+      character*10 header,moistvar
+      !common / comsig / dsg(kl), sgml(kl), sg(kl+1)
+      !common / cll / clon(ifull),clat(ifull)
 
       namelist/gnml/inf,vfil,ds,du,tanl,rnml,stl1,stl2,inzs,zsfil
      &             ,ints,tsfil, ogbl,zsavn,inzsavn,lsavn,inlsavn
@@ -87,6 +107,7 @@
      &             ,insm,smfil
      &             ,splineu,splinev,splinet,zerowinds
      &             ,grdx,grdy,slon,slat
+     &             ,moistvar,kl
 ! define vidar namelist variables
 !     namelist / vi / spline,mxcyc,nvsig,nrh
 !    &               ,oesig,sgml,dsg,ptop,debug,notop,opre
@@ -107,21 +128,26 @@
       data debug/.false./,oesig/.true./, calout/.true./, nrh/0/
       data inzsavn/11/ , zsavn/'zsavn.ff'/
       data inlsavn/11/ , lsavn/'lsavn.ff'/
+      data moistvar/''/
       data zsfil/'/tmp/csjjk/topog5'/
       data tsfil/'/tmp/csjjk/sfct'/
       data smfil/'/tmp/csjjk/smfil'/
-      data sgml/kl*0./, dsg/kl*0./
+      data sgml/klmax*0./, dsg/klmax*0./
       data plevin/maxplev*0./
       data splineu/.true./, splinev/.true./, splinet/.true./
       data sdiag/.false./
       data have_gp/.true./
       data zerowinds/.true./
       data grdx/1./
-      data slon/0./
+      !data slon/0./
       data grdy/-1./
-      data slat/90./
+      !data slat/90./
 
       save
+
+   
+      slon=0.
+      slat=90.
 
 !####################### read namelists ############################
       write(6,*)'read namelist'
@@ -133,45 +159,54 @@
 !     write ( unit=6, nml=vi)
 !####################### read namelist ############################
 
+      if (kl.gt.klmax) then
+        write(6,*) "ERROR: kl is greater than klmax"
+	stop
+      end if
+
+      call comsigalloc(kl)
+      dsgx=dsg(1:kl)
+      sgmlx=sgml(1:kl)
+
       spline = splineu .or. splinev .or. splinet
 
 ! set up what sigma levels the outgoing data will have
 ! assumes top down, ie. sg(1)=0., dsg>0
 
-           sg(1)=0.
-           if ( sgml(kl/2).gt.0. ) then
+           sgx(1)=0.
+           if ( sgmlx(kl/2).gt.0. ) then
 c dsg=0, sgml>0
               do l=2,kl
-                sg(l)=.5*(sgml(l-1)+sgml(l))
+                sgx(l)=.5*(sgmlx(l-1)+sgmlx(l))
               end do ! l=2,kl
               do l=2,kl+1
-                dsg(l-1)=sg(l)-sg(l-1)
+                dsgx(l-1)=sgx(l)-sgx(l-1)
               end do ! l=2,kl+1
-           elseif ( dsg(kl/2).gt.0. ) then
+           elseif ( dsgx(kl/2).gt.0. ) then
 c sgml=0, dsg>0
               do l=2,kl-1
-                sg(l)=sg(l-1)+dsg(l-1)
+                sgx(l)=sgx(l-1)+dsgx(l-1)
               end do ! l=2,kl-1
               do l=1,kl
-                sgml(l)=.5*(sg(l)+sg(l+1))
+                sgmlx(l)=.5*(sgx(l)+sgx(l+1))
               end do ! l=1,kl
            elseif ( kl.eq.35 ) then
-              call calcsig(sg)
+              call calcsig(sgx,kl)
               do l=1,kl
-                sgml(l)=.5*(sg(l)+sg(l+1))
-                dsg(l)=sg(l+1)-sg(l)
+                sgmlx(l)=.5*(sgx(l)+sgx(l+1))
+                dsgx(l)=sgx(l+1)-sgx(l)
               end do ! l=1,kl
            elseif ( oesig ) then
               do l=1,kl
-                dsg(l)=1./float(kl)
-                sgml(l)=(l-.5)/float(kl)
-                sg(l+1)=sg(l)+dsg(l)
+                dsgx(l)=1./float(kl)
+                sgmlx(l)=(l-.5)/float(kl)
+                sgx(l+1)=sgx(l)+dsgx(l)
               end do ! l=1,kl
            else
 	      write(6,*)"Wrong sigma specification: STOP"
               stop
            endif
-           sg(kl+1)=1.
+           sgx(kl+1)=1.
 
 !####################### read topography data ############################
       write(6,*)'open ',inzs,' zsfil=',zsfil
@@ -186,10 +221,54 @@ c sgml=0, dsg>0
         tanl=rlat0
         rnml=schmidt
         write(6,*)"gbl mapproj=",ilx,jlx,rlong0,rlat0,schmidt,ds
-        if(ilx.ne.il.or.jlx.ne.jl)
-     &     stop 'wrong topo file supplied (il,jl) for cdfvidar'
+!        if(ilx.ne.il.or.jlx.ne.jl)
+!     &     stop 'wrong topo file supplied (il,jl) for cdfvidar'
 
-        call setxyz
+        il=ilx
+        jl=6*il
+        ifull=il*jl
+
+        call latlongalloc(il)
+        call cllalloc(il)
+        call sigdataalloc(il,kl)
+        allocate(hgt(il,jl,maxplev),temp(il,jl,maxplev))
+        allocate(u(il,jl,maxplev),v(il,jl,maxplev))
+        allocate(rh(il,jl,maxplev))
+        allocate(sfcto_m(ifull),lsmg_m(ifull))
+        allocate(zsg(ifull))
+        allocate(x(ifull),y(ifull),z(ifull))
+        allocate(ax(ifull),ay(ifull),az(ifull))
+        allocate(bx(ifull),by(ifull),bz(ifull))
+        
+        ! set-up CC grid
+        ccdim(1)=il
+        ccdim(2)=jl
+        lonlat(1)=rlong0
+        lonlat(2)=rlat0
+        allocate(rlld(ccdim(1),ccdim(2),2),grid(ccdim(1),ccdim(2)))
+        allocate(xyz(ccdim(1),ccdim(2),3),axyz(ccdim(1),ccdim(2),3))
+        allocate(bxyz(ccdim(1),ccdim(2),3))        
+        !call cgg2(rlld,grid,ccdim,lonlat,schmidt,dst,iin,iie,iis,iiw)
+        Call getcc(rlld,grid,xyz,axyz,bxyz,ccdim,lonlat,schmidt,dst)
+        do i=1,ccdim(1)
+          do j=1,ccdim(2)
+            iq=i+(j-1)*ccdim(1)
+            rlong(iq)=rlld(i,j,1)
+            rlat(iq)=rlld(i,j,2)
+            x(iq)=xyz(i,j,1)
+            y(iq)=xyz(i,j,2)
+            z(iq)=xyz(i,j,3)
+            ax(iq)=axyz(i,j,1)
+            ay(iq)=axyz(i,j,2)
+            az(iq)=axyz(i,j,3)
+            bx(iq)=bxyz(i,j,1)
+            by(iq)=bxyz(i,j,2)
+            bz(iq)=bxyz(i,j,3)
+          end do
+        end do
+        deallocate(xyz,axyz,bxyz)
+        deallocate (rlld,grid)
+        !call setxyz
 
         rlatx=-1.e29
         rlatn= 1.e29
@@ -200,8 +279,8 @@ c sgml=0, dsg>0
 
 c       convert conformal cubic lats & longs to degrees (-90 to 90) & (0 to 360)
 c       used in sint16; N.B. original rlong is -pi to pi
-          rlat(iq)=rlat(iq)*180./pi
-          rlong(iq)=rlong(iq)*180./pi
+          !rlat(iq)=rlat(iq)*180./pi
+          !rlong(iq)=rlong(iq)*180./pi
           if(rlong(iq).lt.0.)rlong(iq)=rlong(iq)+360.
           if(rlat(iq).gt.rlatx)then
             rlatx=rlat(iq)
@@ -289,6 +368,9 @@ c     call ncpopt(NCVERBOS+NCFATAL)
         ier= nf_inq_dimlen(ncid,latid,iy)
         write(6,*)"input iy,ier=",iy,ier
         ier = nf_inq_varid(ncid,'lon',idv)
+
+        allocate(glon(ix),glat(iy))
+
 ! get glon from input dataset
         ier = nf_get_var_real(ncid,idv,glon)
         ier = nf_inq_varid(ncid,'lat',idv)
@@ -299,31 +381,29 @@ c     call ncpopt(NCVERBOS+NCFATAL)
         write(6,*)"lonid=",lonid," ier=",ier
         ier= nf_inq_dimlen(ncid,lonid,ix)
         write(6,*)"input ix=",ix," ier=",ier
-        ier = nf_inq_varid(ncid,'longitude',idv)
-        ier = nf_get_var_real(ncid,idv,glon)
-        write(6,*)"glon=",(glon(i),i=1,ix)
 
         latid= ncdid(ncid,'latitude',ier)
         ier= nf_inq_dimlen(ncid,latid,iy)
         write(6,*)"input iy=",iy
+
+        allocate(glon(ix),glat(iy))
+
+        ier = nf_inq_varid(ncid,'longitude',idv)
+        ier = nf_get_var_real(ncid,idv,glon)
+        write(6,*)"glon=",(glon(i),i=1,ix)
         ier = nf_inq_varid(ncid,'latitude',idv)
         ier = nf_get_var_real(ncid,idv,glat)
         write(6,*)"glat=",(glat(i),i=1,iy)
+
       endif ! ( ier .eq. 0 ) then
 
-! find grid spacing for input data set
-! NOTE: assumes even grid spacing!!!!
+! find min/max  for input data set
       slon = glon(1)
       elon = glon(ix)
       slat = glat(1)
       elat = glat(iy)
       write(6,*)"==================> slon=",slon," elon=",elon," ix=",ix
       write(6,*)"==================> slat=",slat," elat=",elat," iy=",iy
-      dlon = (glon(ix)-glon(1))/float(ix-1)
-      dlat = (glat(iy)-glat(1))/float(iy-1)
-      write(6,*)"============================> dlon=",dlon," dlat=",dlat
-
-!     if ( dlon .ne.0 ) stop
 
       ier = nf_inq_dimid(ncid,'pres',idpres)
       in_type="p"
@@ -349,6 +429,11 @@ c     call ncpopt(NCVERBOS+NCFATAL)
 
       orev = plev(nplev).gt.plev(1)
       write(6,*)"#################################### orev=",orev
+
+      write(6,*)"allocate arrays ix,iy,nplevs=",ix,iy,nplev
+      allocate(datan(ix*iy*nplev))
+      allocate(zs_gbl(ix*iy))
+      allocate(lsm_gbl(ix*iy))
 
       if(orev) then
         do k=1,nplev
@@ -438,9 +523,10 @@ c     call ncpopt(NCVERBOS+NCFATAL)
       do j=1,iy
        do i=1,ix
          datan(i+(j-1)*ix     )=glon(i)
-         datan(i+(j-1)*ix+nmax)=glat(j)
+         datan(i+(j-1)*ix+ix*iy)=glat(j)
        enddo ! i
       enddo ! j
+
 
 ! printout of glon
       do j=1,iy,iy-1
@@ -455,7 +541,7 @@ c     call ncpopt(NCVERBOS+NCFATAL)
       write(6,*)"============= sintp16 clon++++++++++++++++++++++++++++"
       write(6,*)" nplev=",nplev
 
-      call sintp16(datan,ix,iy,clon,sdiag)
+      call sintp16(datan(1:ix*iy),ix,iy,clon,glon,glat,sdiag,il)
 
       !call prt_pan(clon,il,jl,1,'clon')
        call prt_pan(clon,il,jl,2,'clon')
@@ -467,14 +553,15 @@ c     call ncpopt(NCVERBOS+NCFATAL)
 ! printout of glat
       do j=1,iy,iy-1
         do i=1,ix,ix-1
-          write(6,*)i,j,datan(i+(j-1)*ix+nmax)
+          write(6,*)i,j,datan(i+(j-1)*ix+ix*iy)
         enddo
       enddo
 
       write(6,*)"============= sintp16 clat++++++++++++++++++++++++++++"
       write(6,*)" nplev=",nplev
 
-      call sintp16(datan(1+nmax),ix,iy,clat,sdiag)
+      call sintp16(datan(1+ix*iy:2*ix*iy),ix,iy,clat,glon,glat,
+     &             sdiag,il)
 
       !call prt_pan(clat,il,jl,1,'clat pan1')
        call prt_pan(clat,il,jl,2,'clat pan2')
@@ -525,7 +612,7 @@ c     call ncpopt(NCVERBOS+NCFATAL)
         read(inzsavn,*)((zs_gbl(i+(j-1)*ix),i=1,ix),j=1,iy)
         call amap ( zs_gbl, ix, iy, 'gbl sfczs(m)', 0., 0. )
         !write(6,*)"interp. zsavn to output grid"
-        !call sintp16(zs_gbl,ix,iy,zs,sdiag)
+        !call sintp16(zs_gbl,ix,iy,zs,glon,glat,sdiag)
         !write(6,*) 'findxn model sfc.height (m)'
         !call findxn(zs,ifull,-1.e29,xa,kx,an,kn)
         write(6,*) 'close unit inzsavn=',inzsavn
@@ -576,8 +663,9 @@ c***********************************************************************
       write(6,*)ncid,iarch,idvar,ix,iy,nplev
       call ncread_3d(ncid,iarch,idvar,ix,iy,nplev,datan)
 
-      call amap (datan,ix,iy,'input hgt',0.,0.)
-      call amap (datan(1+ix*iy*(nplev-1)),ix,iy,'input hgt',0.,0.)
+      call amap (datan(1:ix*iy),ix,iy,'input hgt',0.,0.)
+      call amap (datan(1+ix*iy*(nplev-1):ix*iy*nplev),ix,iy,
+     &           'input hgt',0.,0.)
 
       do k=1,nplev
        khin=k
@@ -586,11 +674,12 @@ c***********************************************************************
        igout=ix/2+ix*(iy/2-1)+ix*iy*(khin-1)
        write(6,*)"************************************************k=",k
        write(6,*)"===> khin,datan(igout)=",khin,datan(igout)
-       call sintp16(datan(1+ix*iy*(khin-1)),ix,iy,hgt(1,1,khout),sdiag)
+       call sintp16(datan(1+ix*iy*(khin-1):ix*iy*khin),ix,iy,
+     &              hgt(:,:,khout),glon,glat,sdiag,il)
        write(6,*)"khout,hgt(il/2,jl.2,khout)="
      &           ,khout,hgt(il/2,jl/2,khout)
        write(6,*)'<=== model hgt(m) khin,khout=',khin,khout
-       call findxn(hgt(1,1,khout),ifull,-1.e29,xa,kx,an,kn)
+       call findxn(hgt(:,:,khout),ifull,-1.e29,xa,kx,an,kn)
       enddo ! k
 
       !call prt_pan(hgt(1,1, 1),il,jl,1,'hgt: 1')
@@ -622,8 +711,8 @@ c***********************************************************************
       call ncread_3d(ncid,iarch,idvar,ix,iy,nplev,datan)
 
       ! MJT quick fix
-      do i=1,ix
-        do j=1,iy
+      do j=1,iy
+        do i=1,ix
           k=2
           do while ((k.le.nplev).and.(abs(datan(i+ix*(j-1))).gt.1.e10))
 	    if (abs(datan(i+ix*(j-1)+ix*iy*(k-1))).lt.1.e10) then
@@ -635,34 +724,8 @@ c***********************************************************************
           end do
 	end do
       end do
-      do while (any(abs(datan(1:ix*iy*nplev)).ge.1.e10))
-        do i=1,ix
-          do j=1,iy
-	    do k=1,nplev
-              if (abs(datan(i+ix*(j-1)+ix*iy*(k-1))).ge.1.e10) then
-	        if (k.gt.1) testa=
-     &            (abs(datan(i+ix*(j-1)+ix*iy*(k-2))).lt.1.e10)
-		if (k.lt.nplev) testb=
-     &            (abs(datan(i+ix*(j-1)+ix*iy*k)).lt.1.e10)
-		if (testa.and.testb) then
-		  datan(i+ix*(j-1)+ix*iy*(k-1))=0.5*(
-     &	          datan(i+ix*(j-1)+ix*iy*(k-2))
-     &            +datan(i+ix*(j-1)+ix*iy*k))
-		else if (testa) then
-		  datan(i+ix*(j-1)+ix*iy*(k-1))=
-     &            datan(i+ix*(j-1)+ix*iy*(k-2))
-		else if (testb) then
-		  datan(i+ix*(j-1)+ix*iy*(k-1))=
-     &            datan(i+ix*(j-1)+ix*iy*k)
-		end if
-	      end if
-	    end do
-          end do
-	end do    
-      end do
 
-
-      call amap ( datan, ix, iy, 'input u', 0., 0. )
+      call amap ( datan(1:ix*iy), ix, iy, 'input u', 0., 0. )
 
       do k=1,nplev
         write(6,*)"************************************************k=",k
@@ -672,11 +735,12 @@ c***********************************************************************
 c       igout=ix/2+ix*(iy/2-1)+ix*iy*(khin-1)
 c       write(6,*)khin,datan(igout)
 
-        call sintp16(datan(1+ix*iy*(khin-1)),ix,iy,u(1,1,khout),sdiag)
+        call sintp16(datan(1+ix*iy*(khin-1):ix*iy*khin),ix,iy,
+     &      u(:,:,khout),glon,glat,sdiag,il)
 
 c       write(6,*)khout,u(il/2,jl/2,khout)
 c       write(6,*)'model u(m) khin,khout=',khin,khout
-        call findxn(u(1,1,khout),ifull,-1.e29,xa,kx,an,kn)
+        call findxn(u(:,:,khout),ifull,-1.e29,xa,kx,an,kn)
       enddo
 
       !call prt_pan(u(1,1, 1),il,jl,2,'u : 1')
@@ -696,8 +760,8 @@ c       write(6,*)'model u(m) khin,khout=',khin,khout
       call ncread_3d(ncid,iarch,idvar,ix,iy,nplev,datan)
 
       ! MJT quick fix 
-      do i=1,ix
-        do j=1,iy
+      do j=1,iy
+        do i=1,ix      
           k=2
           do while ((k.le.nplev).and.(abs(datan(i+ix*(j-1))).gt.1.e10))
 	    if (abs(datan(i+ix*(j-1)+ix*iy*(k-1))).lt.1.e10) then
@@ -709,33 +773,8 @@ c       write(6,*)'model u(m) khin,khout=',khin,khout
           end do
 	end do
       end do
-      do while (any(abs(datan(1:ix*iy*nplev)).ge.1.e10))
-        do i=1,ix
-          do j=1,iy
-	    do k=1,nplev
-              if (abs(datan(i+ix*(j-1)+ix*iy*(k-1))).ge.1.e10) then
-	        if (k.gt.1) testa=
-     &            (abs(datan(i+ix*(j-1)+ix*iy*(k-2))).lt.1.e10)
-		if (k.lt.nplev) testb=
-     &            (abs(datan(i+ix*(j-1)+ix*iy*k)).lt.1.e10)
-		if (testa.and.testb) then
-		  datan(i+ix*(j-1)+ix*iy*(k-1))=0.5*(
-     &	          datan(i+ix*(j-1)+ix*iy*(k-2))
-     &            +datan(i+ix*(j-1)+ix*iy*k))
-		else if (testa) then
-		  datan(i+ix*(j-1)+ix*iy*(k-1))=
-     &            datan(i+ix*(j-1)+ix*iy*(k-2))
-		else if (testb) then
-		  datan(i+ix*(j-1)+ix*iy*(k-1))=
-     &            datan(i+ix*(j-1)+ix*iy*k)
-		end if
-	      end if
-	    end do
-          end do
-	end do    
-      end do
 
-      call amap ( datan, ix, iy, 'input v', 0., 0. )
+      call amap ( datan(1:ix*iy), ix, iy, 'input v', 0., 0. )
 
       do k=1,nplev
         write(6,*)"************************************************k=",k
@@ -745,11 +784,12 @@ c       write(6,*)'model u(m) khin,khout=',khin,khout
 c       igout=ix/2+ix*(iy/2-1)+ix*iy*(khin-1)
 c       write(6,*)khin,datan(igout)
 
-        call sintp16(datan(1+ix*iy*(khin-1)),ix,iy,v(1,1,khout),sdiag)
+        call sintp16(datan(1+ix*iy*(khin-1):ix*iy*khin),ix,iy,
+     &      v(:,:,khout),glon,glat,sdiag,il)
 
 c       write(6,*)khout,v(il/2,jl/2,khout)
 c       write(6,*)'model v(m) khin,khout=',khin,khout
-        call findxn(v(1,1,khout),ifull,-1.e29,xa,kx,an,kn)
+        call findxn(v(:,:,khout),ifull,-1.e29,xa,kx,an,kn)
       enddo
 
       !call prt_pan(v(1,1, 1),il,jl,2,'v : 1')
@@ -772,7 +812,7 @@ c       write(6,*)'model v(m) khin,khout=',khin,khout
       do i=1,ix
         do j=1,iy
           k=2
-          do while ((k.le.nplev).and.(abs(datan(i+ix*(j-1))).ge.1.e10))
+          do while ((k.le.nplev).and.(abs(datan(i+ix*(j-1))).gt.1.e10))
 	    if (abs(datan(i+ix*(j-1)+ix*iy*(k-1))).lt.1.e10) then
 	      do l=1,k-1
 	        datan(i+ix*(j-1)+ix*iy*(l-1))=datan(i+ix*(j-1)+ix*iy*(k-1))
@@ -782,33 +822,9 @@ c       write(6,*)'model v(m) khin,khout=',khin,khout
           end do
 	end do
       end do
-      do while (any(abs(datan(1:ix*iy*nplev)).ge.1.e10))
-        do i=1,ix
-          do j=1,iy
-	    do k=1,nplev
-              if (abs(datan(i+ix*(j-1)+ix*iy*(k-1))).ge.1.e10) then
-	        if (k.gt.1) testa=
-     &            (abs(datan(i+ix*(j-1)+ix*iy*(k-2))).lt.1.e10)
-		if (k.lt.nplev) testb=
-     &            (abs(datan(i+ix*(j-1)+ix*iy*k)).lt.1.e10)
-		if (testa.and.testb) then
-		  datan(i+ix*(j-1)+ix*iy*(k-1))=0.5*(
-     &	          datan(i+ix*(j-1)+ix*iy*(k-2))
-     &            +datan(i+ix*(j-1)+ix*iy*k))
-		else if (testa) then
-		  datan(i+ix*(j-1)+ix*iy*(k-1))=
-     &            datan(i+ix*(j-1)+ix*iy*(k-2))
-		else if (testb) then
-		  datan(i+ix*(j-1)+ix*iy*(k-1))=
-     &            datan(i+ix*(j-1)+ix*iy*k)
-		end if
-	      end if
-	    end do
-          end do
-	end do    
-      end do
 
-      call amap ( datan, ix, iy, 'input temp', 0., 0. )
+
+      call amap ( datan(1:ix*iy), ix, iy, 'input temp', 0., 0. )
 
       do k=1,nplev
         write(6,*)"************************************************k=",k
@@ -817,10 +833,11 @@ c       write(6,*)'model v(m) khin,khout=',khin,khout
         if(orev)khout=k
 c       igout=ix/2+ix*(iy/2-1)+ix*iy*(khin-1)
 c       write(6,*)khin,datan(igout)
-       call sintp16(datan(1+ix*iy*(khin-1)),ix,iy,temp(1,1,khout),sdiag)
+       call sintp16(datan(1+ix*iy*(khin-1):ix*iy*khin),ix,iy,
+     &      temp(:,:,khout),glon,glat,sdiag,il)
 c       write(6,*)khout,temp(il/2,jl/2,khout)
 c       write(6,*)'model temp(m) khin,khout=',khin,khout
-        call findxn(temp(1,1,khout),ifull,-1.e29,xa,kx,an,kn)
+        call findxn(temp(:,:,khout),ifull,-1.e29,xa,kx,an,kn)
       enddo
 
       !call prt_pan(temp(1,1, 1),il,jl,1,'temp:  1')
@@ -840,10 +857,18 @@ c       write(6,*)'model temp(m) khin,khout=',khin,khout
 
       ier = nf_inq_varid(ncid,'rh',idvar)
       write(6,*)"ier=",ier," idvar=",idvar
-      moist_var="rh"
+      if ( ier .eq. 0 ) then
+         moist_var="rh"
+      endif
 
       if ( ier .ne. 0 ) then
          ier = nf_inq_varid(ncid,'mix_rto',idvar)
+         write(6,*)"ier=",ier," idvar=",idvar
+         moist_var="mr"
+      endif
+
+      if ( ier .ne. 0 .and. moistvar .ne. '' ) then
+         ier = nf_inq_varid(ncid,moistvar,idvar)
          write(6,*)"ier=",ier," idvar=",idvar
          moist_var="mr"
       endif
@@ -853,8 +878,8 @@ c       write(6,*)'model temp(m) khin,khout=',khin,khout
       call ncread_3d(ncid,iarch,idvar,ix,iy,nplev,datan)
 
       ! MJT quick fix 
-      do i=1,ix
-        do j=1,iy
+      do j=1,iy
+        do i=1,ix
           k=2
           do while ((k.le.nplev).and.(abs(datan(i+ix*(j-1))).gt.1.e10))
 	    if (abs(datan(i+ix*(j-1)+ix*iy*(k-1))).lt.1.e10) then
@@ -866,31 +891,6 @@ c       write(6,*)'model temp(m) khin,khout=',khin,khout
           end do
 	end do
       end do
-      do while (any(abs(datan(1:ix*iy*nplev)).ge.1.e10))
-        do i=1,ix
-          do j=1,iy
-	    do k=1,nplev
-              if (abs(datan(i+ix*(j-1)+ix*iy*(k-1))).ge.1.e10) then
-	        if (k.gt.1) testa=
-     &            (abs(datan(i+ix*(j-1)+ix*iy*(k-2))).lt.1.e10)
-		if (k.lt.nplev) testb=
-     &            (abs(datan(i+ix*(j-1)+ix*iy*k)).lt.1.e10)
-		if (testa.and.testb) then
-		  datan(i+ix*(j-1)+ix*iy*(k-1))=0.5*(
-     &	          datan(i+ix*(j-1)+ix*iy*(k-2))
-     &            +datan(i+ix*(j-1)+ix*iy*k))
-		else if (testa) then
-		  datan(i+ix*(j-1)+ix*iy*(k-1))=
-     &            datan(i+ix*(j-1)+ix*iy*(k-2))
-		else if (testb) then
-		  datan(i+ix*(j-1)+ix*iy*(k-1))=
-     &            datan(i+ix*(j-1)+ix*iy*k)
-		end if
-	      end if
-	    end do
-          end do
-	end do    
-      end do
 
       call findxn(datan,ix*iy*nplev,-1.e29,xa,kx,an,kn)
 
@@ -899,7 +899,7 @@ c       write(6,*)'model temp(m) khin,khout=',khin,khout
         write(6,*)"################################moist_var=",moist_var
       endif ! ( xa .lt. 1.1 ) then
 
-      call amap ( datan, ix, iy, 'input '//moist_var, 0., 0. )
+      call amap ( datan(1:ix*iy), ix, iy, 'input '//moist_var, 0., 0. )
 
       do k=1,nplev
         write(6,*)"************************************************k=",k
@@ -910,26 +910,27 @@ c       write(6,*)'model temp(m) khin,khout=',khin,khout
 c       igout=ix/2+ix*(iy/2-1)+ix*iy*(khin-1)
 c       write(6,*)khin,datan(igout)
 
-        call sintp16(datan(1+ix*iy*(khin-1)),ix,iy,rh(1,1,khout),sdiag)
+        call sintp16(datan(1+ix*iy*(khin-1):ix*iy*khin),ix,iy,
+     &      rh(:,:,khout),glon,glat,sdiag,il)
 
         write(6,*)"make sure data is always between 0 and 100!"
         write(6,*)"for both mixr and rh"
-        do i=1,ifull
-           rh(i,1,khout)=max(0.,min(100.,rh(i,1,khout)))
-        enddo !i=1,ifull
+        !do i=1,ifull
+           rh(:,:,khout)=max(0.,min(100.,rh(:,:,khout)))
+        !enddo !i=1,ifull
 
 c       write(6,*)khout,rh(il/2,jl/2,khout)
 c       write(6,*)'model rh(m) khin,khout=',khin,khout
 
-        call findxn(rh(1,1,khout),ifull,-1.e29,xa,kx,an,kn)
+        call findxn(rh(:,:,khout),ifull,-1.e29,xa,kx,an,kn)
 
         if ( moist_var .eq. "rh" .and. xa .lt. 1.1 ) then
 
           write(6,*)"######################convert rh from 0-1 to 0-100"
-          do i=1,ifull
-            rh(i,1,khout)=max(0.,min(100.,rh(i,1,khout)*100.))
-          enddo !i=1,ifull
-          call findxn(rh(1,1,khout),ifull,-1.e29,xa,kx,an,kn)
+          !do i=1,ifull
+            rh(:,:,khout)=max(0.,min(100.,rh(:,:,khout)*100.))
+          !enddo !i=1,ifull
+          call findxn(rh(:,:,khout),ifull,-1.e29,xa,kx,an,kn)
 
         endif ! ( moist_var .eq. "rh" .and. xa .lt. 1.1 ) then
 
@@ -941,8 +942,8 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
 !############################################################################
 ! sfc data
 !############################################################################
-      call findxn(hgt(1,1, 1),ifull,-1.e29,xa,kx,an,kn)
-      call findxn(hgt(1,1,nplev),ifull,-1.e29,xa,kx,an,kn)
+      call findxn(hgt(:,:, 1),ifull,-1.e29,xa,kx,an,kn)
+      call findxn(hgt(:,:,nplev),ifull,-1.e29,xa,kx,an,kn)
       write(6,*)"nplev=",nplev
 
       write(6,*)"================================================mslp"
@@ -956,11 +957,11 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
 
       if ( ier .eq. 0 ) then
 
-        call ncread_2d(ncid,iarch,idvar,ix,iy,datan)
+        call ncread_2d(ncid,iarch,idvar,ix,iy,datan(1:ix*iy))
 
-        call amap ( datan, ix, iy, 'gbl mslp', 0., 0. )
+        call amap ( datan(1:ix*iy), ix, iy, 'gbl mslp', 0., 0. )
 
-        call sintp16(datan,ix,iy,pmsl,sdiag)
+        call sintp16(datan(1:ix*iy),ix,iy,pmsl,glon,glat,sdiag,il)
 
         write(6,*)" findxn model mslp(Pa)"
         call findxn(pmsl,ifull,-1.e29,xa,kx,an,kn)
@@ -993,13 +994,11 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
 
       if ( ier .eq. 0 ) then
 
-         write(6,*)"######",ix,iy,nnx,nny,nmax
+         call ncread_2d(ncid,iarch,idvar,ix,iy,datan(1:ix*iy))  ! zsi(m)
 
-         call ncread_2d(ncid,iarch,idvar,ix,iy,datan)  ! zsi(m)
+         call amap ( datan(1:ix*iy), ix, iy, 'gbl zs', 0., 0. )
 
-         call amap ( datan, ix, iy, 'gbl zs', 0., 0. )
-
-         call sintp16(datan,ix,iy,zsi_m,sdiag)  ! (m)
+         call sintp16(datan(1:ix*iy),ix,iy,zsi_m,glon,glat,sdiag,il)  ! (m)
 
          write(6,*)" findxn zsi_m(m)"
          call findxn(zsi_m,ifull,-1.e29,xa,kx,an,kn)
@@ -1037,7 +1036,8 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
          olsm_gbl = .true.
 
 !         call ncread_2d(ncid,iarch,idvar,ix,iy,lsm_gbl)
-         call ncread_2d(ncid,1,idvar,ix,iy,lsm_gbl)	! MJT quick fix 
+         call ncread_2d(ncid,1,idvar,ix,iy,datan(1:ix*iy))	! MJT quick fix 
+         lsm_gbl=datan(1:ix*iy)
 
          ! MJT quick fix 
          where (abs(lsm_gbl(:)).ge.1.e10)
@@ -1046,7 +1046,9 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
 
          call amap ( lsm_gbl, ix, iy, 'lsm_gbl', 0., 0. )
 
-         call sintp16(lsm_gbl,ix,iy,lsmg_m,sdiag)
+         call sintp16(lsm_gbl,ix,iy,lsmg_m,glon,glat,sdiag,il)
+         
+         !lsmg_m=real(nint(lsmg_m))
 
          write(6,*)" findxn model lsmg_m"
          call findxn(lsmg_m,ifull,-1.e29,xa,kx,an,kn)
@@ -1079,11 +1081,11 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
 
       if ( ier .eq. 0 ) then
 
-         call ncread_2d(ncid,iarch,idvar,ix,iy,datan)
+         call ncread_2d(ncid,iarch,idvar,ix,iy,datan(1:ix*iy))
 
-         call amap ( datan, ix, iy, 'gbl sfcp', 0., 0. )
+         call amap ( datan(1:ix*iy), ix, iy, 'gbl sfcp', 0., 0. )
 
-         call sintp16(datan,ix,iy,psg_m,sdiag)
+         call sintp16(datan(1:ix*iy),ix,iy,psg_m,glon,glat,sdiag,il)
 
       else
            write(6,*)"No sfcp data found, setting to -999."
@@ -1108,9 +1110,9 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
 
         write(6,*)"input data has sfc temp data, now read in"
 
-        call ncread_2d(ncid,iarch,idvar,ix,iy,datan)
+        call ncread_2d(ncid,iarch,idvar,ix,iy,datan(1:ix*iy))
 
-        call amap ( datan, ix, iy, 'gbl sfct', 0., 0. )
+        call amap ( datan(1:ix*iy), ix, iy, 'gbl sfct', 0., 0. )
 
         spval=-1.e10
         write(6,*)"spval=",spval
@@ -1123,9 +1125,11 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
         write(6,*)"prepare to interp. tss for sea and land separately"
         write(6,*)"igd,jgd,gtss=",igd,jgd,datan(ijgd)
         write(6,*)"putting only land values into datan"
-        write(6,*)"putting only ocean values into datan(+nmax)"
+        write(6,*)"putting only ocean values into datan(+ix*iy)"
 !not done since tss already at sea level     write(6,*)"First: reduce tss to sea level"
 
+        nlpnts=0
+        nopnts=0
         do j=1,iy
          do i=1,ix
           iq = i+(j-1)*ix
@@ -1133,15 +1137,17 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
 !         write(6,*)i,j,iq,datan(iq) ,lsm_gbl(iq)
 !not done since tss already at sea level       datan(iq)=datan(iq)+zs_gbl(iq)*.0065
 
-          datan(iq+nmax)=datan(iq)                          ! for ocean pts
+          datan(iq+ix*iy)=datan(iq)                          ! for ocean pts
 
           if(olsm_gbl)then
 
             !if ( lsm_gbl(iq) .gt. .5 ) then
             if ( lsm_gbl(iq) .lt. .5 ) then
               datan(iq)=spval                               ! land, fill in ocean pts
+              nlpnts=nlpnts+1
             else !!!  ( lsm_gbl(iq) .lt. .5 ) then
-              datan(iq+nmax)=spval                          ! ocean, fill in land pts
+              datan(iq+ix*iy)=spval                          ! ocean, fill in land pts
+              nopnts=nopnts+1
             endif ! ( lsm_gbl(iq) .gt. .5 ) then
 
           endif!(olsm_gbl)then
@@ -1151,30 +1157,33 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
 
         write(6,*)"two global tss arrays with spval=", spval
         write(6,*)"igd,jgd,lgtss=",igd,jgd,datan(ijgd)
-        write(6,*)"igd,jgd,ogtss=",igd,jgd,datan(ijgd+nmax)
+        write(6,*)"igd,jgd,ogtss=",igd,jgd,datan(ijgd+ix*iy)
 
-        write(6,*)"fill in missing values"
+        write(6,*)"fill in missing values nlpnts,nopnts=",nlpnts,nopnts
 
         write(6,*)"=======> for land array, fill in tss ocean values"
-        call fill(datan,ix,iy,.1*spval,datan(1+2*nmax))
+        call fill(datan(1:ix*iy),ix,iy,.1*spval,
+     &            datan(1+2*ix*iy:3*ix*iy))
 
-        if(olsm_gbl)then
+        if(olsm_gbl .and. nopnts.gt.0)then
            write(6,*)"=======> for ocean array, fill in tss land values"
-           call fill(datan(1+nmax),ix,iy,.1*spval,datan(1+2*nmax))
+           call fill(datan(1+ix*iy:2*ix*iy),ix,iy,.1*spval,
+     &               datan(1+2*ix*iy:3*ix*iy))
         endif!(olsm_gbl)then
 
         write(6,*)"igd,jgd,lgtss=",igd,jgd,datan(ijgd)
-        write(6,*)"igd,jgd,ogtss=",igd,jgd,datan(ijgd+nmax)
+        write(6,*)"igd,jgd,ogtss=",igd,jgd,datan(ijgd+ix*iy)
 
 
 !not done since tss already at sea level     write(6,*)"tss at sea level here"
 
         write(6,*)"=========================> now interp. land data"
-        call sintp16(datan,ix,iy,sfct,sdiag)                 ! land
+        call sintp16(datan(1:ix*iy),ix,iy,sfct,glon,glat,sdiag,il)                 ! land
 
-        if(olsm_gbl)then
+        if(olsm_gbl .and. nopnts.gt.0)then
           write(6,*)"=========================> now interp. ocean data"
-           call sintp16(datan(1+nmax),ix,iy,sfcto_m,sdiag)   ! ocean
+           call sintp16(datan(1+ix*iy:2*ix*iy),ix,iy,sfcto_m,glon,glat,
+     &                  sdiag,il)   ! ocean
         endif!(olsm_gbl)then
 
         call prt_pan(sfct   ,il,jl,2,'tss')
@@ -1229,9 +1238,9 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
 
       write(6,*)"check of temp data to ensure all is going okay"
       write(6,*)" findxn model temp(1)"
-      call findxn(temp(1,1,1),ifull,-1.e29,xa,kx,an,kn)
+      call findxn(temp(:,:,1),ifull,-1.e29,xa,kx,an,kn)
       write(6,*)" findxn model temp(nplev)"
-      call findxn(temp(1,1,nplev),ifull,-1.e29,xa,kx,an,kn)
+      call findxn(temp(:,:,nplev),ifull,-1.e29,xa,kx,an,kn)
 
       write(6,*)"nplev=",nplev
 c constrain rh to 0-100
@@ -1272,11 +1281,11 @@ c     For rotated coordinated version, see JMcG's notes
 
       write(6,*)'before zon/meridional'
 
-      call maxmin(u,' u',0,1.)
-      call maxmin(v,' v',0,1.)
-      !call maxmin(hgt,' hgt',0,.001)
-      !call maxmin(temp,' temp',0,1.)
-      !call maxmin(rh,' rh',0,1000.)
+      call maxmin(u,' u',0,1.,il,kl)
+      call maxmin(v,' v',0,1.,il,kl)
+      !call maxmin(hgt,' hgt',0,.001,il,kl)
+      !call maxmin(temp,' temp',0,1.,il,kl)
+      !call maxmin(rh,' rh',0,1000.,il,kl)
 
       !call prt_pan(u(1,1, 1),il,jl,2,'u : 1')
       !call prt_pan(v(1,1, 1),il,jl,2,'v : 1')
@@ -1294,7 +1303,10 @@ c     For rotated coordinated version, see JMcG's notes
       sn= 1.e29
 
 
-      do iq=1,ifull
+      !do iq=1,ifull
+      do j=1,jl
+        do i=1,il
+        iq=i+(j-1)*il
 c       set up unit zonal vector components
         zonx=            -polenz*y(iq)
         zony=polenz*x(iq)-polenx*z(iq)
@@ -1309,26 +1321,28 @@ c       set up unit zonal vector components
         do k=1,nplev
            uzon = u(iq,1,k)
            vmer = v(iq,1,k)
-           u(iq,1,k)= costh*uzon+sinth*vmer
-           v(iq,1,k)=-sinth*uzon+costh*vmer
+           u(i,j,k)= costh*uzon+sinth*vmer
+           v(i,j,k)=-sinth*uzon+costh*vmer
            if(iq.eq.imidpan2)then
              write(6,'("before zon/mer; k,u,v: ",i3,2f10.2)')k,uzon,vmer
              write(6,'("zonx,zony,zonz,den,costh,sinth",
      &                6f8.4)')zonx,zony,zonz,den,costh,sinth
              write(6,'("after zon/mer; k,u,v: ",i3,2f10.2)')
-     &                        k,u(iq,1,k),v(iq,1,k)
+     &                        k,u(i,j,k),v(i,j,k)
            endif
         enddo  ! k loop
-      enddo      ! iq loop
+        end do
+      end do
+      !enddo      ! iq loop
 
       write(6,*)'cx,cn,sx,sn=',cx,cn,sx,sn
       write(6,*)'after zon/meridional'
 
-      call maxmin(u,' u',0,1.)
-      call maxmin(v,' v',0,1.)
-      call maxmin(hgt,' hgt',0,.001)
-      call maxmin(temp,' temp',0,1.)
-      call maxmin(rh,' rh',0,1.)
+      call maxmin(u(:,:,1:kl),' u',0,1.,il,kl)
+      call maxmin(v(:,:,1:kl),' v',0,1.,il,kl)
+      call maxmin(hgt(:,:,1:kl),' hgt',0,.001,il,kl)
+      call maxmin(temp(:,:,1:kl),' temp',0,1.,il,kl)
+      call maxmin(rh(:,:,1:kl),' rh',0,1.,il,kl)
 
       !call prt_pan(u(1,1, 1),il,jl,2,'u : 1')
       !call prt_pan(v(1,1, 1),il,jl,2,'v : 1')
@@ -1379,30 +1393,45 @@ c vlc=v@v*c(th)-u@v*s(th)
 
 !#######################################################################
       call vidar(nplev,hgt,temp,u,v,rh
-     &     ,iyr,imn,idy,ihr,iarch,time,mtimer,cplev,io_out)
+     &     ,iyr,imn,idy,ihr,iarch,time,mtimer,cplev,io_out,il,kl)
 !#######################################################################
 
       enddo ! narch
 
+      deallocate(datan,zs_gbl,lsm_gbl)
+      deallocate(glon,glat)
+
       write(6,*)'*********** Finished cdfvidar ************************'
+      
+      deallocate(x,y,z,ax,ay,az,bx,by,bz)
+      deallocate(hgt,temp,u,v,rh)
+      deallocate(sfcto_m,lsmg_m)
+      deallocate(zsg)
+      call sigdatadealloc    
+      call latlongdealloc      
+      call clldealloc
+      call comsigdealloc
 
       stop
       end ! cdfvidar
 c***************************************************************************
       subroutine ncread_2d(idhist,iarch,idvar,il,jl,var)
 
-      include 'gblparm.h'
+!     include 'gblparm.h'
       include 'netcdf.inc'
 
       integer start(3),count(3)
 
       real var(il*jl), addoff, sf
-      integer*2 ivar(nnx*nny)
+
+      integer*2, dimension(:), allocatable :: ivar
+!     integer*2 ivar(nnx*nny)
+
       character*30 name
 
-      write(6,*)"ncread_2d idhist=",idhist
+      write(6,*)"=============================> ncread_2d idhist=",idhist
       write(6,*)"iarch=",iarch," idvar=",idvar
-      write(6,*)"il=",il," jl=",jl," nnx,nny=",nnx,nny
+      write(6,*)"il=",il," jl=",jl
 
 c read name
       ier = nf_inq_varname(idhist,idvar,name)
@@ -1410,7 +1439,7 @@ c read name
 
       if(ier.eq.0)then
 
-        if(il*jl.gt.nnx*nny)stop "ncread_2d il*jl.gt.nnx*nny"
+!       if(il*jl.gt.nnx*nny)stop "ncread_2d il*jl.gt.nnx*nny"
 
         start(1) = 1
         start(2) = 1
@@ -1419,13 +1448,14 @@ c read name
         count(2) = jl
         count(3) = 1
 
-c       write(6,'("start=",4i4)') start
-c       write(6,'("count=",4i4)') count
+        write(6,'("start=",4i4)') start
+        write(6,'("count=",4i4)') count
 
       ier = nf_inq_vartype(idhist,idvar,itype)
       write(6,*)"itype=",itype," ier=",ier
 
       if ( itype .eq. nf_short ) then
+         allocate(ivar(il*jl))
          write(6,*)"variable is short"
          call ncvgt(idhist,idvar,start,count,ivar,ier)
          write(6,*)"ivar(1)=",ivar(1)," ier=",ier
@@ -1481,24 +1511,30 @@ c unpack data
       write(6,*)"ncread_2d idvar=",idvar," iarch=",iarch
       write(6,*)"ncread_2d dx=",dx," dn=",dn
 
+      if ( itype .eq. nf_short ) then
+         deallocate(ivar)
+      endif
+
       return ! ncread_2d
       end
 c***************************************************************************
       subroutine ncread_3d(idhist,iarch,idvar,il,jl,kl,var)
 c             call ncread_3d(ncid,iarch,idvar,ix,iy,nplev,datan)
 
-      include 'gblparm.h'
+!     include 'gblparm.h'
       include 'netcdf.inc'
 
       integer start(4),count(4)
 
-      integer*2 ivar(nmax*35)
+!     integer*2 ivar(nmax*35)
+      integer*2, dimension(:), allocatable :: ivar
+
       real var(il*jl*kl)
       character*30 name
 
       write(6,*)"ncread_2d idhist=",idhist
       write(6,*)"iarch=",iarch," idvar=",idvar
-      write(6,*)"il=",il," jl=",jl," nnx,nny=",nnx,nny
+      write(6,*)"il=",il," jl=",jl
 
       ier = nf_inq_varname(idhist,idvar,name)
       write(6,*)"ier=",ier," name=",name
@@ -1523,6 +1559,7 @@ c read data
 
       if ( itype .eq. nf_short ) then
          write(6,*)"variable is short"
+         allocate(ivar(il*jl*kl))
          call ncvgt(idhist,idvar,start,count,ivar,ier)
       else if ( itype .eq. nf_float ) then
          write(6,*)"variable is float"
@@ -1532,7 +1569,10 @@ c read data
          stop
       endif
 
-c obtain scaling factors and offsets from attributes
+      addoff=0.
+      sf=1.
+      if ( itype .eq. nf_short ) then
+      write(6,*)"obtain scaling factors and offsets from attributes"
       call ncagt(idhist,idvar,'add_offset',addoff,ier)
       if ( ier.ne.0 ) addoff=0.
       write(6,*)"ier=",ier," addoff=",addoff
@@ -1540,6 +1580,7 @@ c obtain scaling factors and offsets from attributes
       call ncagt(idhist,idvar,'scale_factor',sf,ier)
       if ( ier.ne.0 ) sf=1.
       write(6,*)"ier=",ier," sf=",sf
+      endif
 
 c unpack data
       dx=-1.e29
@@ -1569,6 +1610,10 @@ c unpack data
 
       write(6,*)"ncread_3d idvar=",idvar," iarch=",iarch
       write(6,*)"ncread_3d dx=",dx," dn=",dn
+
+      if ( itype .eq. nf_short ) then
+         deallocate(ivar)
+      endif
 
       return ! ncread_3d
       end

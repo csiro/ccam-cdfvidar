@@ -1,4 +1,6 @@
-      subroutine sintp16(gdat,ng1,ng2,rdat,odiag)
+      subroutine sintp16(gdat,ng1,ng2,rdat,glon,glat,odiag,il)
+
+      use latlong_m
 
       logical odiag,opdiag
 
@@ -8,15 +10,17 @@
 ! with first data point at 0 deg lon, 90 deg N lat ****** LH coord system!!
 ! southern lats are negative
 
-      include 'gblparm.h' ! nnx,nny
-      include 'newmpar.h' ! il,jl,ifull
+      !include 'newmpar.h' ! il,jl,ifull
 
-      real gdat(ng1*ng2)
-      real rdat(il*jl)
+      integer il,jl,ifull
 
-      include 'latlong.h'  ! rlat,rlong
+      real gdat(ng1*ng2),glon(ng1),glat(ng2)
+      real rdat(6*il*il)
 
-      common/glonlat/glon(nnx),glat(nny)
+      jl=6*il
+      ifull=il*jl
+
+      !include 'latlong.h'  ! rlat,rlong
 
       if(odiag)write(6,'(72("="))')
 
@@ -52,7 +56,7 @@
       do iq=1,ifull
         jmod=1+((iq-1)/il)
         imod=iq-(jmod-1)*il
-        !if(mod(iq,48).eq.0)write(6,*)"iq,im,jm=",iq,imod,jmod
+        !if(mod(iq,il).eq.0)write(6,*)"iq,im,jm=",iq,imod,jmod
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
 
 ! compute x and y of model point in input grid space
@@ -61,7 +65,6 @@
         if(rlong(iq).lt.0.)xlon=360.+rlong(iq)
 
         x=(xlon*ng1/360.)+1. ! assumes x=1 at 0 deg
-
         y=-999 ! default (no value) case
 
         do jg=1,ng2-1
@@ -108,6 +111,7 @@
         opdiag=imod.eq.il/2.and.il.lt.jmod.and.jmod.lt.2*il
         opdiag=(jmod.eq.1.5*il)
         opdiag=F
+
         call intp16(gdat,ng1,ng2,x,y,rdat(iq),opdiag)
 
 !***********************************************************************

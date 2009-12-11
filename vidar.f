@@ -1,5 +1,8 @@
       subroutine vidar(nplevs,zp,tp,up,vp,hp
-     &                ,iyr,imon,idy,ihr,nt,time,mtimer,pm,io_out)
+     &                ,iyr,imon,idy,ihr,nt,time,mtimer,pm,io_out,il,kl)
+     
+      use comsig_m, dsg => dsgx, sgml => sgmlx, sg => sgx
+      use sigdata_m
 ! version for globpe
 c**********************************************************************
 c   interpolation from nplevs pressure levels to lm sigma levels       
@@ -17,18 +20,20 @@ c   nt : time period to process
 c   ptop : pressure at top sigma level (0.0 mb)
 
 c***********************************************************************
-      include 'newmpar.h'
+      !include 'newmpar.h'
 
-      parameter ( imf=il, jmf=jl, lm=kl )
+      integer il,jl,kl,ifull
+      integer imf,jmf,lm,im,imp1,imid
+      !parameter ( imf=il, jmf=jl, lm=kl )
 
       include 'nplevs.h' ! maxplev
 
-      parameter ( im=imf )
+      !parameter ( im=imf )
 
-      parameter ( lmp1 = lm+1 )
-      parameter ( imid = il/2+il*(jl/2-1) )
+      !parameter ( lmp1 = lm+1 )
+      !parameter ( imid = il/2+il*(jl/2-1) )
 
-      common / comsig / dsg(kl), sgml(kl), sg(kl+1)
+      !common / comsig / dsg(kl), sgml(kl), sg(kl+1)
 
 c**********************************************************************
 
@@ -46,10 +51,10 @@ c**********************************************************************
 !       &             ,splineu,splinev,splinet,zerowinds
 c**********************************************************************
 
-      real zp(ifull,maxplev),tp(ifull,maxplev),rp(ifull,maxplev)
-     &    ,hp(ifull,maxplev),up(ifull,maxplev),vp(ifull,maxplev)
+      real zp(6*il*il,maxplev),tp(6*il*il,maxplev),rp(6*il*il,maxplev)
+     &    ,hp(6*il*il,maxplev),up(6*il*il,maxplev),vp(6*il*il,maxplev)
 
-      include 'sigdata.h'
+      !include 'sigdata.h'
 !n    common/sigdata/pmsl(ifull),sfct(ifull),zs(ifull),ps(ifull)
 !n   &             ,us(ifull,kl)    ,vs(ifull,kl)    ,ts(ifull,kl)
 !n   &             ,rs(ifull,kl)    ,hs(ifull,kl)    ,psg_m(ifull)
@@ -64,7 +69,7 @@ c**********************************************************************
       character*2 moist_var
       character*10 header
 
-      real alm(ifull),prein(ifull)
+      real alm(6*il*il),prein(6*il*il)
 
       common / labcom / lab(17)
                         character*4 lab
@@ -72,7 +77,7 @@ c**********************************************************************
       common / mapproj / du,tanl,rnml,stl1,stl2
 
       real pm(maxplev), alpm(maxplev)
-      real ac(lm), bc(lm), cc(lm), dc(lm)
+      real ac(kl+1), bc(kl+1), cc(kl+1), dc(kl+1)
 
       integer pcoun
       integer dypmo(12)
@@ -86,6 +91,15 @@ c**********************************************************************
 
 c***********************************************************************
       save
+
+      jl=6*il
+      ifull=il*jl
+      imf=il
+      jmf=jl
+      lm=kl
+      im=imf
+      lmp1 = lm+1
+      imid = il/2+il*(jl/2-1)
 
       write(6,*)"#####################################################"
 
@@ -212,7 +226,8 @@ c***********************************************************************
         do k=1,nplevs
 
 ! rp is returned with h2o saturation partial pressures
-          call esmtrv ( tp(1,k), rp(1,k), npts, rs, ts, us, vs )
+          call esmtrv ( tp(:,k), rp(:,k), npts, rs(:,1),
+     &                  ts(:,1), us(:,1), vs(:,1) )
 
           pr = .01*pm(k) ! hPa
           if ( osig_in ) pr = .01*calc_p(psg_m(imid),pm(k)) ! hPa
@@ -244,7 +259,8 @@ c***********************************************************************
         do k=1,nplevs
 
 ! hp is returned with h2o saturation partial pressures
-          call esmtrv ( tp(1,k), rp(1,k), npts, rs, ts, us, vs )
+          call esmtrv ( tp(:,k), rp(:,k), npts, rs(:,1), ts(:,1),
+     &                  us(:,1), vs(:,1) )
 
           pr = .01*pm(k)
           if ( osig_in ) pr = .01*calc_p(psg_m(imid),pm(k))
@@ -488,8 +504,9 @@ c end of pressure loop
        else ! if ( ! have_gp ) then
          ! Use lowest pressure level temp as to compute ps from pmsl
          ps(i)=exp(log(100.*pmsl(i))-max(0.,grav*zs(i))/(rrr*tp(i,1)))
+         write(6,*)"pmsl(i),grav,zs(i),rrr,tp(i,1),ps(i)"
          if ( mod(i,100).eq.0 ) then
-           write(6,'(6f10.3)')pmsl(i),grav,zs(i),rrr,tp(i,1),ps(i)
+           write(6,'(6f11.3)')pmsl(i),grav,zs(i),rrr,tp(i,1),ps(i)
          endif
        endif ! if ( have_gp ) then
 c***********************************************************************
@@ -746,7 +763,8 @@ c rp,zp,up,vp are used as temporary arrays
  746      tp(iq,1)=(ps(iq)-ptop)*sgml(k)+ptop
 
 c ts is returned with h2o saturation partial pressures
-        call esmtrv ( ts(1,k), rs(1,k), npts, rp, zp, up, vp )
+        call esmtrv ( ts(:,k), rs(:,k), npts, rp(:,1), zp(:,1),
+     &                up(:,1), vp(:,1) )
 
 c calculate actual.mix.ratio
         do 750 iq=1, npts
@@ -794,40 +812,40 @@ c read replacement sfct if ints>0
             call amap ( sfct, imt, jmt, 'new sfct', 5., 0. )
          endif
 
-        call maxmin(ts,'ts',0,1.)
-        call maxmin(rs,'rs',0,1.)
-        call maxmin(us,'us',0,1.)
-        call maxmin(vs,'vs',0,1.)
+        call maxmin(ts,'ts',0,1.,il,kl)
+        call maxmin(rs,'rs',0,1.,il,kl)
+        call maxmin(us,'us',0,1.,il,kl)
+        call maxmin(vs,'vs',0,1.,il,kl)
+        
+        print *,"*** ",maxval(ts),minval(ts)
 
 c write out file
         if ( io_out .eq. 3 ) then
            write(6,*)"io_out=3 no longer supported!!!!!!!!!!"
            stop
-!          call tomod ( alm,sgml,prein
-!    &          ,ihr,idy,imon,iyr,iout,oform,vfil,ds,opre )
         else
-           call invert1(sgml)
-           call invert3(ts)
-           call invert3(rs)
-           call invert3(us)
-           call invert3(vs)
+           call invert1(sgml,kl)
+           call invert3(ts,il,kl)
+           call invert3(rs,il,kl)
+           call invert3(us,il,kl)
+           call invert3(vs,il,kl)
 
            call outcdf(ihr,idy,imon,iyr,iout,nt,time,mtimer
-     &                 ,sgml,vfil,ds)
+     &                 ,sgml,vfil,ds,il,kl)
 
-           call invert1(sgml)
+           call invert1(sgml,kl)
 
         endif
 c***********************************************************************
       return ! vidar
       end ! vidar
 !=======================================================================
-      subroutine calcsig(sigh)
+      subroutine calcsig(sigh,kl)
 
 c these routines are written from top down
 c nsig=50 option general cubic half-sigma levels (normal formula bottom up)
 
-      parameter (kl=35)
+      integer kl
 
       real sigh(kl+1)
 

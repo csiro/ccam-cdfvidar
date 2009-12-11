@@ -1,11 +1,16 @@
-      subroutine invert3(temp)
+      subroutine invert3(temp,il,kl)
 
 c invert vertical levels in temp() like darlam (bottom up)
 
-      include 'newmpar.h' ! il,jl,kl,ifull,ijk
+      !include 'newmpar.h' ! il,jl,kl,ifull,ijk
 
-      real temp(ifull,kl)
-      real tmp(ifull,kl)
+      integer il,jl,ifull,kl
+
+      real temp(6*il*il,kl)
+      real tmp(6*il*il,kl)
+
+      jl=6*il
+      ifull=il*jl
 
       do k=1,kl
        do iq=1,ifull
@@ -22,9 +27,11 @@ c invert vertical levels in temp() like darlam (bottom up)
       return ! invert3
       end
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      subroutine invert1(sig)
+      subroutine invert1(sig,kl)
 
-      include 'newmpar.h' ! il,jl,kl,ifull,ijk
+      !include 'newmpar.h' ! il,jl,kl,ifull,ijk
+
+      integer kl
 
       real sig(kl)
       real tmp(kl)
