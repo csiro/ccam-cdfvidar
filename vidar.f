@@ -1,4 +1,4 @@
-      subroutine vidar(nplevs,zp,tp,up,vp,hp
+      subroutine vidar(nplevs,zp,tp,up,vp,hp,validlevcc
      &                ,iyr,imon,idy,ihr,nt,time,mtimer,pm,io_out,il,kl)
      
       use comsig_m, dsg => dsgx, sgml => sgmlx, sg => sgx
@@ -53,6 +53,7 @@ c**********************************************************************
 
       real zp(6*il*il,maxplev),tp(6*il*il,maxplev),rp(6*il*il,maxplev)
      &    ,hp(6*il*il,maxplev),up(6*il*il,maxplev),vp(6*il*il,maxplev)
+      real validlevcc(6*il*il)
 
       !include 'sigdata.h'
 !n    common/sigdata/pmsl(ifull),sfct(ifull),zs(ifull),ps(ifull)
@@ -502,10 +503,16 @@ c end of pressure loop
         enddo ! kk
  173    continue
        else ! if ( ! have_gp ) then
+
+
+         k=nplevs+1-nint(validlevcc(i))
+         avgtmp=tp(i,k)
+         
          ! Use lowest pressure level temp as to compute ps from pmsl
-         ps(i)=exp(log(100.*pmsl(i))-max(0.,grav*zs(i))/(rrr*tp(i,1)))
-         write(6,*)"pmsl(i),grav,zs(i),rrr,tp(i,1),ps(i)"
+         ps(i)=exp(log(100.*pmsl(i))-max(0.,grav*zs(i))/(rrr*avgtmp))
+
          if ( mod(i,100).eq.0 ) then
+           write(6,*)"pmsl(i),grav,zs(i),rrr,tp(i,1),ps(i)"
            write(6,'(6f11.3)')pmsl(i),grav,zs(i),rrr,tp(i,1),ps(i)
          endif
        endif ! if ( have_gp ) then

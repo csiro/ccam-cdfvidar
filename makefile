@@ -18,7 +18,7 @@ cdfvidar : $(OBJ2)
 #	$(CMP) $(FFLAGS) $(OBJ2) $(LIBS) -o cdfvidar.C$(RES)L$(LEV)
 
 clean:
-	rm -f *.o core cdfvidar
+	rm -f *.o core cdfvidar *.mod
 
 .SUFFIXES:.f90
 .f.o:

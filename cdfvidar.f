@@ -77,6 +77,8 @@
       real, dimension(:), allocatable :: lsmg_m
       !real lsm_m(ifull) MJT lsmask
       real, dimension(:), allocatable :: zsg
+      real, dimension(:), allocatable :: validlevhost
+      real, dimension(:), allocatable :: validlevcc
 
       !include 'sigdata.h'
 !     common/sigdata/pmsl(ifull),sfct(ifull),zs(ifull),ps(ifull)
@@ -239,6 +241,7 @@ c sgml=0, dsg>0
         allocate(x(ifull),y(ifull),z(ifull))
         allocate(ax(ifull),ay(ifull),az(ifull))
         allocate(bx(ifull),by(ifull),bz(ifull))
+	allocate(validlevcc(ifull))
         
         ! set-up CC grid
         ccdim(1)=il
@@ -434,6 +437,7 @@ c     call ncpopt(NCVERBOS+NCFATAL)
       allocate(datan(ix*iy*nplev))
       allocate(zs_gbl(ix*iy))
       allocate(lsm_gbl(ix*iy))
+      allocate(validlevhost(ix*iy))
 
       if(orev) then
         do k=1,nplev
@@ -711,19 +715,9 @@ c***********************************************************************
       call ncread_3d(ncid,iarch,idvar,ix,iy,nplev,datan)
 
       ! MJT quick fix
-      do j=1,iy
-        do i=1,ix
-          k=2
-          do while ((k.le.nplev).and.(abs(datan(i+ix*(j-1))).gt.1.e10))
-	    if (abs(datan(i+ix*(j-1)+ix*iy*(k-1))).lt.1.e10) then
-	      do l=1,k-1
-	        datan(i+ix*(j-1)+ix*iy*(l-1))=datan(i+ix*(j-1)+ix*iy*(k-1))
-	      end do
-	    end if
-            k=k+1
-          end do
-	end do
-      end do
+      validlevhost=1
+      call getvalidlev(validlevhost,datan,ix,iy,nplev)
+      call filldat(datan,ix,iy,nplev)
 
       call amap ( datan(1:ix*iy), ix, iy, 'input u', 0., 0. )
 
@@ -760,19 +754,8 @@ c       write(6,*)'model u(m) khin,khout=',khin,khout
       call ncread_3d(ncid,iarch,idvar,ix,iy,nplev,datan)
 
       ! MJT quick fix 
-      do j=1,iy
-        do i=1,ix      
-          k=2
-          do while ((k.le.nplev).and.(abs(datan(i+ix*(j-1))).gt.1.e10))
-	    if (abs(datan(i+ix*(j-1)+ix*iy*(k-1))).lt.1.e10) then
-	      do l=1,k-1
-	        datan(i+ix*(j-1)+ix*iy*(l-1))=datan(i+ix*(j-1)+ix*iy*(k-1))
-	      end do
-	    end if
-            k=k+1
-          end do
-	end do
-      end do
+      call getvalidlev(validlevhost,datan,ix,iy,nplev)
+      call filldat(datan,ix,iy,nplev)
 
       call amap ( datan(1:ix*iy), ix, iy, 'input v', 0., 0. )
 
@@ -809,19 +792,8 @@ c       write(6,*)'model v(m) khin,khout=',khin,khout
       call ncread_3d(ncid,iarch,idvar,ix,iy,nplev,datan)
 
       ! MJT quick fix 
-      do i=1,ix
-        do j=1,iy
-          k=2
-          do while ((k.le.nplev).and.(abs(datan(i+ix*(j-1))).gt.1.e10))
-	    if (abs(datan(i+ix*(j-1)+ix*iy*(k-1))).lt.1.e10) then
-	      do l=1,k-1
-	        datan(i+ix*(j-1)+ix*iy*(l-1))=datan(i+ix*(j-1)+ix*iy*(k-1))
-	      end do
-	    end if
-            k=k+1
-          end do
-	end do
-      end do
+      call getvalidlev(validlevhost,datan,ix,iy,nplev)
+      call filldat(datan,ix,iy,nplev)
 
 
       call amap ( datan(1:ix*iy), ix, iy, 'input temp', 0., 0. )
@@ -878,19 +850,8 @@ c       write(6,*)'model temp(m) khin,khout=',khin,khout
       call ncread_3d(ncid,iarch,idvar,ix,iy,nplev,datan)
 
       ! MJT quick fix 
-      do j=1,iy
-        do i=1,ix
-          k=2
-          do while ((k.le.nplev).and.(abs(datan(i+ix*(j-1))).gt.1.e10))
-	    if (abs(datan(i+ix*(j-1)+ix*iy*(k-1))).lt.1.e10) then
-	      do l=1,k-1
-	        datan(i+ix*(j-1)+ix*iy*(l-1))=datan(i+ix*(j-1)+ix*iy*(k-1))
-	      end do
-	    end if
-            k=k+1
-          end do
-	end do
-      end do
+      call getvalidlev(validlevhost,datan,ix,iy,nplev)
+      call filldat(datan,ix,iy,nplev)
 
       call findxn(datan,ix*iy*nplev,-1.e29,xa,kx,an,kn)
 
@@ -1083,9 +1044,26 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
 
          call ncread_2d(ncid,iarch,idvar,ix,iy,datan(1:ix*iy))
 
+         if (any(datan(1:ix*iy).gt.2000)) then
+           datan(1:ix*iy)=datan(1:ix*iy)/100.
+         end if
+
          call amap ( datan(1:ix*iy), ix, iy, 'gbl sfcp', 0., 0. )
 
          call sintp16(datan(1:ix*iy),ix,iy,psg_m,glon,glat,sdiag,il)
+
+         ! remove levels below surface
+         do j=1,iy
+           do i=1,ix
+             iq=i+ix*(j-1)
+             do k=validlevhost(iq),nplev
+               if (datan(iq).gt.plev(k)) then
+                 validlevhost(iq)=real(k)
+                 exit
+               end if
+             end do
+           end do
+         end do
 
       else
            write(6,*)"No sfcp data found, setting to -999."
@@ -1387,12 +1365,16 @@ c vlc=v@v*c(th)-u@v*s(th)
       iq=il/2+(jl/2-1)*il
       write(6,'("pmsl=",f12.2," sfct=",f12.2)') pmsl(iq),sfct(iq)
 
+      ! intepolate valid level
+      call amap ( validlevhost, ix, iy, 'gbl levl', 0., 0. )
+      call sintp16(validlevhost,ix,iy,validlevcc,glon,glat,sdiag,il)
+
       write(6,*)"calling vidar now!! ntimes,iarch=",ntimes,iarch
 
       if2=0
 
 !#######################################################################
-      call vidar(nplev,hgt,temp,u,v,rh
+      call vidar(nplev,hgt,temp,u,v,rh,validlevcc
      &     ,iyr,imn,idy,ihr,iarch,time,mtimer,cplev,io_out,il,kl)
 !#######################################################################
 
@@ -1491,7 +1473,7 @@ c no data found
 c unpack data
       dx=-1.e29
       dn= 1.e29
-      do j=1,il
+      do j=1,jl
         do i=1,il
           ij=i+(j-1)*il
       	  if ( itype .eq. nf_short ) then
@@ -1661,3 +1643,88 @@ c***********************************************************************
       return 
       end
 !***********************************************************************
+
+      subroutine getvalidlev(validlev,datan,ix,iy,plev)
+      
+      implicit none
+      
+      integer, intent(in) :: ix,iy,plev
+      integer i,j,k,iq,iqk
+      real, dimension(ix*iy), intent(inout) :: validlev
+      real, dimension(ix*iy*plev), intent(in) :: datan
+      
+      do j=1,iy
+        do i=1,ix
+          iq=i+ix*(j-1)
+          do k=nint(validlev(iq)),plev	
+	    iqk=i+ix*(j-1)+ix*iy*(k-1)
+	    if (datan(iqk).lt.1.E10) then
+	      validlev(iq)=real(k)
+	      exit
+	    end if
+	  end do
+	end do
+      end do
+      
+      return
+      end subroutine getvalidlev
+      
+      subroutine filldat(datan,ix,iy,plev)
+      
+      implicit none
+      
+      integer, intent(in) :: ix,iy,plev
+      integer i,j,k,is,ie,iqk,iqn
+      real, dimension(ix*iy*plev), intent(inout) :: datan
+      real, dimension(ix*iy) :: datatemp
+
+      do k=1,plev
+        is=ix*iy*(k-1)+1
+        ie=ix*iy*k
+        if (all(datan(is:ie).gt.1.E10)) then
+          write(6,*) "ERROR: No valid data on level"
+          stop
+        end if
+        datatemp(:)=datan(is:ie)
+        do while (any(datan(is:ie).gt.1.E10))
+          do j=1,iy
+            do i=1,ix
+              iqk=i+ix*(j-1)+ix*iy*(k-1)
+              if (datan(iqk).lt.1.E10) then
+                if (j.lt.iy) then
+                  iqn=i+ix*j
+                  if (datatemp(iqn).gt.1.E10) then
+                    datatemp(iqn)=datan(iqk)
+                  end if
+                end if
+                if (i.lt.ix) then
+                  iqn=i+1+ix*(j-1)
+		else
+                  iqn=1+ix*(j-1)	
+		end if
+                if (datatemp(iqn).gt.1.E10) then
+                    datatemp(iqn)=datan(iqk)
+                end if
+	        if (j.gt.1) then
+                  iqn=i+ix*(j-2)
+                  if (datatemp(iqn).gt.1.E10) then
+                    datatemp(iqn)=datan(iqk)
+                  end if
+		end if
+	        if (i.gt.1) then
+                  iqn=i-1+ix*(j-1)
+		else
+		  iqn=ix+ix*(j-1)
+		end if
+                if (datatemp(iqn).gt.1.E10) then
+                  datatemp(iqn)=datan(iqk)
+                end if
+	      end if
+	    end do
+	  end do
+          datan(is:ie)=datatemp(:)
+        end do
+      end do
+      
+      return
+      end subroutine filldat
