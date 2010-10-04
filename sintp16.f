@@ -64,7 +64,15 @@
         xlon=rlong(iq)
         if(rlong(iq).lt.0.)xlon=360.+rlong(iq)
 
-        x=(xlon*ng1/360.)+1. ! assumes x=1 at 0 deg
+        x=1.+(ng1-1)*(xlon-glon(1))/(glon(ng1)-glon(1))
+
+        if ( x .lt. 1 ) then
+           x=x+float(ng1)
+        endif
+        if ( x .gt. ng1 ) then
+           x=x-float(ng1)
+        endif
+
         y=-999 ! default (no value) case
 
         do jg=1,ng2-1

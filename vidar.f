@@ -79,6 +79,7 @@ c**********************************************************************
 
       real pm(maxplev), alpm(maxplev)
       real ac(kl+1), bc(kl+1), cc(kl+1), dc(kl+1)
+      real tpold(6*il*il,maxplev) ! MJT suggestion
 
       integer pcoun
       integer dypmo(12)
@@ -372,6 +373,7 @@ c convert sensible temp to virt. temp
       write(6,'(a3,6a12)') 
      &          "k","pm(hPa)","zp(m)","tp(K) (1)","(npts) "
      &                           ," rp (g/g) (1)","(npts)"
+      tpold=tp ! MJT suggestion
       do k=1,nplevs
         do i=1,npts
           tp(i,k)=tp(i,k)*(rp(i,k)+.622)/(.622*(1.+rp(i,k)))
@@ -509,7 +511,10 @@ c end of pressure loop
          avgtmp=tp(i,k)
          
          ! Use lowest pressure level temp as to compute ps from pmsl
-         ps(i)=exp(log(100.*pmsl(i))-max(0.,grav*zs(i))/(rrr*avgtmp))
+         !ps(i)=exp(log(100.*pmsl(i))-max(0.,grav*zs(i))/(rrr*avgtmp)) ! jjk
+ 	   
+ 	 tmsl=avgtmp +zs(i)*.0065                                     ! jlm
+         ps(i)=100.*pmsl(i)*(1.-.0065*zs(i)/tmsl)**(grav/(.0065*rrr)) ! jlm
 
          if ( mod(i,100).eq.0 ) then
            write(6,*)"pmsl(i),grav,zs(i),rrr,tp(i,1),ps(i)"
@@ -631,6 +636,14 @@ c always linear interpolate rh and mix.ratio
               ts1=tp(i,lev+1)+(tp(i,lev+1)-tp(i,lev))*fap
 c convert back to sensible temperature
               ts(i,k)=ts1*0.622*(1.0+rs(i,k))/(0.622+rs(i,k))
+	      !-------------------------------------------------------
+	      ! MJT suggestion
+	      if (ts(i,k).gt.350.) then
+	         print *,"bad ts at ",i,k,ts(i,k)
+		 ts=tpold(i,lev+1)+(tpold(i,lev+1)-tpold(i,lev))*fap
+		 print *,"new ts at ",i,k,ts(i,k)
+	      end if
+	      !-------------------------------------------------------
             endif ! not splinet
 
 c end of pressure loop
