@@ -13,19 +13,10 @@
       common/levpre/nplev,plev(maxplev)
       real cplev(maxplev)
 
-!     include 'gblparm.h' ! nnx nny nmax=nnx*nny = maximum dims for input grid 
-
-      !include 'newmpar.h'
       include 'netcdf.inc'
-
-      !include 'parm.h'
-      !include 'xyzinfo.h'  ! x,y,z,wts
-      !include 'latlong.h'  ! rlat,rlong
-      !include 'vecsuv.h'
 
       parameter ( pi=3.1415926536 )
       parameter ( g=9.80616 )
-      
       parameter ( klmax = 100 )
       
       real, dimension(klmax) :: dsg,sgml
@@ -41,23 +32,8 @@
 
       common/lconther/ther
       include 'vidar.h'
-!        logical spline,oesig,debug,notop,opre,calout,oform
-!        logical splineu,splinev,splinet,zerowinds,osig_in
-!        character*80 zsfil,tsfil,smfil,vfil
-!        common / vi / ntimes,spline,mxcyc,nvsig,nrh
-!       &             ,oesig,ptop,debug,notop,opre
-!       &             ,in,calout
-!       &             ,iout,oform,osig_in
-!       &             ,inzs,zsfil,ints,tsfil,insm,smfil
-!       &             ,vfil
-!       &             ,splineu,splinev,splinet,zerowinds
-
       logical sdiag
 
-!     real datan(nmax*maxplev)
-!     real zs_gbl(nmax)
-!     real lsm_gbl(nmax)
-!     common/glonlat/glon(nnx),glat(nny)
       real dst
       real, dimension(2) :: lonlat
       real, dimension(:,:,:), allocatable :: rlld,xyz,axyz,bxyz      
@@ -75,16 +51,9 @@
       real, dimension(:,:,:), allocatable :: rh
       real, dimension(:), allocatable :: sfcto_m
       real, dimension(:), allocatable :: lsmg_m
-      !real lsm_m(ifull) MJT lsmask
       real, dimension(:), allocatable :: zsg
       real, dimension(:), allocatable :: validlevhost
       real, dimension(:), allocatable :: validlevcc
-
-      !include 'sigdata.h'
-!     common/sigdata/pmsl(ifull),sfct(ifull),zs(ifull),ps(ifull)
-!    &             ,us(ifull,kl)    ,vs(ifull,kl)    ,ts(ifull,kl)
-!    &             ,rs(ifull,kl)    ,hs(ifull,kl)    ,psg_m(ifull)
-!    &             ,zsi_m(ifull)
 
       common/datatype/moist_var,in_type
       character*1 in_type
@@ -92,12 +61,10 @@
 
       logical ofirst, ogbl, orev, olsm_gbl
       character*60 timorg
-      character*60 cu ! MJT quick fix
+      character*60 cu
       character*3 cmonth
       character*80 zsavn,lsavn
       character*10 header,moistvar
-      !common / comsig / dsg(kl), sgml(kl), sg(kl+1)
-      !common / cll / clon(ifull),clat(ifull)
 
       namelist/gnml/inf,vfil,ds,du,tanl,rnml,stl1,stl2,inzs,zsfil
      &             ,ints,tsfil, ogbl,zsavn,inzsavn,lsavn,inlsavn
@@ -110,14 +77,6 @@
      &             ,splineu,splinev,splinet,zerowinds
      &             ,grdx,grdy,slon,slat
      &             ,moistvar,kl
-! define vidar namelist variables
-!     namelist / vi / spline,mxcyc,nvsig,nrh
-!    &               ,oesig,sgml,dsg,ptop,debug,notop,opre
-!    &               ,in,calout
-!    &               ,iout,oform
-!    &               ,insm,smfil
-!    &               ,splineu,splinev,splinet,zerowinds
-!    &               ,grdx,grdy,slon,slat
 
       data khin/0/,kuin/0/,kvin/0/,ktin/0/,krin/0/
       data igd/1/,jgd/1/,id/1/,jd/1/,mtimer/0/
@@ -141,9 +100,7 @@
       data have_gp/.true./
       data zerowinds/.true./
       data grdx/1./
-      !data slon/0./
       data grdy/-1./
-      !data slat/90./
 
       save
 
@@ -888,17 +845,13 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
         if ( moist_var .eq. "rh" .and. xa .lt. 1.1 ) then
 
           write(6,*)"######################convert rh from 0-1 to 0-100"
-          !do i=1,ifull
-            rh(:,:,khout)=max(0.,min(100.,rh(:,:,khout)*100.))
-          !enddo !i=1,ifull
+          rh(:,:,khout)=max(0.,min(100.,rh(:,:,khout)*100.))
           call findxn(rh(:,:,khout),ifull,-1.e29,xa,kx,an,kn)
 
         endif ! ( moist_var .eq. "rh" .and. xa .lt. 1.1 ) then
 
       enddo
 
-      !call prt_pan(rh(1,1, 1),il,jl,1,moist_var//' : 1')
-      !call prt_pan(rh(1,1,nplev),il,jl,1,moist_var//' : nplev')
 
 !############################################################################
 ! sfc data
@@ -1209,6 +1162,93 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
 
       call prt_pan(sfct,il,jl,2,'sfct')
       !call prt_pan(sfct,il,jl,1,'sfct')
+
+      write(6,*)"============================================fracice"
+
+      fracice=-1.
+      ier = nf_inq_varid(ncid,'fracice',idvar)
+      write(6,*)"ier=",ier," idvar=",idvar
+
+      if ( ier .eq. 0 ) then ! we have fracice data
+
+        write(6,*)"input data has fracice data, now read in"
+
+        call ncread_2d(ncid,iarch,idvar,ix,iy,datan(1:ix*iy))
+	
+	where (datan(1:ix*iy).gt.1.01)
+	  datan(1:ix*iy)=0.
+	end where
+
+        call amap ( datan(1:ix*iy), ix, iy, 'gbl fice', 0., 0. )
+
+        spval=-1.e10
+        write(6,*)"spval=",spval
+        write(6,*)"###################### do we have olsm_gbl=",olsm_gbl
+        ijgd=igd+ix*(jgd-1)
+        write(6,*)"igd,jgd,ijgd=",igd,jgd,ijgd
+        ijd=id+il*(jd-1)
+        write(6,*)"id,jd,ijd=",id,jd,ijd
+
+        write(6,*)"prepare to interp. fracice"
+        write(6,*)"igd,jgd,gtss=",igd,jgd,datan(ijgd)
+
+        nlpnts=0
+        nopnts=0
+        do j=1,iy
+         do i=1,ix
+          iq = i+(j-1)*ix
+
+          datan(iq+ix*iy)=datan(iq)                          ! for ocean pts
+
+          if(olsm_gbl)then
+
+            if ( lsm_gbl(iq) .ge. .5 ) then
+              datan(iq+ix*iy)=spval                          ! ocean, fill in land pts
+              nopnts=nopnts+1
+	    else
+	      nlpnts=nlpnts+1
+            endif ! ( lsm_gbl(iq) .ge. .5 ) then
+
+          endif!(olsm_gbl)then
+
+         enddo ! ix
+        enddo ! iy
+
+        write(6,*)"global fracice array with spval=", spval
+        write(6,*)"igd,jgd,ogtss=",igd,jgd,datan(ijgd+ix*iy)
+
+        write(6,*)"fill in missing values nlpnts,nopnts=",nlpnts,nopnts
+
+        write(6,*)"===> for ocean array, fill in fracice land values"
+        call fill(datan(1+ix*iy:2*ix*iy),ix,iy,.1*spval,
+     &            datan(1+2*ix*iy:3*ix*iy))
+
+        write(6,*)"igd,jgd,ogtss=",igd,jgd,datan(ijgd+ix*iy)
+
+        write(6,*)"=========================> now interp. ocean data"
+        call sintp16(datan(1+ix*iy:2*ix*iy),ix,iy,fracice,glon,glat,
+     &                  sdiag,il)   ! ocean
+
+        call prt_pan(fracice,il,jl,2,'fracice')
+
+        where (lsm_m.ge.0.5)
+	  fracice=0.
+	end where
+
+        write(6,*)"id,jd,fracice=",id,jd,fracice(ijd)
+
+        write(6,*)" findxn model fracice"
+        call findxn(fracice,ifull,-1.e29,xa,kx,an,kn)
+
+      else
+
+        write(6,*)"###############no fracice data in input dataset"
+        write(6,*)"###############setting fracice data to -1.!!!!!!!"
+        fracice=-1.
+
+      endif ! ier eq 0 , sfct
+
+      call prt_pan(fracice,il,jl,2,'fracice')
 
 !############################################################################
 ! end sfc data

@@ -640,7 +640,7 @@ c convert back to sensible temperature
 	      ! MJT suggestion
 	      if (ts(i,k).gt.350.) then
 	         print *,"bad ts at ",i,k,ts(i,k)
-		 ts=tpold(i,lev+1)+(tpold(i,lev+1)-tpold(i,lev))*fap
+		 ts(i,k)=tpold(i,lev+1)+(tpold(i,lev+1)-tpold(i,lev))*fap
 		 print *,"new ts at ",i,k,ts(i,k)
 	      end if
 	      !-------------------------------------------------------

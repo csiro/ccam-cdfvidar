@@ -75,7 +75,14 @@ c#######################################################################
       if ( iarch.lt.1 ) stop "wrong iarch in outcdf"
       if ( iarch.eq.1 ) then
         write(6,*)'nccre of ',cdffile
+#ifdef usenc3
         idnc = nccre(cdffile, ncclob, ier)
+#else
+	!ier=nf_create(cdffile,NF_NOCLOBBER,idnc)
+	!ier=nf_create(cdffile,NF_64BIT_OFFSET,idnc)
+	!ier=nf_create(cdffile,NF_NETCDF4.or.NF90_CLASSIC_MODEL,idnc)
+	ier=nf_create(cdffile,NF_NETCDF4,idnc)
+#endif
         write(6,*)'idnc,ier=',idnc,ier
 c Turn off the data filling
         imode = ncsfil(idnc,ncnofill,ier)
@@ -342,6 +349,16 @@ c       Sigma levels
 !       write(6,*)'sig=',sig
         call ncapt(idnc,ncglobal,'sigma',ncfloat,kl,sig,ier)
 
+        lname = 'year-month-day at start of run'
+        idkdate = ncvdef(idnc,'kdate',nclong,1,dim(4),ier)
+        call ncaptc(idnc,idkdate,'long_name',ncchar
+     &             ,lngstr(lname),lname,ier)
+
+        lname = 'hour-minute at start of run'
+        idktime = ncvdef(idnc,'ktime',nclong,1,dim(4),ier)
+        call ncaptc(idnc,idktime,'long_name',ncchar
+     &             ,lngstr(lname),lname,ier)
+
         lname = 'timer (hrs)'
         idnter = ncvdef(idnc,'timer',ncfloat,1,dim(4),ier)
         call ncaptc(idnc,idnter,'long_name',ncchar
@@ -360,16 +377,6 @@ c       Sigma levels
         lname = 'number of time steps from start'
         idktau = ncvdef(idnc,'ktau',nclong,1,dim(4),ier)
         call ncaptc(idnc,idktau,'long_name',ncchar
-     &             ,lngstr(lname),lname,ier)
-
-        lname = 'year-month-day at start of run'
-        idkdate = ncvdef(idnc,'kdate',nclong,1,dim(4),ier)
-        call ncaptc(idnc,idkdate,'long_name',ncchar
-     &             ,lngstr(lname),lname,ier)
-
-        lname = 'hour-minute at start of run'
-        idktime = ncvdef(idnc,'ktime',nclong,1,dim(4),ier)
-        call ncaptc(idnc,idktime,'long_name',ncchar
      &             ,lngstr(lname),lname,ier)
 
         idv = ncvdef(idnc,'sigma', ncfloat, 1, dim(3),ier)
@@ -440,6 +447,11 @@ c       For time varying surface fields
         lname = 'Soil moisture bottom'
         call attrib(idnc,idim2,3,'wfb',lname,'none',0.,.4)
 
+        if (any(fracice.ge.0.)) then
+          lname = 'Sea ice fraction'
+          call attrib(idnc,idim2,3,'fracice',lname,'none',0.,6.5)
+	end if
+
         write(6,*)'3d variables'
         call attrib(idnc,dim,4,'temp','Air temperature','K',100.,350.)
         call attrib(idnc,dim,4,'u','x-component wind','m/s',-150.,150.)
@@ -506,6 +518,10 @@ c     set time to number of minutes since start
       call ncvpt1(idnc,idv,iarch,int(time),ier)
       write(6,*)"int(time)=",int(time)
 
+      idv = ncvid(idnc,'kdate',ier)
+      call ncvpt1(idnc,idv,iarch,kdate,ier)
+      idv = ncvid(idnc,'ktime',ier)
+      call ncvpt1(idnc,idv,iarch,ktime,ier)
       idv = ncvid(idnc,'timer',ier)
       call ncvpt1(idnc,idv,iarch,timer,ier)
       idv = ncvid(idnc,'mtimer',ier)
@@ -515,10 +531,7 @@ c     set time to number of minutes since start
       call ncvpt1(idnc,idv,iarch,timeg,ier)
       idv = ncvid(idnc,'ktau',ier)
       call ncvpt1(idnc,idv,iarch,ktau,ier)
-      idv = ncvid(idnc,'kdate',ier)
-      call ncvpt1(idnc,idv,iarch,kdate,ier)
-      idv = ncvid(idnc,'ktime',ier)
-      call ncvpt1(idnc,idv,iarch,ktime,ier)
+
       write(6,*)'kdate,ktime,ktau=',kdate,ktime,ktau
       write(6,*)'timer,timeg=',timer,timeg
 
@@ -593,6 +606,10 @@ c     set time to number of minutes since start
       !call histwrt3(aa,'wbftot',idnc,iarch,il)
       call histwrt3(aa,'wfg',idnc,iarch,il)
       call histwrt3(aa,'wfb',idnc,iarch,il)
+
+      if (any(fracice.ge.0.)) then
+        call histwrt3(fracice,'fracice',idnc,iarch,il)
+      end if
 
 !     call histwrt3(sicedep,'siced',idnc,iarch)
 !     call histwrt3(snowd,'snd',idnc,iarch)
