@@ -1040,10 +1040,21 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
 
         call ncread_2d(ncid,iarch,idvar,ix,iy,datan(1:ix*iy))
 
-        call amap ( datan(1:ix*iy), ix, iy, 'gbl sfct', 0., 0. )
-
         spval=-1.e10
         write(6,*)"spval=",spval
+	
+	if (any(datan(1:ix*iy).gt.400.)) then
+	  write(6,*) "Missing data found in sfc temp"
+	  where (datan(1:ix*iy).gt.400.)
+	    datan(1:ix*iy)=spval
+	  end where
+          call fill(datan(1:ix*iy),ix,iy,.1*spval,
+     &            datan(1+2*ix*iy:3*ix*iy))
+	end if
+
+        call amap ( datan(1:ix*iy), ix, iy, 'gbl sfct', 0., 0. )
+
+
         write(6,*)"###################### do we have olsm_gbl=",olsm_gbl
         ijgd=igd+ix*(jgd-1)
         write(6,*)"igd,jgd,ijgd=",igd,jgd,ijgd
