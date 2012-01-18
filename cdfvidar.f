@@ -368,6 +368,10 @@ c     call ncpopt(NCVERBOS+NCFATAL)
       ier = nf_inq_dimid(ncid,'pres',idpres)
       in_type="p"
       if ( ier .ne. 0 ) then
+         ier = nf_inq_dimid(ncid,'plev',idpres)
+         in_type="p"
+      endif
+      if ( ier .ne. 0 ) then
          ier = nf_inq_dimid(ncid,'lvl',idpres)
          in_type="s"
       endif
@@ -377,6 +381,9 @@ c     call ncpopt(NCVERBOS+NCFATAL)
       write(6,*)"ier=",ier," nplev=",nplev
 
       ier = nf_inq_varid(ncid,'pres',ivpres)
+      if ( ier .ne. 0 ) then
+         ier = nf_inq_varid(ncid,'plev',ivpres)
+      endif
       if ( ier .ne. 0 ) then
          ier = nf_inq_varid(ncid,'lvl',ivpres)
       endif
@@ -504,12 +511,7 @@ c     call ncpopt(NCVERBOS+NCFATAL)
 
       call sintp16(datan(1:ix*iy),ix,iy,clon,glon,glat,sdiag,il)
 
-      !call prt_pan(clon,il,jl,1,'clon')
-       call prt_pan(clon,il,jl,2,'clon')
-      !call prt_pan(clon,il,jl,3,'clon')
-      !call prt_pan(clon,il,jl,4,'clon')
-      !call prt_pan(clon,il,jl,5,'clon')
-      !call prt_pan(clon,il,jl,6,'clon')
+      call prt_pan(clon,il,jl,2,'clon')
 
 ! printout of glat
       do j=1,iy,iy-1
@@ -524,12 +526,7 @@ c     call ncpopt(NCVERBOS+NCFATAL)
       call sintp16(datan(1+ix*iy:2*ix*iy),ix,iy,clat,glon,glat,
      &             sdiag,il)
 
-      !call prt_pan(clat,il,jl,1,'clat pan1')
-       call prt_pan(clat,il,jl,2,'clat pan2')
-      !call prt_pan(clat,il,jl,3,'clat pan3')
-      !call prt_pan(clat,il,jl,4,'clat pan4')
-      !call prt_pan(clat,il,jl,5,'clat pan5')
-      !call prt_pan(clat,il,jl,6,'clat pan6')
+      call prt_pan(clat,il,jl,2,'clat pan2')
 
       write(6,'("ix,iy,nplev,narch=",4i5)')ix,iy,nplev,narch
 
@@ -554,7 +551,7 @@ c     call ncpopt(NCVERBOS+NCFATAL)
         write(6,*)"######################## WARNING!!!!!!!!!!!!!!!!"
         write(6,*)"######################## since inlsavn le 0 ####"
         write(6,*)"######################## setting input lsm == 1!"
-      write(6,*)" nplev=",nplev,ix,iy
+        write(6,*)" nplev=",nplev,ix,iy
         do j=1,iy
          do i=1,ix
           lsm_gbl(i+(j-1)*ix)=1.
