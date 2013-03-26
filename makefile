@@ -1,9 +1,7 @@
-SHELL=/bin/sh
-
 CMP = ifort
-FFLAGS = -O -fpp
-LIBS = -L /apps/netcdf/4.1.3/lib -L /apps/hdf5/1.8.8/lib -lnetcdf -lnetcdff -lhdf5 -lhdf5_hl
-INC = -I /apps/netcdf/4.1.3/include
+FFLAGS = -fpp
+LIBS = -L $(NETCDF_ROOT)/lib -L $(HDF5_HOME)/lib -lnetcdf -lnetcdff -lhdf5 -lhdf5_hl
+INC = -I $(NETCDF_ROOT)/include
 
 OBJ2= dryadj.o findxn.o filt.o sintp16.o vidar.o invert.o\
 	cdfvidar.o vispl.o esmtrv.o amap.o mslp.o lconset.o \
@@ -15,7 +13,6 @@ OBJ2= dryadj.o findxn.o filt.o sintp16.o vidar.o invert.o\
 
 cdfvidar : $(OBJ2)
 	$(CMP) $(FFLAGS) $(OBJ2) $(LIBS) -o cdfvidar
-#	$(CMP) $(FFLAGS) $(OBJ2) $(LIBS) -o cdfvidar.C$(RES)L$(LEV)
 
 clean:
 	rm -f *.o core cdfvidar *.mod
