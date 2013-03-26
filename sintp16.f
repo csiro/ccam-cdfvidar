@@ -10,8 +10,6 @@
 ! with first data point at 0 deg lon, 90 deg N lat ****** LH coord system!!
 ! southern lats are negative
 
-      !include 'newmpar.h' ! il,jl,ifull
-
       integer il,jl,ifull
 
       real gdat(ng1*ng2),glon(ng1),glat(ng2)
@@ -50,13 +48,20 @@
       dn=1.e29
       dx=-1.e29
 
+      idiag=94
+      jdiag=280
+      idiag=-10
+      jdiag=-10
+
+      iqdiag=idiag+(jdiag-1)*il
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
 ! loop over all model grid points
 ! to interpolate from input grid to model grid
       do iq=1,ifull
         jmod=1+((iq-1)/il)
         imod=iq-(jmod-1)*il
-        !if(mod(iq,il).eq.0)write(6,*)"iq,im,jm=",iq,imod,jmod
+        if(iq.eq.iqdiag)write(6,*)"iq,im,jm=",iq,imod,jmod
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
 
 ! compute x and y of model point in input grid space
@@ -108,26 +113,24 @@
 
         if ( y.lt.-900. ) stop
 
-!       if(i.eq.20.and.j.gt.45.and.j.lt.55) then
-!       write(30,'("iq,i,j,xlon,rlat(iq),x,y=",3i5,4f10.2)')
-!    &              iq,i,j,xlon,rlat(iq),x,y
-!       endif!(i.eq.20.and.j.gt.45.and.j.lt.55) then
+        if(i.eq.idiag.and.j.gt.jdiag) then
+        write(30,'("iq,i,j,xlon,rlat(iq),x,y=",3i5,4f10.2)')
+     &              iq,i,j,xlon,rlat(iq),x,y
+        endif
 
 !***********************************************************************
 ! acutal interpolation to a point
 
         opdiag=imod.eq.il/2.and.il.lt.jmod.and.jmod.lt.2*il
         opdiag=(jmod.eq.1.5*il)
+        opdiag=imod.eq.idiag.and.jmod.eq.jdiag
         opdiag=F
 
         call intp16(gdat,ng1,ng2,x,y,rdat(iq),opdiag)
 
 !***********************************************************************
 
-        !if(odiag.and.iq.eq.20+(20-1)*il)then
-        if (odiag.and.
-     &     ((imod.eq.il/2.and.il.lt.jmod.and.jmod.lt.2*il).or.
-     &      (jmod.eq.1.5*il)))then
+        if (odiag.and.(imod.eq.idiag.and.jmod.eq.jdiag)) then
           write(6,*)"iq,imod,jmod=",iq,imod,jmod
           write(6,*)"xlon,rlong,rlat=",xlon,rlong(iq),rlat(iq)
           write(6,*)"jg,glon(jg),jgp",jg,glon(jg),glon(jgp)
@@ -181,7 +184,7 @@
       return ! subroutine sintp16(gdat,ng1,ng2,rdat,odiag)
       end
 !========================================================================
-      subroutine intp16(globex,ng1,ng2,x,y,fine,ofirst)
+      subroutine intp16(globex,ng1,ng2,x,y,fine,opdiag)
 
 !**********************************************************************
 !
@@ -192,51 +195,72 @@
 !     jlm: this is a quadratic fitting pts 2 & 3 & cubic value of centre point
 !**********************************************************************
 
-      logical prnt,ofirst
+      logical prnt,opdiag
       real globex(ng1,ng2)
 
-      data p25/.25/, c1/1./
+      data prnt/.true./
 
+      prnt=.false.
 ! determine the interpolation distances.
 
+! this is x direction values
       m=x
+      if(m.lt.1)then
+        m=ng1+m
+        prnt=.true.
+      endif
       mm1=m-1
+      if(mm1.lt.1)then
+        mm1=ng1+mm1
+        prnt=.true.
+      endif
       mp1=m+1
+      if(mp1.gt.ng1)then
+        mp1=mp1-ng1
+        prnt=.true.
+      endif
       mp2=m+2
+      if(mp2.gt.ng1)then
+        mp2=mp2-ng1
+        prnt=.true.
+      endif
 ! this code added 20 Nov 1998
 ! assumes data has wrap around in e-w direction
-      if(mm1.lt.1)mm1=ng1+mm1
       if(mp1.gt.ng1)mp1=mp1-ng1
       if(mp2.gt.ng1)mp2=mp2-ng1
 
+! this is y direction values
       n=y
-      if ( n.lt.1 ) n=1
-      if ( n.gt.ng2 ) n=ng2
+      if ( n.lt.1 ) then
+        n=1
+      else if ( n.gt.ng2 ) then
+        n=ng2
+      endif
       nm1=n-1
       np1=n+1
       np2=n+2
 
-      if ( ofirst ) then
-        print *,'m,nm1,mp2=',m,mm1,mp2
-        print *,'n,nm1,np2=',n,nm1,np2
-      endif
+!     if ( prnt ) then
+!       write(6,*)'x,m,nm1,mp2=',x,mm1,m,mp1,mp2
+!       write(6,*)'y,n,nm1,np2=',y,nm1,n,np1,np2
+!     endif
       if ( nm1.lt.1 .or. np2.gt.ng2 ) then
-       if ( ofirst) then
+       if (opdiag) then
         print *,'n,m,nm1,np2,ng2=',n,m,nm1,np2,ng2
         print *,'*********** n out of bounds in intp16 ***********'
-       endif ! ofirst
+       endif ! opdiag
        if ( nm1.lt.1 ) nm1=1
        if ( np1.gt.ng2 ) np1=ng2
        if ( np2.gt.ng2 ) np2=ng2
       endif
-      dx=x-m
-      dy=y-n
-      dxx=p25*(dx-c1)
-      dyy=p25*(dy-c1)
-!     print *,dx,dy,dxx,dyy
-!     do j=nm1,np2
-!       print *,j,(globex(i,j),i=mm1,mp2,1)
-!     enddo
+      dx=x-real(int(x))
+      dy=y-real(int(y))
+      dxx=.25*(dx-1.)
+      dyy=.25*(dy-1.)
+      if(opdiag)then
+       write(6,*)x,m,dx,dxx
+       write(6,*)y,n,dy,dyy
+      endif
 
 ! determine the 16 x-y gridpoints, i.e. top11-top44, to be used
 !        for the interpolation.
@@ -267,11 +291,10 @@
 
       fine = ab + dy*(ac-ab + dyy*(aa-ab-ac+ad) )
 
-      !if(ng1.lt.3.and.abs(fine).eq.100.)then
-      if(ofirst)then
+      if(opdiag)then
          write(6,111) m,n,dx,dy,dxx,dyy
-111      format (1h ,5x,'(m,n)=',i3,',',i3,3x,'(dx,dy)=',f6.3,',',f6.3,
-     .           3x,'(dxx,dyy)=',f6.3,',',f6.3)
+111      format (1h ,5x,'(m,n)=',i3,',',i3,3x,'(dx,dy)=',f7.3,',',f7.3,
+     .           3x,'(dxx,dyy)=',f7.3,',',f7.3)
          print *,'x,y: ',x,y
          write(6,122) top14,top24,top34,top44,top13,top23,top33,top43,
      .                top12,top22,top32,top42,top11,top21,top31,top41

@@ -2,8 +2,8 @@ SHELL=/bin/sh
 
 CMP = ifort
 FFLAGS = -O -fpp
-LIBS = -L /tools/netcdf/4.1.1/lib -lnetcdf -lnetcdff -lhdf5 -lhdf5_hl
-INC = -I /tools/netcdf/4.1.1/include
+LIBS = -L /apps/netcdf/4.1.3/lib -L /apps/hdf5/1.8.8/lib -lnetcdf -lnetcdff -lhdf5 -lhdf5_hl
+INC = -I /apps/netcdf/4.1.3/include
 
 OBJ2= dryadj.o findxn.o filt.o sintp16.o vidar.o invert.o\
 	cdfvidar.o vispl.o esmtrv.o amap.o mslp.o lconset.o \

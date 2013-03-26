@@ -5,13 +5,56 @@
       use comsig_m      
       use latlong_m
       use sigdata_m
+      
+      implicit none
+      
+      integer iout,in
+      integer kvin,kuin,kbin
+      integer ism,nrh
+      integer krin,ktin,khin
+      integer mtimer,id,jd
+      integer mxcyc,nvsig,ntimes
+      integer insm,klmax,l
+      integer ilx,jlx,i,j,iq
+      integer nplev,ilonx,ilatx
+      integer ier,ijd,ilt,jlk
+      integer irecd,ngatts,nvars
+      integer ndims,idv,lonid,latid
+      integer k,ivpres
+      integer narch,idtim,idpres
+      integer ilonn,iyr,imn,idy
+      integer ivtim,ihr,imi
+      integer icmonth_to_imn
+      integer nt,iarch,khout,igout
+      integer idvar,kn,kx
+      integer nopnts,nlpnts,ijgd
+      integer jk,imidpan2
+      integer ilatn,if2,inlsavn
+      integer inzsavn,ints,inzs
+      integer io_out,igd,jgd
+      
+      real ptop,grdx,grdy
+      real g,pi,rlonx,rlatx
+      real rlonn,rlatn
+      real rlong0,rlat0,schmidt
+      real elon,elat,xplev
+      real time,xa,an
+      real spval,sinlong,coslat
+      real coslong,polenz,poleny
+      real polenx,sinlat,sx,cx
+      real zonx,zony,sn,cn
+      real sinth,conth,den,zonz
+      real uzon,costh,ull,vll
+      real vmer,ther,ds,du,tanl
+      real rnml,stl1,stl2
+      real rlon
 
       character*80 inf
 
       common/mapproj/du,tanl,rnml,stl1,stl2
       include 'nplevs.h' ! maxplev
-      common/levpre/nplev,plev(maxplev)
-      real cplev(maxplev)
+      real, dimension(maxplev) :: plev,cplev
+      common/levpre/nplev,plev
 
       include 'netcdf.inc'
 
@@ -28,6 +71,8 @@
 * variable ids
       integer  idil,idjl,idkl,idnt,ix,iy
       integer  il,jl,kl,ifull
+      integer ncid
+      integer iernc,liernc,lncid,varid,dimid
       integer, dimension(2) :: ccdim
 
       common/lconther/ther
@@ -172,16 +217,30 @@ c sgml=0, dsg>0
 
       if ( ogbl ) then
         write(6,*)"set up cc geometry"
-        open(unit=inzs,file=zsfil,status='old',form='formatted')
-!       read(inzs,'(i3,i4,2f6.1,f5.2,f9.0,a47)')
-!    &          ilx,jlx,rlong0,rlat0,schmidt,ds,header
-        read(inzs,*)ilx,jlx,rlong0,rlat0,schmidt,ds,header
+        
+        liernc=nf_open(zsfil,nf_nowrite,lncid)
+        if (liernc==nf_noerr) then
+          iernc=nf_inq_dimid(lncid,"longitude",dimid)
+          iernc=nf_inq_dimlen(lncid,dimid,ilx)
+          iernc=nf_inq_dimid(lncid,"latitude",dimid)
+          iernc=nf_inq_dimlen(lncid,dimid,jlx)
+          iernc=nf_get_att_real(lncid,nf_global,"lon0",rlong0)
+          if (iernc/=0) then
+            write(6,*) "ERROR reading lon0 ",iernc
+            stop
+          end if
+          iernc=nf_get_att_real(lncid,nf_global,"lat0",rlat0)
+          iernc=nf_get_att_real(lncid,nf_global,"schmidt",schmidt)
+          ds=0.
+          header=''
+        else
+          open(unit=inzs,file=zsfil,status='old',form='formatted')
+          read(inzs,*)ilx,jlx,rlong0,rlat0,schmidt,ds,header
+        end if
         du=rlong0
         tanl=rlat0
         rnml=schmidt
         write(6,*)"gbl mapproj=",ilx,jlx,rlong0,rlat0,schmidt,ds
-!        if(ilx.ne.il.or.jlx.ne.jl)
-!     &     stop 'wrong topo file supplied (il,jl) for cdfvidar'
 
         il=ilx
         jl=6*il
@@ -198,7 +257,7 @@ c sgml=0, dsg>0
         allocate(x(ifull),y(ifull),z(ifull))
         allocate(ax(ifull),ay(ifull),az(ifull))
         allocate(bx(ifull),by(ifull),bz(ifull))
-	allocate(validlevcc(ifull))
+        allocate(validlevcc(ifull))
         
         ! set-up CC grid
         ccdim(1)=il
@@ -265,6 +324,7 @@ c       used in sint16; N.B. original rlong is -pi to pi
         write(6,*)"rlong:x,n=",rlonx,ilonx,rlonn,ilonn
         write(6,*)"rlatg:x,n=",rlatx,ilatx,rlatn,ilatn
       else ! ( not ogbl ) then
+        liernc=-1
         open(inzs,file=zsfil,form='formatted',recl=il*7,status='old')
         write(6,*)'read zsfil header'
         read(inzs,*,err=25)ilt,jlk,ds,du,tanl,rnml,stl1,stl2
@@ -280,17 +340,27 @@ c       used in sint16; N.B. original rlong is -pi to pi
         call lconset(ds)
       endif ! ( ogbl ) then
 
-      write(6,*)'read model grid zsg = g*zs'
-      read(inzs,*)zsg
+      if (liernc==nf_noerr) then
+        write(6,*)'read model grid zsg = g*zs'
+        iernc=nf_inq_varid(lncid,"zs",varid)
+        iernc=nf_get_var_real(lncid,varid,zsg)
+        write(6,*)'read model grid land-sea mask (0=ocean, 1=land)'
+        iernc=nf_inq_varid(lncid,"lsm",varid)
+        iernc=nf_get_var_real(lncid,varid,lsm_m)
+        iernc=nf_close(lncid)
+      else
+        write(6,*)'read model grid zsg = g*zs'
+        read(inzs,*)zsg
 
-      write(6,*)'convert g*zs to zs(m)'
-      do iq=1,ifull
-        zs(iq)=zsg(iq)/g ! convert ascii read in zs*g to zs(m)
-      enddo !iq=1,ifull
+        write(6,*)'convert g*zs to zs(m)'
+        do iq=1,ifull
+          zs(iq)=zsg(iq)/g ! convert ascii read in zs*g to zs(m)
+        enddo !iq=1,ifull
 
-      write(6,*)'read model grid land-sea mask (0=ocean, 1=land)'
-      read(inzs,*)lsm_m
-      close(inzs)
+        write(6,*)'read model grid land-sea mask (0=ocean, 1=land)'
+        read(inzs,*)lsm_m
+        close(inzs)
+      end if
 
       ijd=id+il*(jd-1)
       write(6,*)"ijd=",ijd," zs(m)=",zs(ijd)," lsm_m=",lsm_m(ijd)
