@@ -1018,6 +1018,7 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
 
 !         call ncread_2d(ncid,iarch,idvar,ix,iy,lsm_gbl)
          call ncread_2d(ncid,1,idvar,ix,iy,datan(1:ix*iy))	! MJT quick fix 
+	 datan(1:ix*iy)=abs(datan(1:ix*iy))                     ! MJT quick fix
          lsm_gbl=datan(1:ix*iy)
 
          ! MJT quick fix 
