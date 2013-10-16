@@ -124,7 +124,7 @@
         opdiag=imod.eq.il/2.and.il.lt.jmod.and.jmod.lt.2*il
         opdiag=(jmod.eq.1.5*il)
         opdiag=imod.eq.idiag.and.jmod.eq.jdiag
-        opdiag=F
+        opdiag=.False.
 
         call intp16(gdat,ng1,ng2,x,y,rdat(iq),opdiag)
 

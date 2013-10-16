@@ -1629,6 +1629,7 @@ c             call ncread_3d(ncid,iarch,idvar,ix,iy,nplev,datan)
 
 !     integer*2 ivar(nmax*35)
       integer*2, dimension(:), allocatable :: ivar
+      double precision, dimension(:), allocatable :: dvar
 
       real var(il*jl*kl)
       character*30 name
@@ -1660,11 +1661,24 @@ c read data
 
       if ( itype .eq. nf_short ) then
          write(6,*)"variable is short"
-         allocate(ivar(il*jl*kl))
+	 if (.not.allocated(ivar)) allocate(ivar(il*jl*kl))
+	 if (size(ivar).ne.il*jl*kl) then
+	   deallocate(ivar)
+	   allocate(ivar(il*jl*kl))
+	 end if
          call ncvgt(idhist,idvar,start,count,ivar,ier)
       else if ( itype .eq. nf_float ) then
          write(6,*)"variable is float"
          call ncvgt(idhist,idvar,start,count,var,ier)
+      else if ( itype .eq. nf_double ) then
+         write(6,*)"variable is double"
+	 if (.not.allocated(dvar)) allocate(dvar(il*jl*kl))
+	 if (size(dvar).ne.il*jl*kl) then
+	   deallocate(dvar)
+	   allocate(dvar(il*jl*kl))
+	 end if
+         call ncvgt(idhist,idvar,start,count,dvar,ier)
+	 var=real(dvar)
       else
          write(6,*)"variable is unknown"
          stop
@@ -1711,10 +1725,6 @@ c unpack data
 
       write(6,*)"ncread_3d idvar=",idvar," iarch=",iarch
       write(6,*)"ncread_3d dx=",dx," dn=",dn
-
-      if ( itype .eq. nf_short ) then
-         deallocate(ivar)
-      endif
 
       return ! ncread_3d
       end

@@ -1,6 +1,6 @@
 CMP = ifort
 FFLAGS = -fpp
-LIBS = -L $(NETCDF_ROOT)/lib -L $(HDF5_HOME)/lib -lnetcdf -lnetcdff -lhdf5 -lhdf5_hl
+LIBS = -L $(NETCDF_ROOT)/lib -L -lnetcdf -lnetcdff
 INC = -I $(NETCDF_ROOT)/include
 
 OBJ2= dryadj.o findxn.o filt.o sintp16.o vidar.o invert.o\
