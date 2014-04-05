@@ -553,8 +553,9 @@ c     call ncpopt(NCVERBOS+NCFATAL)
         read(timorg,'(15x,i2)') imi
       end if
 
-      if ( iyr .lt. 10 ) iyr = iyr+2000
-      if ( iyr .lt. 100 ) iyr = iyr+1900
+      ! disabled by MJT
+      !if ( iyr .lt. 10 ) iyr = iyr+2000
+      !if ( iyr .lt. 100 ) iyr = iyr+1900
 
       write(6,'("iyr,imn,idy,ihr,imi=",5i4)')iyr,imn,idy,ihr,imi
 
