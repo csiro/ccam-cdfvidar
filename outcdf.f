@@ -122,7 +122,8 @@ c define coords.
         icy=kdate/10000
         icm=max(1,min(12,(kdate-icy*10000)/100))
         icd=max(1,min(31,(kdate-icy*10000-icm*100)))
-        if(icy.lt.100)icy=icy+1900
+        ! disabled by MJT
+        !if(icy.lt.100)icy=icy+1900
         ich=ktime/100
         icmi=(ktime-ich*100)
         ics=0
