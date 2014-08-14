@@ -540,8 +540,8 @@ c     set time to number of minutes since start
 
       if(ktau.eq.0.or.itype.eq.-1)then  ! also for restart file
 !       write time-invariant fields      
-        call histwrt3(em,'map',idnc,iarch,il)
-        call histwrt3(f,'cor',idnc,iarch,il)
+        call histwrt3(real(em),'map',idnc,iarch,il)
+        call histwrt3(real(f),'cor',idnc,iarch,il)
         call histwrt3(clon,'clon',idnc,iarch,il)
         call histwrt3(clat,'clat',idnc,iarch,il)
       endif ! (ktau.eq.0) 
@@ -620,13 +620,13 @@ c     set time to number of minutes since start
       call histwrt4(us,'u',idnc,iarch,il,kl)
       call histwrt4(vs,'v',idnc,iarch,il,kl)
       call histwrt4(rs,'mixr',idnc,iarch,il,kl)
-      write(6,*)"ifullw,ifull=",ifullw,ifull
+      !write(6,*)"ifullw,ifull=",ifullw,ifull
 
-      if(ifullw.eq.ifull)then
-        call histwrt4(qfg,'qfg',idnc,iarch,il,kl)
-        call histwrt4(qlg,'qlg',idnc,iarch,il,kl)
-        call histwrt4(cfrax,'cfrac',idnc,iarch,il,kl)
-      endif
+      !if(ifullw.eq.ifull)then
+      !  call histwrt4(qfg,'qfg',idnc,iarch,il,kl)
+      !  call histwrt4(qlg,'qlg',idnc,iarch,il,kl)
+      !  call histwrt4(cfrax,'cfrac',idnc,iarch,il,kl)
+      !endif
 
       return ! subroutine openhist(idnc,iarch,itype,dim,sig
       end

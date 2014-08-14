@@ -519,7 +519,7 @@ c     call ncpopt(NCVERBOS+NCFATAL)
 
       !call ncagtc(ncid,ivtim,"time_origin",timorg,20,ier)
       ier = nf_get_att_text(ncid,ivtim,'units',timorg) ! MJT quick fix
-      write(6,*)"ier=",ier," timorg=",timorg
+      write(6,*)"ier=",ier," timorg=",trim(timorg)
 
       if (ier.eq.0) then
         i=index(timorg,'since')
@@ -663,16 +663,22 @@ c***********************************************************************
       select case(cu) ! MJT quick fix
         case('days')
           time=time*1440. 	
-	case('hours')
+	  case('hours')
           time=time*60. 	
-	case('minutes')
+	  case('minutes')
           ! no change	
-	case DEFAULT
-	  write(6,*) "cannot convert unknown time unit ",trim(cu)
-	  stop
+	  case DEFAULT
+	    write(6,*) "cannot convert unknown time unit ",trim(cu)
+	    stop
       end select
 
       write(6,*)"time=",time
+      
+      if ( time>1.E9 ) then
+        write(6,*) "ERROR: Time too large for real variable"
+        write(6,*) "Consider adjusting base date"
+        stop
+      end if
 
       write(6,*)" input levels are bottom-up"
       write(6,*)" model levels in vidar are top-down"
@@ -740,7 +746,7 @@ c***********************************************************************
       call ncread_3d(ncid,iarch,idvar,ix,iy,nplev,datan)
 
       ! MJT quick fix
-      validlevhost=1
+      validlevhost=1.
       call getvalidlev(validlevhost,datan,ix,iy,nplev)
       call filldat(datan,ix,iy,nplev)
 
@@ -1078,7 +1084,7 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
          do j=1,iy
            do i=1,ix
              iq=i+ix*(j-1)
-             do k=validlevhost(iq),nplev
+             do k=nint(validlevhost(iq)),nplev
                if (datan(iq).gt.plev(k)) then
                  validlevhost(iq)=real(k)
                  exit
@@ -1120,7 +1126,7 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
 	  where (datan(1:ix*iy).gt.400.)
 	    datan(1:ix*iy)=spval
 	  end where
-          call fill(datan(1:ix*iy),ix,iy,.1*spval,
+        call fill(datan(1:ix*iy),ix,iy,.1*spval,
      &            datan(1+2*ix*iy:3*ix*iy))
 	end if
 
