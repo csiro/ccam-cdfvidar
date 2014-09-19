@@ -29,7 +29,7 @@ cdfvidar.o vidar.o : comsig_m.o
 cdfvidar.o outcdf.o : cll_m.o
 cdfvidar.o vidar.o : sigdata_m.o
 cdfvidar.o : ccinterp.o
-vispl.o dryadj.o : lmax.h
+cdfvidar.o vispl.o dryadj.o : lmax.h
 cdfvidar.o vidar.o vispl.o : nplevs.h
 cdfvidar.o vidar.o : vidar.h
 utilities.o : utilities.f90
