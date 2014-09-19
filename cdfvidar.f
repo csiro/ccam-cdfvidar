@@ -14,7 +14,7 @@
       integer krin,ktin,khin
       integer mtimer,id,jd
       integer mxcyc,nvsig,ntimes
-      integer insm,klmax,l
+      integer insm,l
       integer ilx,jlx,i,j,iq
       integer nplev,ilonx,ilatx
       integer ier,ijd,ilt,jlk
@@ -57,12 +57,12 @@
       common/levpre/nplev,plev
 
       include 'netcdf.inc'
+      include 'lmax.h'
 
       parameter ( pi=3.1415926536 )
       parameter ( g=9.80616 )
-      parameter ( klmax = 100 )
       
-      real, dimension(klmax) :: dsg,sgml
+      real, dimension(lmax) :: dsg,sgml
 
       common/ncdfids/dimil,dimjl,dimkl,dimtim
      &              ,idil,idjl,idkl,idnt
@@ -138,7 +138,7 @@
       data zsfil/'/tmp/csjjk/topog5'/
       data tsfil/'/tmp/csjjk/sfct'/
       data smfil/'/tmp/csjjk/smfil'/
-      data sgml/klmax*0./, dsg/klmax*0./
+      data sgml/lmax*0./, dsg/lmax*0./
       data plevin/maxplev*0./
       data splineu/.true./, splinev/.true./, splinet/.true./
       data sdiag/.false./
@@ -163,8 +163,8 @@
 !     write ( unit=6, nml=vi)
 !####################### read namelist ############################
 
-      if (kl.gt.klmax) then
-        write(6,*) "ERROR: kl is greater than klmax"
+      if (kl.gt.lmax) then
+        write(6,*) "ERROR: kl is greater than lmax"
 	stop
       end if
 

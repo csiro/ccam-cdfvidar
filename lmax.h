@@ -1,1 +1,1 @@
-      parameter ( lmax=36 )
+      integer, parameter :: lmax = 200
