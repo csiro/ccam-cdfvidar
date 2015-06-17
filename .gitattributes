@@ -1,7 +1,7 @@
 * text=auto !eol
 /amap.f -text
 /ccinterp.f90 -text
-/cdfvidar.f -text
+/cdfvidar.f90 -text
 /cll_m.f90 -text
 /comsig_m.f90 -text
 /dryadj.f -text
@@ -27,7 +27,7 @@
 /nfft.f -text
 /nfft_m.f90 -text
 /nplevs.h -text
-/outcdf.f -text
+/outcdf.f90 -text
 /parm_m.f90 -text
 /precis_m.f90 -text
 /prt_pan.f -text

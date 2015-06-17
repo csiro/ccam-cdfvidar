@@ -64,16 +64,16 @@
       
       real, dimension(lmax) :: dsg,sgml
 
-      common/ncdfids/dimil,dimjl,dimkl,dimtim
-     &              ,idil,idjl,idkl,idnt
-* dimension ids
+      common/ncdfids/dimil,dimjl,dimkl,dimtim,idil,idjl,idkl,idnt
+! dimension ids
       integer  dimil,dimjl,dimkl,dimtim
-* variable ids
+! variable ids
       integer  idil,idjl,idkl,idnt,ix,iy
       integer  il,jl,kl,ifull
       integer ncid
       integer iernc,liernc,lncid,varid,dimid
       integer, dimension(2) :: ccdim
+      integer, dimension(2) :: start, ncount
 
       common/lconther/ther
       include 'vidar.h'
@@ -111,17 +111,17 @@
       character*80 zsavn,lsavn
       character*10 header,moistvar
 
-      namelist/gnml/inf,vfil,ds,du,tanl,rnml,stl1,stl2,inzs,zsfil
-     &             ,ints,tsfil, ogbl,zsavn,inzsavn,lsavn,inlsavn
-     &             ,plevin,orev,io_out,igd,jgd,id,jd,mtimer,ntimes
-     &             ,spline,mxcyc,nvsig,nrh
-     &             ,oesig,sgml,dsg,ptop,debug,notop,opre,have_gp
-     &             ,in,calout
-     &             ,iout,oform,sdiag
-     &             ,insm,smfil
-     &             ,splineu,splinev,splinet,zerowinds
-     &             ,grdx,grdy,slon,slat
-     &             ,moistvar,kl
+      namelist/gnml/inf,vfil,ds,du,tanl,rnml,stl1,stl2,inzs,zsfil   &
+                   ,ints,tsfil, ogbl,zsavn,inzsavn,lsavn,inlsavn    &
+                   ,plevin,orev,io_out,igd,jgd,id,jd,mtimer,ntimes  &
+                   ,spline,mxcyc,nvsig,nrh                          &
+                   ,oesig,sgml,dsg,ptop,debug,notop,opre,have_gp    &
+                   ,in,calout                                       &
+                   ,iout,oform,sdiag                                &
+                   ,insm,smfil                                      &
+                   ,splineu,splinev,splinet,zerowinds               &
+                   ,grdx,grdy,slon,slat                             &
+                   ,moistvar,kl
 
       data khin/0/,kuin/0/,kvin/0/,ktin/0/,krin/0/
       data igd/1/,jgd/1/,id/1/,jd/1/,mtimer/0/
@@ -165,7 +165,7 @@
 
       if (kl.gt.lmax) then
         write(6,*) "ERROR: kl is greater than lmax"
-	stop
+        stop
       end if
 
       call comsigalloc(kl)
@@ -179,7 +179,7 @@
 
            sgx(1)=0.
            if ( sgmlx(kl/2).gt.0. ) then
-c dsg=0, sgml>0
+! dsg=0, sgml>0
               do l=2,kl
                 sgx(l)=.5*(sgmlx(l-1)+sgmlx(l))
               end do ! l=2,kl
@@ -187,7 +187,7 @@ c dsg=0, sgml>0
                 dsgx(l-1)=sgx(l)-sgx(l-1)
               end do ! l=2,kl+1
            elseif ( dsgx(kl/2).gt.0. ) then
-c sgml=0, dsg>0
+! sgml=0, dsg>0
               do l=2,kl-1
                 sgx(l)=sgx(l-1)+dsgx(l-1)
               end do ! l=2,kl-1
@@ -296,8 +296,8 @@ c sgml=0, dsg>0
 
         do iq=1,ifull
 
-c       convert conformal cubic lats & longs to degrees (-90 to 90) & (0 to 360)
-c       used in sint16; N.B. original rlong is -pi to pi
+!       convert conformal cubic lats & longs to degrees (-90 to 90) & (0 to 360)
+!       used in sint16; N.B. original rlong is -pi to pi
           !rlat(iq)=rlat(iq)*180./pi
           !rlong(iq)=rlong(iq)*180./pi
           if(rlong(iq).lt.0.)rlong(iq)=rlong(iq)+360.
@@ -332,8 +332,7 @@ c       used in sint16; N.B. original rlong is -pi to pi
            write(6,*)'no header in newtopo file'
         else
            write(6,*)'Header information for topofile'
-           write(6,*)'ilt,jlk,ds,du,tanl,rnml,stl1,stl2'
-     &           ,ilt,jlk,ds,du,tanl,rnml,stl1,stl2
+           write(6,*)'ilt,jlk,ds,du,tanl,rnml,stl1,stl2',ilt,jlk,ds,du,tanl,rnml,stl1,stl2
            if(ilt.ne.il.or.jlk.ne.jl)stop 'wrong topofile supplied'
         endif     ! (ilt.eq.0.or.jlk.eq.0)
         write(6,*)"set up model grid params by calling lconset ds=",ds
@@ -369,7 +368,7 @@ c       used in sint16; N.B. original rlong is -pi to pi
 !####################### open input netcdf file ############################
       write(6,*)'inf='
       write(6,*)inf
-      ncid = ncopn(inf,ncnowrit,ier)
+      ier = nf_open(inf,nf_nowrite,ncid)
       write(6,*)'ncid=',ncid
       if(ier.ne.0) then
         write(6,*)' cannot open netCDF file; error code ',ier
@@ -377,24 +376,24 @@ c       used in sint16; N.B. original rlong is -pi to pi
       end if
 
 !####################### get attributes of input netcdf file ############################
-      call ncinq(ncid,ndims,nvars,ngatts,irecd,ier)
+      ier = nf_inq(ncid,ndims,nvars,ngatts,irecd)
       write(6,'("ndims,nvars,ngatts,irecd,ier")')
       write(6,'(5i6)') ndims,nvars,ngatts,irecd,ier
 
-c Get dimensions
+! Get dimensions
       write(6,*) "get dim1 ncid=",ncid
-c turn OFF fatal netcdf errors
-      call ncpopt(0)
-      lonid = ncdid(ncid,'lon',ier)
+! turn OFF fatal netcdf errors
+      !call ncpopt(0)
+      ier = nf_inq_dimid(ncid,'lon',lonid)
       write(6,*)"lon ncid,lonid,ier=",ncid,lonid,ier
-c turn on fatal netcdf errors
-c     write(6,*)"NCVERBOS,NCFATAL=",NCVERBOS,NCFATAL
-c     call ncpopt(NCVERBOS+NCFATAL)
+! turn on fatal netcdf errors
+!     write(6,*)"NCVERBOS,NCFATAL=",NCVERBOS,NCFATAL
+!     call ncpopt(NCVERBOS+NCFATAL)
       if ( ier.eq.0 ) then
         write(6,*)"ncid,lonid=",ncid,lonid
         ier= nf_inq_dimlen(ncid,lonid,ix)
         write(6,*)"input ix,ier=",ix,ier
-        latid= ncdid(ncid,'lat',ier)
+        ier = nf_inq_dimid(ncid,'lat',latid)
         ier= nf_inq_dimlen(ncid,latid,iy)
         write(6,*)"input iy,ier=",iy,ier
         ier = nf_inq_varid(ncid,'lon',idv)
@@ -407,12 +406,12 @@ c     call ncpopt(NCVERBOS+NCFATAL)
         ier = nf_get_var_real(ncid,idv,glat)
       else
         write(6,*)"now try longitude"
-        lonid = ncdid(ncid,'longitude',ier)
+        ier = nf_inq_dimid(ncid,'longitude',lonid)
         write(6,*)"lonid=",lonid," ier=",ier
         ier= nf_inq_dimlen(ncid,lonid,ix)
         write(6,*)"input ix=",ix," ier=",ier
 
-        latid= ncdid(ncid,'latitude',ier)
+        ier = nf_inq_dimid(ncid,'latitude',latid)
         ier= nf_inq_dimlen(ncid,latid,iy)
         write(6,*)"input iy=",iy
 
@@ -594,8 +593,7 @@ c     call ncpopt(NCVERBOS+NCFATAL)
       write(6,*)"============= sintp16 clat++++++++++++++++++++++++++++"
       write(6,*)" nplev=",nplev
 
-      call sintp16(datan(1+ix*iy:2*ix*iy),ix,iy,clat,glon,glat,
-     &             sdiag,il)
+      call sintp16(datan(1+ix*iy:2*ix*iy),ix,iy,clat,glon,glat,sdiag,il)
 
       call prt_pan(clat,il,jl,2,'clat pan2')
 
@@ -650,26 +648,27 @@ c     call ncpopt(NCVERBOS+NCFATAL)
 
       write(6,*)' reading variables '
 
-c***********************************************************************
+!***********************************************************************
       do iarch=1,narch
-c***********************************************************************
+!***********************************************************************
 
       sdiag=.false.
 
       ier = nf_inq_varid(ncid,'time',ivtim)
-      ier = nf_get_var1_real(ncid,ivtim,iarch,time)
+      start = iarch
+      ier = nf_get_var1_real(ncid,ivtim,start,time)
       nt=1
       
       select case(cu) ! MJT quick fix
         case('days')
           time=time*1440. 	
-	  case('hours')
+        case('hours')
           time=time*60. 	
-	  case('minutes')
+        case('minutes')
           ! no change	
-	  case DEFAULT
-	    write(6,*) "cannot convert unknown time unit ",trim(cu)
-	    stop
+        case DEFAULT
+          write(6,*) "cannot convert unknown time unit ",trim(cu)
+          stop
       end select
 
       write(6,*)"time=",time
@@ -699,8 +698,7 @@ c***********************************************************************
       call ncread_3d(ncid,iarch,idvar,ix,iy,nplev,datan)
 
       call amap (datan(1:ix*iy),ix,iy,'input hgt',0.,0.)
-      call amap (datan(1+ix*iy*(nplev-1):ix*iy*nplev),ix,iy,
-     &           'input hgt',0.,0.)
+      call amap (datan(1+ix*iy*(nplev-1):ix*iy*nplev),ix,iy,'input hgt',0.,0.)
 
       do k=1,nplev
        khin=k
@@ -709,10 +707,8 @@ c***********************************************************************
        igout=ix/2+ix*(iy/2-1)+ix*iy*(khin-1)
        write(6,*)"************************************************k=",k
        write(6,*)"===> khin,datan(igout)=",khin,datan(igout)
-       call sintp16(datan(1+ix*iy*(khin-1):ix*iy*khin),ix,iy,
-     &              hgt(:,:,khout),glon,glat,sdiag,il)
-       write(6,*)"khout,hgt(il/2,jl.2,khout)="
-     &           ,khout,hgt(il/2,jl/2,khout)
+       call sintp16(datan(1+ix*iy*(khin-1):ix*iy*khin),ix,iy,hgt(:,:,khout),glon,glat,sdiag,il)
+       write(6,*)"khout,hgt(il/2,jl.2,khout)=",khout,hgt(il/2,jl/2,khout)
        write(6,*)'<=== model hgt(m) khin,khout=',khin,khout
        call findxn(hgt(:,:,khout),ifull,-1.e29,xa,kx,an,kn)
       enddo ! k
@@ -757,14 +753,13 @@ c***********************************************************************
         khin=k
         khout=nplev+1-k
         if(orev)khout=k
-c       igout=ix/2+ix*(iy/2-1)+ix*iy*(khin-1)
-c       write(6,*)khin,datan(igout)
+!       igout=ix/2+ix*(iy/2-1)+ix*iy*(khin-1)
+!       write(6,*)khin,datan(igout)
 
-        call sintp16(datan(1+ix*iy*(khin-1):ix*iy*khin),ix,iy,
-     &      u(:,:,khout),glon,glat,sdiag,il)
+        call sintp16(datan(1+ix*iy*(khin-1):ix*iy*khin),ix,iy,u(:,:,khout),glon,glat,sdiag,il)
 
-c       write(6,*)khout,u(il/2,jl/2,khout)
-c       write(6,*)'model u(m) khin,khout=',khin,khout
+!       write(6,*)khout,u(il/2,jl/2,khout)
+!       write(6,*)'model u(m) khin,khout=',khin,khout
         call findxn(u(:,:,khout),ifull,-1.e29,xa,kx,an,kn)
       enddo
 
@@ -795,14 +790,13 @@ c       write(6,*)'model u(m) khin,khout=',khin,khout
         khin=k
         khout=nplev+1-k
         if(orev)khout=k
-c       igout=ix/2+ix*(iy/2-1)+ix*iy*(khin-1)
-c       write(6,*)khin,datan(igout)
+!       igout=ix/2+ix*(iy/2-1)+ix*iy*(khin-1)
+!       write(6,*)khin,datan(igout)
 
-        call sintp16(datan(1+ix*iy*(khin-1):ix*iy*khin),ix,iy,
-     &      v(:,:,khout),glon,glat,sdiag,il)
+        call sintp16(datan(1+ix*iy*(khin-1):ix*iy*khin),ix,iy,v(:,:,khout),glon,glat,sdiag,il)
 
-c       write(6,*)khout,v(il/2,jl/2,khout)
-c       write(6,*)'model v(m) khin,khout=',khin,khout
+!       write(6,*)khout,v(il/2,jl/2,khout)
+!       write(6,*)'model v(m) khin,khout=',khin,khout
         call findxn(v(:,:,khout),ifull,-1.e29,xa,kx,an,kn)
       enddo
 
@@ -834,12 +828,11 @@ c       write(6,*)'model v(m) khin,khout=',khin,khout
         khin=k
         khout=nplev+1-k
         if(orev)khout=k
-c       igout=ix/2+ix*(iy/2-1)+ix*iy*(khin-1)
-c       write(6,*)khin,datan(igout)
-       call sintp16(datan(1+ix*iy*(khin-1):ix*iy*khin),ix,iy,
-     &      temp(:,:,khout),glon,glat,sdiag,il)
-c       write(6,*)khout,temp(il/2,jl/2,khout)
-c       write(6,*)'model temp(m) khin,khout=',khin,khout
+!       igout=ix/2+ix*(iy/2-1)+ix*iy*(khin-1)
+!       write(6,*)khin,datan(igout)
+       call sintp16(datan(1+ix*iy*(khin-1):ix*iy*khin),ix,iy,temp(:,:,khout),glon,glat,sdiag,il)
+!       write(6,*)khout,temp(il/2,jl/2,khout)
+!       write(6,*)'model temp(m) khin,khout=',khin,khout
         call findxn(temp(:,:,khout),ifull,-1.e29,xa,kx,an,kn)
       enddo
 
@@ -899,11 +892,10 @@ c       write(6,*)'model temp(m) khin,khout=',khin,khout
         khout=nplev+1-k
         if(orev)khout=k
 
-c       igout=ix/2+ix*(iy/2-1)+ix*iy*(khin-1)
-c       write(6,*)khin,datan(igout)
+!       igout=ix/2+ix*(iy/2-1)+ix*iy*(khin-1)
+!       write(6,*)khin,datan(igout)
 
-        call sintp16(datan(1+ix*iy*(khin-1):ix*iy*khin),ix,iy,
-     &      rh(:,:,khout),glon,glat,sdiag,il)
+        call sintp16(datan(1+ix*iy*(khin-1):ix*iy*khin),ix,iy,rh(:,:,khout),glon,glat,sdiag,il)
 
         write(6,*)"make sure data is always between 0 and 100!"
         write(6,*)"for both mixr and rh"
@@ -911,8 +903,8 @@ c       write(6,*)khin,datan(igout)
            rh(:,:,khout)=max(0.,min(100.,rh(:,:,khout)))
         !enddo !i=1,ifull
 
-c       write(6,*)khout,rh(il/2,jl/2,khout)
-c       write(6,*)'model rh(m) khin,khout=',khin,khout
+!       write(6,*)khout,rh(il/2,jl/2,khout)
+!       write(6,*)'model rh(m) khin,khout=',khin,khout
 
         call findxn(rh(:,:,khout),ifull,-1.e29,xa,kx,an,kn)
 
@@ -1126,8 +1118,7 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
 	  where (datan(1:ix*iy).gt.400.)
 	    datan(1:ix*iy)=spval
 	  end where
-        call fill(datan(1:ix*iy),ix,iy,.1*spval,
-     &            datan(1+2*ix*iy:3*ix*iy))
+        call fill(datan(1:ix*iy),ix,iy,.1*spval,datan(1+2*ix*iy:3*ix*iy))
 	end if
 
         call amap ( datan(1:ix*iy), ix, iy, 'gbl sfct', 0., 0. )
@@ -1179,13 +1170,11 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
         write(6,*)"fill in missing values nlpnts,nopnts=",nlpnts,nopnts
 
         write(6,*)"=======> for land array, fill in tss ocean values"
-        call fill(datan(1:ix*iy),ix,iy,.1*spval,
-     &            datan(1+2*ix*iy:3*ix*iy))
+        call fill(datan(1:ix*iy),ix,iy,.1*spval,datan(1+2*ix*iy:3*ix*iy))
 
         if(olsm_gbl .and. nopnts.gt.0)then
            write(6,*)"=======> for ocean array, fill in tss land values"
-           call fill(datan(1+ix*iy:2*ix*iy),ix,iy,.1*spval,
-     &               datan(1+2*ix*iy:3*ix*iy))
+           call fill(datan(1+ix*iy:2*ix*iy),ix,iy,.1*spval,datan(1+2*ix*iy:3*ix*iy))
         endif!(olsm_gbl)then
 
         write(6,*)"igd,jgd,lgtss=",igd,jgd,datan(ijgd)
@@ -1199,8 +1188,7 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
 
         if(olsm_gbl .and. nopnts.gt.0)then
           write(6,*)"=========================> now interp. ocean data"
-           call sintp16(datan(1+ix*iy:2*ix*iy),ix,iy,sfcto_m,glon,glat,
-     &                  sdiag,il)   ! ocean
+           call sintp16(datan(1+ix*iy:2*ix*iy),ix,iy,sfcto_m,glon,glat,sdiag,il)   ! ocean
         endif!(olsm_gbl)then
 
         call prt_pan(sfct   ,il,jl,2,'tss')
@@ -1261,9 +1249,9 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
 
         call ncread_2d(ncid,iarch,idvar,ix,iy,datan(1:ix*iy))
 	
-	where (datan(1:ix*iy).gt.1.01)
-	  datan(1:ix*iy)=0.
-	end where
+        where (datan(1:ix*iy).gt.1.01)
+          datan(1:ix*iy)=0.
+        end where
 
         call amap ( datan(1:ix*iy), ix, iy, 'gbl fice', 0., 0. )
 
@@ -1306,14 +1294,12 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
         write(6,*)"fill in missing values nlpnts,nopnts=",nlpnts,nopnts
 
         write(6,*)"===> for ocean array, fill in fracice land values"
-        call fill(datan(1+ix*iy:2*ix*iy),ix,iy,.1*spval,
-     &            datan(1+2*ix*iy:3*ix*iy))
+        call fill(datan(1+ix*iy:2*ix*iy),ix,iy,.1*spval,datan(1+2*ix*iy:3*ix*iy))
 
         write(6,*)"igd,jgd,ogtss=",igd,jgd,datan(ijgd+ix*iy)
 
         write(6,*)"=========================> now interp. ocean data"
-        call sintp16(datan(1+ix*iy:2*ix*iy),ix,iy,fracice,glon,glat,
-     &                  sdiag,il)   ! ocean
+        call sintp16(datan(1+ix*iy:2*ix*iy),ix,iy,fracice,glon,glat,sdiag,il)   ! ocean
 
         call prt_pan(fracice,il,jl,2,'fracice')
 
@@ -1347,7 +1333,7 @@ c       write(6,*)'model rh(m) khin,khout=',khin,khout
       call findxn(temp(:,:,nplev),ifull,-1.e29,xa,kx,an,kn)
 
       write(6,*)"nplev=",nplev
-c constrain rh to 0-100
+! constrain rh to 0-100
         do k=1,nplev
          do j=1,jl
           do i=1,il
@@ -1359,16 +1345,16 @@ c constrain rh to 0-100
 !############### fix winds if CC grid ###############################
        if ( ogbl ) then
 
-c     here use unstaggered lats and lons for u and v
-c     For calculating zonal and meridional wind components, use the
-c     following information, where theta is the angle between the
-c     (ax,ay,az) vector [along the xg axis] and the zonal-component-vector:
-c     veczon = k x r, i.e. (-y,x,0)/sqrt(x**2 + y**2)
-c     vecmer = r x veczon, i.e. (-xz,-yz,x**2 + y**2)/sqrt(x**2 + y**2)
-c     costh is (veczon . a) = (-y*ax + x*ay)/sqrt(x**2 + y**2)
-c     sinth is (vecmer . a) = [-xz*ax - yz*ay + (x**2 + y**2)*az]/sqrt
-c      using (r . a)=0, sinth collapses to az/sqrt(x**2 + y**2)
-c     For rotated coordinated version, see JMcG's notes
+!     here use unstaggered lats and lons for u and v
+!     For calculating zonal and meridional wind components, use the
+!     following information, where theta is the angle between the
+!     (ax,ay,az) vector [along the xg axis] and the zonal-component-vector:
+!     veczon = k x r, i.e. (-y,x,0)/sqrt(x**2 + y**2)
+!     vecmer = r x veczon, i.e. (-xz,-yz,x**2 + y**2)/sqrt(x**2 + y**2)
+!     costh is (veczon . a) = (-y*ax + x*ay)/sqrt(x**2 + y**2)
+!     sinth is (vecmer . a) = [-xz*ax - yz*ay + (x**2 + y**2)*az]/sqrt
+!      using (r . a)=0, sinth collapses to az/sqrt(x**2 + y**2)
+!     For rotated coordinated version, see JMcG's notes
 
       coslong=cos(rlong0*pi/180.)
       sinlong=sin(rlong0*pi/180.)
@@ -1411,7 +1397,7 @@ c     For rotated coordinated version, see JMcG's notes
       do j=1,jl
         do i=1,il
         iq=i+(j-1)*il
-c       set up unit zonal vector components
+!       set up unit zonal vector components
         zonx=            -polenz*y(iq)
         zony=polenz*x(iq)-polenx*z(iq)
         zonz=polenx*y(iq)
@@ -1429,10 +1415,8 @@ c       set up unit zonal vector components
            v(i,j,k)=-sinth*uzon+costh*vmer
            if(iq.eq.imidpan2)then
              write(6,'("before zon/mer; k,u,v: ",i3,2f10.2)')k,uzon,vmer
-             write(6,'("zonx,zony,zonz,den,costh,sinth",
-     &                6f8.4)')zonx,zony,zonz,den,costh,sinth
-             write(6,'("after zon/mer; k,u,v: ",i3,2f10.2)')
-     &                        k,u(i,j,k),v(i,j,k)
+             write(6,'("zonx,zony,zonz,den,costh,sinth",6f8.4)')zonx,zony,zonz,den,costh,sinth
+             write(6,'("after zon/mer; k,u,v: ",i3,2f10.2)') k,u(i,j,k),v(i,j,k)
            endif
         enddo  ! k loop
         end do
@@ -1454,21 +1438,21 @@ c       set up unit zonal vector components
 !############### fix winds if DARLAM grid ###############################
        else ! not ogbl
 
-c convert e-w/n-s lat/lon winds to model winds
-c loop over all model grid points
+! convert e-w/n-s lat/lon winds to model winds
+! loop over all model grid points
         do k=1,nplev
          write(6,*)k,temp(1,1,k),u(1,1,k),v(1,1,k)
          do j=1,jl
           do i=1,il
-c get lat lon of model grid ( just to get ther )
+! get lat lon of model grid ( just to get ther )
            call lconll(rlon,rlat,float(i),float(j))
-c calculate ucmp l.c.winds
-c ulc=v@u*s(th)+u@u*c(th)
+! calculate ucmp l.c.winds
+! ulc=v@u*s(th)+u@u*c(th)
            ull = u(i,j,k)
            vll = v(i,j,k)
            u(i,j,k)=vll*sin(ther)+ull*cos(ther)
-c calculate vcmp l.c.winds
-c vlc=v@v*c(th)-u@v*s(th)
+! calculate vcmp l.c.winds
+! vlc=v@v*c(th)-u@v*s(th)
            v(i,j,k)=vll*cos(ther)-ull*sin(ther)
           enddo ! i
          enddo ! j
@@ -1484,8 +1468,7 @@ c vlc=v@v*c(th)-u@v*s(th)
       write(6,'(6a10)')"plev","hgt","temp","u","v","rh/mr"
       do k=1,nplev
           cplev(k)=plev(nplev+1-k)
-          write(6,'(5f10.2,f10.5)') cplev(k),hgt(i,j,k),temp(i,j,k)
-     &                       ,u(i,j,k),v(i,j,k),rh(i,j,k)
+          write(6,'(5f10.2,f10.5)') cplev(k),hgt(i,j,k),temp(i,j,k),u(i,j,k),v(i,j,k),rh(i,j,k)
       enddo ! k=1,nplev
 
       iq=il/2+(jl/2-1)*il
@@ -1500,8 +1483,7 @@ c vlc=v@v*c(th)-u@v*s(th)
       if2=0
 
 !#######################################################################
-      call vidar(nplev,hgt,temp,u,v,rh,validlevcc
-     &     ,iyr,imn,idy,ihr,iarch,time,mtimer,cplev,io_out,il,kl)
+      call vidar(nplev,hgt,temp,u,v,rh,validlevcc,iyr,imn,idy,ihr,iarch,time,mtimer,cplev,io_out,il,kl)
 !#######################################################################
 
       enddo ! narch
@@ -1522,7 +1504,7 @@ c vlc=v@v*c(th)-u@v*s(th)
 
       stop
       end ! cdfvidar
-c***************************************************************************
+!***************************************************************************
       subroutine ncread_2d(idhist,iarch,idvar,il,jl,var)
 
 !     include 'gblparm.h'
@@ -1541,7 +1523,7 @@ c***************************************************************************
       write(6,*)"iarch=",iarch," idvar=",idvar
       write(6,*)"il=",il," jl=",jl
 
-c read name
+! read name
       ier = nf_inq_varname(idhist,idvar,name)
       write(6,*)"ier=",ier," name=",name
 
@@ -1565,12 +1547,12 @@ c read name
       if ( itype .eq. nf_short ) then
          allocate(ivar(il*jl))
          write(6,*)"variable is short"
-         call ncvgt(idhist,idvar,start,count,ivar,ier)
+         ier = nf_get_vara_int2(idhist,idvar,start,count,ivar)
          write(6,*)"ivar(1)=",ivar(1)," ier=",ier
          write(6,*)"ivar(il*jl)=",ivar(il*jl)
       else if ( itype .eq. nf_float ) then
          write(6,*)"variable is float"
-         call ncvgt(idhist,idvar,start,count,var,ier)
+         ier = nf_get_vara_real(idhist,idvar,start,count,var)
          write(6,*)"var(1)=",var(1)," ier=",ier
          write(6,*)"var(il*jl)=",var(il*jl)
       else
@@ -1578,17 +1560,17 @@ c read name
          stop
       endif
 
-c obtain scaling factors and offsets from attributes
-        call ncagt(idhist,idvar,'add_offset',addoff,ier)
+! obtain scaling factors and offsets from attributes
+        ier = nf_get_att_real(idhist,idvar,'add_offset',addoff)
         if ( ier.ne.0 ) addoff=0.
         write(6,*)"ier=",ier," addoff=",addoff
 
-        call ncagt(idhist,idvar,'scale_factor',sf,ier)
+        ier = nf_get_att_real(idhist,idvar,'scale_factor',sf)
         if ( ier.ne.0 ) sf=1.
         write(6,*)"ier=",ier," addoff=",addoff
 
       else!(ier.eq.0)then
-c no data found
+! no data found
         do i=1,il*jl
          var(i)=0
         enddo
@@ -1596,19 +1578,17 @@ c no data found
         addoff=0.
       endif!(ier.eq.0)then
 
-c unpack data
+! unpack data
       dx=-1.e29
       dn= 1.e29
       do j=1,jl
         do i=1,il
           ij=i+(j-1)*il
       	  if ( itype .eq. nf_short ) then
-           if(i.eq.1.and.j.eq.1)
-     &      write(6,*)"ivar,sf,addoff=",ivar(ij),sf,addoff
+           if(i.eq.1.and.j.eq.1) write(6,*)"ivar,sf,addoff=",ivar(ij),sf,addoff
             var(ij) = ivar(ij)*sf + addoff
           else
-           if(i.eq.1.and.j.eq.1)
-     &      write(6,*)"var,sf,addoff=",var(ij),sf,addoff
+           if(i.eq.1.and.j.eq.1) write(6,*)"var,sf,addoff=",var(ij),sf,addoff
             var(ij) = var(ij)*sf + addoff
           endif
           dx=max(dx,var(ij))
@@ -1625,9 +1605,9 @@ c unpack data
 
       return ! ncread_2d
       end
-c***************************************************************************
+!***************************************************************************
       subroutine ncread_3d(idhist,iarch,idvar,il,jl,kl,var)
-c             call ncread_3d(ncid,iarch,idvar,ix,iy,nplev,datan)
+!             call ncread_3d(ncid,iarch,idvar,ix,iy,nplev,datan)
 
 !     include 'gblparm.h'
       include 'netcdf.inc'
@@ -1661,31 +1641,31 @@ c             call ncread_3d(ncid,iarch,idvar,ix,iy,nplev,datan)
       write(6,'("start=",4i4)') start
       write(6,'("count=",4i4)') count
 
-c read data
+! read data
       write(6,*)"idhist=",idhist," idvar=",idvar
       ier = nf_inq_vartype(idhist,idvar,itype)
       write(6,*)"ier=",ier," itype=",itype
 
       if ( itype .eq. nf_short ) then
          write(6,*)"variable is short"
-	 if (.not.allocated(ivar)) allocate(ivar(il*jl*kl))
-	 if (size(ivar).ne.il*jl*kl) then
-	   deallocate(ivar)
-	   allocate(ivar(il*jl*kl))
-	 end if
-         call ncvgt(idhist,idvar,start,count,ivar,ier)
+         if (.not.allocated(ivar)) allocate(ivar(il*jl*kl))
+         if (size(ivar).ne.il*jl*kl) then
+           deallocate(ivar)
+           allocate(ivar(il*jl*kl))
+         end if
+         ier = nf_get_vara_int2(idhist,idvar,start,count,ivar)
       else if ( itype .eq. nf_float ) then
          write(6,*)"variable is float"
-         call ncvgt(idhist,idvar,start,count,var,ier)
+         ier = nf_get_vara_real(idhist,idvar,start,count,var)
       else if ( itype .eq. nf_double ) then
          write(6,*)"variable is double"
-	 if (.not.allocated(dvar)) allocate(dvar(il*jl*kl))
-	 if (size(dvar).ne.il*jl*kl) then
-	   deallocate(dvar)
-	   allocate(dvar(il*jl*kl))
-	 end if
-         call ncvgt(idhist,idvar,start,count,dvar,ier)
-	 var=real(dvar)
+         if (.not.allocated(dvar)) allocate(dvar(il*jl*kl))
+         if (size(dvar).ne.il*jl*kl) then
+           deallocate(dvar)
+           allocate(dvar(il*jl*kl))
+         end if
+         ier = nf_get_vara_double(idhist,idvar,start,count,dvar)
+         var=real(dvar)
       else
          write(6,*)"variable is unknown"
          stop
@@ -1695,35 +1675,31 @@ c read data
       sf=1.
       if ( itype .eq. nf_short ) then
       write(6,*)"obtain scaling factors and offsets from attributes"
-      call ncagt(idhist,idvar,'add_offset',addoff,ier)
+      ier = nf_get_att_real(idhist,idvar,'add_offset',addoff)
       if ( ier.ne.0 ) addoff=0.
       write(6,*)"ier=",ier," addoff=",addoff
 
-      call ncagt(idhist,idvar,'scale_factor',sf,ier)
+      ier = nf_get_att_real(idhist,idvar,'scale_factor',sf)
       if ( ier.ne.0 ) sf=1.
       write(6,*)"ier=",ier," sf=",sf
       endif
 
-c unpack data
+! unpack data
       dx=-1.e29
       dn= 1.e29
       do k=1,kl
        do j=1,jl
         do i=1,il
           ijk=i+(j-1)*il+(k-1)*il*jl
-          if(i.eq.1.and.j.eq.1.and.k.eq.1)
-     &       write(6,*)"i,j,k,ijk=",i,j,k,ijk
+          if(i.eq.1.and.j.eq.1.and.k.eq.1) write(6,*)"i,j,k,ijk=",i,j,k,ijk
       	  if ( itype .eq. nf_short ) then
-           if(i.eq.1.and.j.eq.1.and.k.eq.1)
-     &      write(6,*)"ivar,sf,addoff=",ivar(ijk),sf,addoff
+           if(i.eq.1.and.j.eq.1.and.k.eq.1) write(6,*)"ivar,sf,addoff=",ivar(ijk),sf,addoff
             var(ijk) = ivar(ijk)*sf + addoff
           else
-           if(i.eq.1.and.j.eq.1.and.k.eq.1)
-     &      write(6,*)"var,sf,addoff=",var(ijk),sf,addoff
+           if(i.eq.1.and.j.eq.1.and.k.eq.1) write(6,*)"var,sf,addoff=",var(ijk),sf,addoff
             var(ijk) = var(ijk)*sf + addoff
           endif
-          if(i.eq.1.and.j.eq.1.and.k.eq.1)
-     &      write(6,*)"var=",var(ijk)
+          if(i.eq.1.and.j.eq.1.and.k.eq.1) write(6,*)"var=",var(ijk)
           dx=max(dx,var(ijk))
           dn=min(dn,var(ijk))
         end do
@@ -1735,13 +1711,13 @@ c unpack data
 
       return ! ncread_3d
       end
-c***********************************************************************
-      subroutine filt_nc(var,il,jl,kl)
-
-      real var(il,jl,kl)
-
-      write(6,*) "filt_nc"
-
+!***********************************************************************
+!      subroutine filt_nc(var,il,jl,kl)
+!
+!      real var(il,jl,kl)
+!
+!      write(6,*) "filt_nc"
+!
 !     do k=1,kl
 !      do j=1,jl
 !       do i=1,il
@@ -1749,9 +1725,9 @@ c***********************************************************************
 !       end do
 !      end do
 !     end do
-
-      return ! filt_nc
-      end
+!
+!      return ! filt_nc
+!      end
 !***********************************************************************
       function icmonth_to_imn(cmonth)
 
@@ -1793,13 +1769,13 @@ c***********************************************************************
         do i=1,ix
           iq=i+ix*(j-1)
           do k=nint(validlev(iq)),plev	
-	    iqk=i+ix*(j-1)+ix*iy*(k-1)
-	    if (datan(iqk).lt.1.E10) then
-	      validlev(iq)=real(k)
-	      exit
-	    end if
-	  end do
-	end do
+            iqk=i+ix*(j-1)+ix*iy*(k-1)
+            if (datan(iqk).lt.1.E10) then
+              validlev(iq)=real(k)
+              exit
+            end if
+          end do
+        end do
       end do
       
       return
@@ -1835,29 +1811,29 @@ c***********************************************************************
                 end if
                 if (i.lt.ix) then
                   iqn=i+1+ix*(j-1)
-		else
+                else
                   iqn=1+ix*(j-1)	
-		end if
+                end if
                 if (datatemp(iqn).gt.1.E10) then
                     datatemp(iqn)=datan(iqk)
                 end if
-	        if (j.gt.1) then
+                if (j.gt.1) then
                   iqn=i+ix*(j-2)
                   if (datatemp(iqn).gt.1.E10) then
                     datatemp(iqn)=datan(iqk)
                   end if
-		end if
-	        if (i.gt.1) then
+                end if
+                if (i.gt.1) then
                   iqn=i-1+ix*(j-1)
-		else
-		  iqn=ix+ix*(j-1)
-		end if
+                else
+                  iqn=ix+ix*(j-1)
+                end if
                 if (datatemp(iqn).gt.1.E10) then
                   datatemp(iqn)=datan(iqk)
                 end if
-	      end if
-	    end do
-	  end do
+              end if
+            end do
+          end do
           datan(is:ie)=datatemp(:)
         end do
       end do
