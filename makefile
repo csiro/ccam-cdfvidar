@@ -9,7 +9,7 @@ OBJ2= dryadj.o findxn.o filt.o sintp16.o vidar.o invert.o\
       setxyz_m.o ccinterp.o jimcc_m.o \
       latltoij_m.o xyzinfo_m.o newmpar_m.o indices_m.o \
       parm_m.o precis_m.o ind_m.o jimco_m.o jim_utils.o nfft_m.o \
-      latlong_m.o comsig_m.o cll_m.o sigdata_m.o
+      latlong_m.o comsig_m.o cll_m.o sigdata_m.o netcdf_m.o
 
 cdfvidar : $(OBJ2)
 	$(CMP) $(FFLAGS) $(OBJ2) $(LIBS) -o cdfvidar
@@ -32,6 +32,7 @@ cdfvidar.o : ccinterp.o
 cdfvidar.o vispl.o dryadj.o : lmax.h
 cdfvidar.o vidar.o vispl.o : nplevs.h
 cdfvidar.o vidar.o : vidar.h
+cdfvidar.o outcdf.o : netcdf_m.o
 utilities.o : utilities.f90
 ccinterp.o : ccinterp.f90 setxyz_m.o xyzinfo_m.o latltoij_m.o newmpar_m.o indices_m.o precis_m.o
 latltoij_m.o : latltoij_m.f90 xyzinfo_m.o newmpar_m.o precis_m.o

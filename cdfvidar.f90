@@ -4,6 +4,7 @@
       use cll_m
       use comsig_m      
       use latlong_m
+      use netcdf_m
       use sigdata_m
       
       implicit none
@@ -56,7 +57,6 @@
       real, dimension(maxplev) :: plev,cplev
       common/levpre/nplev,plev
 
-      include 'netcdf.inc'
       include 'lmax.h'
 
       parameter ( pi=3.1415926536 )
@@ -1507,12 +1507,18 @@
 !***************************************************************************
       subroutine ncread_2d(idhist,iarch,idvar,il,jl,var)
 
-!     include 'gblparm.h'
-      include 'netcdf.inc'
+      use netcdf_m
 
+      implicit none
+      
+!     include 'gblparm.h'
+
+      integer idhist,il,jl,iarch,idvar
+      integer i,j,ij,ier,itype
       integer start(3),count(3)
 
       real var(il*jl), addoff, sf
+      real dx, dn
 
       integer*2, dimension(:), allocatable :: ivar
 !     integer*2 ivar(nnx*nny)
@@ -1609,8 +1615,9 @@
       subroutine ncread_3d(idhist,iarch,idvar,il,jl,kl,var)
 !             call ncread_3d(ncid,iarch,idvar,ix,iy,nplev,datan)
 
+      use netcdf_m
+      
 !     include 'gblparm.h'
-      include 'netcdf.inc'
 
       integer start(4),count(4)
 

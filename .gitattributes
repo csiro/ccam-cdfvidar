@@ -23,6 +23,7 @@
 /makefile -text
 /maxmin.f -text
 /mslp.f -text
+/netcdf_m.f90 -text
 /newmpar_m.f90 -text
 /nfft.f -text
 /nfft_m.f90 -text

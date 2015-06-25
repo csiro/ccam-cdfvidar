@@ -1,6 +1,8 @@
 !=======================================================================
       subroutine outcdf(ihr,idy,imon,iyr,iout,nt,time,mtimer,sig,cdffile,ddss,il,kl)
-     
+
+      use netcdf_m
+      
       implicit none
       
       integer il,jl,kl,ifull
@@ -40,7 +42,6 @@
       real sig(kl)
       real time,dt,ds
 
-      include 'netcdf.inc'
       character cdffile*80
 
       common/cdfind/ixp,iyp,idlev,idnt
@@ -87,8 +88,8 @@
         write(6,*)'nccre of ',cdffile
 #ifdef usenc3
       !idnc = nccre(cdffile, ncclob, ier)
-      ier = nf_create(cdffile,nf_clobber,idnc)
-      !ier = nf_create(cdffile,NF_64BIT_OFFSET,idnc)
+      !ier = nf_create(cdffile,nf_clobber,idnc)
+      ier = nf_create(cdffile,NF_64BIT_OFFSET,idnc)
 #else
 	!ier=nf_create(cdffile,NF_NOCLOBBER,idnc)
 	!ier=nf_create(cdffile,NF_64BIT_OFFSET,idnc)
@@ -275,6 +276,7 @@
       subroutine openhist(idnc,iarch,itype,dim,sig,kdate,ktime,time,mtimer,il,kl)
 
       use cll_m
+      use netcdf_m
       use sigdata_m
       use xyzinfo_m, only : em,f
 
@@ -294,7 +296,6 @@
       !include 'map.h'
 !     include 'mapproj.h'
 !     include 'morepbl.h'
-      include 'netcdf.inc'
 !     include 'nsibd.h' ! rsmin,ivegt,sigmf,tgg,tgf,ssdn,res,rmc,isoilm,ico2em
       !include 'parm.h'
 !     include 'parmdyn.h'
@@ -657,7 +658,7 @@
 !=======================================================================
       subroutine attrib(cdfid,dim,ndim,name,lname,units,xmin,xmax)
 
-      include 'netcdf.inc'
+      use netcdf_m
 
       integer*2 minv, maxv, missval   ! was integer*2
       parameter(minv = -32500, maxv = 32500, missval = -32501)
@@ -711,20 +712,26 @@
       subroutine histwrt3(var,sname,idnc,iarch,il)
 ! Write 2d+t fields from the savegrid array.
 
-      include 'netcdf.inc'
+      use netcdf_m
+      
+      implicit none
       
       integer il,jl,ifull
+      integer iarch
 
       !include 'newmpar.h'
       !include 'parm.h'
 
       integer mid, start(3), count(3)
-      integer*2 ipack(il,6*il) ! was integer*2 
+      integer imn, imx, jmn, jmx
+      integer i, j, ndims
+      integer(kind=2) ipack(il,6*il) ! was integer*2 
       character(len=*), intent(in) :: sname
 !     character*8 sname
-      integer*2 minv, maxv, missval ! was integer*2 
+      integer(kind=2) minv, maxv, missval ! was integer*2 
       parameter(minv = -32500, maxv = 32500, missval = -32501)
       real addoff, scale_f
+      real varn, varx, xmin, xmax, pvar
       integer, intent(in) :: idnc
       integer ier
 
@@ -771,7 +778,8 @@
         end do
       end do
 
-      ier = nf_put_vara_int2(idnc, mid, start, count, ipack)
+      ier = nf_inq_varndims(idnc,mid,ndims)
+      ier = nf_put_vara_int2(idnc, mid, start(1:ndims), count(1:ndims), ipack)
       if(ier.ne.0)stop "in histwrt3 ier not zero"
 
       write(6,'("histwrt3:",a7," nt=",i4," n=",f12.4," ij=",2i4," x=",f12.4," ij=",2i4)') sname,iarch,varn,imn,jmn,varx,imx,jmx
@@ -782,7 +790,7 @@
       subroutine histwrt4(var,sname,idnc,iarch,il,kl)
 ! Write 3d+t fields from the savegrid array.
 
-      include 'netcdf.inc'
+      use netcdf_m
       
       integer il,jl,kl,ifull
 
