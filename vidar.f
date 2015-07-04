@@ -1,3 +1,24 @@
+! Conformal Cubic Atmospheric Model
+    
+! Copyright 2015 Commonwealth Scientific Industrial Research Organisation (CSIRO)
+    
+! This file is part of the Conformal Cubic Atmospheric Model (CCAM)
+!
+! CCAM is free software: you can redistribute it and/or modify
+! it under the terms of the GNU General Public License as published by
+! the Free Software Foundation, either version 3 of the License, or
+! (at your option) any later version.
+!
+! CCAM is distributed in the hope that it will be useful,
+! but WITHOUT ANY WARRANTY; without even the implied warranty of
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+! GNU General Public License for more details.
+!
+! You should have received a copy of the GNU General Public License
+! along with CCAM.  If not, see <http://www.gnu.org/licenses/>.
+
+!------------------------------------------------------------------------------
+      
       subroutine vidar(nplevs,zp,tp,up,vp,hp,validlevcc
      &                ,iyr,imon,idy,ihr,nt,time,mtimer,pm,io_out,il,kl)
      
@@ -513,7 +534,7 @@ c end of pressure loop
          ! Use lowest pressure level temp as to compute ps from pmsl
          !ps(i)=exp(log(100.*pmsl(i))-max(0.,grav*zs(i))/(rrr*avgtmp)) ! jjk
  	   
- 	 tmsl=avgtmp +zs(i)*.0065                                     ! jlm
+         tmsl=avgtmp +zs(i)*.0065                                     ! jlm
          ps(i)=100.*pmsl(i)*(1.-.0065*zs(i)/tmsl)**(grav/(.0065*rrr)) ! jlm
 
          if ( mod(i,100).eq.0 ) then
@@ -639,9 +660,9 @@ c convert back to sensible temperature
 	      !-------------------------------------------------------
 	      ! MJT suggestion
 	      if (ts(i,k).gt.350.) then
-	         print *,"bad ts at ",i,k,ts(i,k)
-		 ts(i,k)=tpold(i,lev+1)+(tpold(i,lev+1)-tpold(i,lev))*fap
-		 print *,"new ts at ",i,k,ts(i,k)
+               print *,"bad ts at ",i,k,ts(i,k)
+               ts(i,k)=tpold(i,lev+1)+(tpold(i,lev+1)-tpold(i,lev))*fap
+               print *,"new ts at ",i,k,ts(i,k)
 	      end if
 	      !-------------------------------------------------------
             endif ! not splinet
