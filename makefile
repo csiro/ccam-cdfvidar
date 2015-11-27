@@ -1,7 +1,15 @@
 CMP = ifort
-FFLAGS = -fpp
+FFLAGS = 
 LIBS = -L $(NETCDF_ROOT)/lib -lnetcdf -lnetcdff
 INC = -I $(NETCDF_ROOT)/include
+PPFLAG90 = -fpp
+PPFLAG77 = -fpp
+
+ifeq ($(GFORTRAN),yes)
+CMP = gfortran
+PPFLAG90 = -x f95-cpp-input
+PPFLAG77 = -x f77-cpp-input
+endif
 
 OBJ2= dryadj.o findxn.o filt.o sintp16.o vidar.o invert.o\
 	cdfvidar.o vispl.o esmtrv.o amap.o mslp.o lconset.o \
@@ -19,9 +27,9 @@ clean:
 
 .SUFFIXES:.f90
 .f.o:
-	$(CMP) -c $(FFLAGS) $(INC) $<
+	$(CMP) -c $(FFLAGS) $(INC) $(PPFLAG77) $<
 .f90.o:
-	$(CMP) -c $(FFLAGS) $(INC) $<
+	$(CMP) -c $(FFLAGS) $(INC) $(PPFLAG90) $<
 %.o : %.mod
 
 cdfvidar.o sintp16.o setxyz.o: latlong_m.o
