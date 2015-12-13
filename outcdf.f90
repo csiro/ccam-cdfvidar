@@ -45,8 +45,8 @@
 
       character rundate*10
 
+      integer, save :: idnc1, iarch1, idnc0, idncm1
       integer nextout, itype, nihead, nrhead
-      integer iarch1, idnc0, idnc1, idncm1
       integer kdate, ktime, iarch
       integer idnc, ier, imode, ixp, iyp
       integer idlev, idnt, ktau, icy, icm, icd
@@ -111,10 +111,10 @@
       !ier = nf_create(cdffile,nf_clobber,idnc)
       ier = nf_create(cdffile,NF_64BIT_OFFSET,idnc)
 #else
-	!ier=nf_create(cdffile,NF_NOCLOBBER,idnc)
-	!ier=nf_create(cdffile,NF_64BIT_OFFSET,idnc)
-	!ier=nf_create(cdffile,NF_NETCDF4.or.NF90_CLASSIC_MODEL,idnc)
-	ier=nf_create(cdffile,NF_NETCDF4,idnc)
+        !ier=nf_create(cdffile,NF_NOCLOBBER,idnc)
+        !ier=nf_create(cdffile,NF_64BIT_OFFSET,idnc)
+        !ier=nf_create(cdffile,NF_NETCDF4.or.NF90_CLASSIC_MODEL,idnc)
+        ier=nf_create(cdffile,NF_NETCDF4,idnc)
 #endif
         write(6,*)'idnc,ier=',idnc,ier
 ! Turn off the data filling
@@ -276,7 +276,7 @@
       write(6,*)'call openhist for itype= ',itype
       call openhist(idnc,iarch,itype,dim,sig,kdate,ktime,time,mtimer,il,kl)
 
-      ier = nf_close(idnc)
+      ier = nf_sync(idnc)
       if(ier.ne.0)write(6,*)"ncsnc idnc,ier=",idnc,ier
 
       if ( itype.eq.1 ) then
@@ -563,6 +563,10 @@
 
 !     set time to number of minutes since start
       ier = nf_inq_varid(idnc,'time',idv)
+      if (ier/=0) then
+        write(6,*) "nf_inq_varid ier ",ier
+        stop
+      end if
       start = iarch
       ier = nf_put_var1_int(idnc,idv,start,int(time))
       write(6,*)"int(time)=",int(time)
@@ -771,6 +775,11 @@
 
 ! find variable index
       ier = nf_inq_varid(idnc,sname,mid)
+      if(ier.ne.0) then
+        write(6,*) "in histwrt3 ier not zero",ier
+        write(6,*) "in nf_inq_varid"
+        stop
+      end if
       ier = nf_get_att_real(idnc,mid,'add_offset',addoff)
       ier = nf_get_att_real(idnc,mid,'scale_factor',scale_f)
 
@@ -800,7 +809,12 @@
 
       ier = nf_inq_varndims(idnc,mid,ndims)
       ier = nf_put_vara_int2(idnc, mid, start(1:ndims), count(1:ndims), ipack)
-      if(ier.ne.0)stop "in histwrt3 ier not zero"
+      if(ier.ne.0) then
+        write(6,*) "in histwrt3 ier not zero",ier
+        write(6,*) "ndims,mid ",ndims,mid
+        write(6,*) "start,count ",start(1:ndims),count(1:ndims)
+        stop
+      end if
 
       write(6,'("histwrt3:",a7," nt=",i4," n=",f12.4," ij=",2i4," x=",f12.4," ij=",2i4)') sname,iarch,varn,imn,jmn,varx,imx,jmx
 
