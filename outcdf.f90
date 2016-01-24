@@ -490,9 +490,9 @@
         lname= 'Water mixing ratio'
         call attrib(idnc,dim,4,'mixr',lname,'kg/kg',0.,.05)
         !if(ifullw.eq.ifull)then
-          call attrib(idnc,dim,4,'qfg','Frozen water','kg/kg',0.,.02)
-          call attrib(idnc,dim,4,'qlg','Liquid water','kg/kg',0.,.02)
-          call attrib(idnc,dim,4,'cfrac','Cloud fraction','none',0.,1.)
+        !  call attrib(idnc,dim,4,'qfg','Frozen water','kg/kg',0.,.02)
+        !  call attrib(idnc,dim,4,'qlg','Liquid water','kg/kg',0.,.02)
+        !  call attrib(idnc,dim,4,'cfrac','Cloud fraction','none',0.,1.)
         !endif
 
         write(6,*)'finished defining attributes'
