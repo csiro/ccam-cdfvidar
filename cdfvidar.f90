@@ -1392,19 +1392,19 @@
 
       write(6,*)'before zon/meridional'
 
-      call maxmin(u,' u',0,1.,il,kl)
-      call maxmin(v,' v',0,1.,il,kl)
-      !call maxmin(hgt,' hgt',0,.001,il,kl)
-      !call maxmin(temp,' temp',0,1.,il,kl)
-      !call maxmin(rh,' rh',0,1000.,il,kl)
+      call maxmin(u,' u',0,1.,il,nplev)
+      call maxmin(v,' v',0,1.,il,nplev)
+      !call maxmin(hgt,' hgt',0,.001,il,nplev)
+      !call maxmin(temp,' temp',0,1.,il,nplev)
+      !call maxmin(rh,' rh',0,1000.,il,nplev)
 
       !call prt_pan(u(1,1, 1),il,jl,2,'u : 1')
       !call prt_pan(v(1,1, 1),il,jl,2,'v : 1')
 
-      imidpan2 = il/2+(jk+jl/2-1)*il
-      do k=1,nplev
-        write(6,*)'k,u/v(imidpan2,1,k)',u(imidpan2,1,k),v(imidpan2,1,k)
-      enddo
+      !imidpan2 = il/2+(jk+jl/2-1)*il
+      !do k=1,nplev
+      !  write(6,*)'k,u/v(imidpan2,1,k)',u(imidpan2,1,k),v(imidpan2,1,k)
+      !enddo
 
       write(6,*)"convert winds to CCAM grid convention"
 
@@ -1430,15 +1430,15 @@
         cn=min(cn,costh)
         sn=min(sn,sinth)
         do k=1,nplev
-           uzon = u(iq,1,k)
-           vmer = v(iq,1,k)
+           uzon = u(i,j,k)
+           vmer = v(i,j,k)
            u(i,j,k)= costh*uzon+sinth*vmer
            v(i,j,k)=-sinth*uzon+costh*vmer
-           if(iq.eq.imidpan2)then
-             write(6,'("before zon/mer; k,u,v: ",i3,2f10.2)')k,uzon,vmer
-             write(6,'("zonx,zony,zonz,den,costh,sinth",6f8.4)')zonx,zony,zonz,den,costh,sinth
-             write(6,'("after zon/mer; k,u,v: ",i3,2f10.2)') k,u(i,j,k),v(i,j,k)
-           endif
+           !if(iq.eq.imidpan2)then
+           !  write(6,'("before zon/mer; k,u,v: ",i3,2f10.2)')k,uzon,vmer
+           !  write(6,'("zonx,zony,zonz,den,costh,sinth",6f8.4)')zonx,zony,zonz,den,costh,sinth
+           !  write(6,'("after zon/mer; k,u,v: ",i3,2f10.2)') k,u(i,j,k),v(i,j,k)
+           !endif
         enddo  ! k loop
         end do
       end do
@@ -1447,11 +1447,11 @@
       write(6,*)'cx,cn,sx,sn=',cx,cn,sx,sn
       write(6,*)'after zon/meridional'
 
-      call maxmin(u(:,:,1:kl),' u',0,1.,il,kl)
-      call maxmin(v(:,:,1:kl),' v',0,1.,il,kl)
-      call maxmin(hgt(:,:,1:kl),' hgt',0,.001,il,kl)
-      call maxmin(temp(:,:,1:kl),' temp',0,1.,il,kl)
-      call maxmin(rh(:,:,1:kl),' rh',0,1.,il,kl)
+      call maxmin(u(:,:,1:nplev),' u',0,1.,il,nplev)
+      call maxmin(v(:,:,1:nplev),' v',0,1.,il,nplev)
+      call maxmin(hgt(:,:,1:nplev),' hgt',0,.001,il,nplev)
+      call maxmin(temp(:,:,1:nplev),' temp',0,1.,il,nplev)
+      call maxmin(rh(:,:,1:nplev),' rh',0,1.,il,nplev)
 
       !call prt_pan(u(1,1, 1),il,jl,2,'u : 1')
       !call prt_pan(v(1,1, 1),il,jl,2,'v : 1')

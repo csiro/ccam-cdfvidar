@@ -45,7 +45,7 @@
 
       character rundate*10
 
-      integer, save :: idnc1, iarch1, idnc0, idncm1
+      integer, save :: idnc0, idnc1, idncm1
       integer nextout, itype, nihead, nrhead
       integer kdate, ktime, iarch
       integer idnc, ier, imode, ixp, iyp
@@ -74,7 +74,6 @@
       character*3 month(12)
       data month/'jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'/
 
-      data iarch1/0/
       data idnc1/0/, idnc0/0/, idncm1/0/
       data rundate/"ncepavnanl"/
 
@@ -92,8 +91,6 @@
       write(6,*)"kdate,ktime=",kdate,ktime
 
 ! itype=1 outfile
-      iarch1=iarch1+1
-      iarch=iarch1
       iarch=nt
       idnc=idnc1
 
@@ -111,15 +108,15 @@
       !ier = nf_create(cdffile,nf_clobber,idnc)
       ier = nf_create(cdffile,NF_64BIT_OFFSET,idnc)
 #else
-        !ier=nf_create(cdffile,NF_NOCLOBBER,idnc)
-        !ier=nf_create(cdffile,NF_64BIT_OFFSET,idnc)
-        !ier=nf_create(cdffile,NF_NETCDF4.or.NF90_CLASSIC_MODEL,idnc)
-        ier=nf_create(cdffile,NF_NETCDF4,idnc)
+	!ier=nf_create(cdffile,NF_NOCLOBBER,idnc)
+	!ier=nf_create(cdffile,NF_64BIT_OFFSET,idnc)
+	!ier=nf_create(cdffile,NF_NETCDF4.or.NF90_CLASSIC_MODEL,idnc)
+	ier=nf_create(cdffile,NF_NETCDF4,idnc)
 #endif
         write(6,*)'idnc,ier=',idnc,ier
 ! Turn off the data filling
         ier = nf_set_fill(idnc,nf_nofill,oldmode)
-        write(6,*)'imode=',imode
+        !write(6,*)'imode=',imode
 ! Create dimensions, lon, lat
         ier = nf_def_dim(idnc,'longitude', il,           xdim)
         ier = nf_def_dim(idnc,'latitude',  jl,           ydim)
@@ -153,7 +150,8 @@
         write(6,*)'idnt=',idnt
         ier = nf_put_att_text(idnc,idnt,'point_spacing',4,'even')
 
-        write(6,*)'kdate,ktime,ktau=',kdate,ktime,ktau
+        !write(6,*)'kdate,ktime,ktau=',kdate,ktime,ktau
+        write(6,*)'kdate,ktime=',kdate,ktime
 
         icy=kdate/10000
         icm=max(1,min(12,(kdate-icy*10000)/100))
@@ -341,6 +339,7 @@
       integer idim2(3)
       integer, dimension(1) :: ivals
       integer, dimension(1) :: start, ncount
+      integer nrun
       real xpnt(il),ypnt(6*il)
       real sig(kl)
 
@@ -374,6 +373,7 @@
 
 !       Create global attributes
 !       Model run number
+        nrun = 1
         ivals = nrun
         ier = nf_put_att_int(idnc,nf_global,'nrun',nf_int,1,ivals)
         write(6,*)"nrun=",nrun," ier=",ier
@@ -489,11 +489,11 @@
         call attrib(idnc,dim,4,'v','y-component wind','m/s',-150.,150.)
         lname= 'Water mixing ratio'
         call attrib(idnc,dim,4,'mixr',lname,'kg/kg',0.,.05)
-        if(ifullw.eq.ifull)then
+        !if(ifullw.eq.ifull)then
           call attrib(idnc,dim,4,'qfg','Frozen water','kg/kg',0.,.02)
           call attrib(idnc,dim,4,'qlg','Liquid water','kg/kg',0.,.02)
           call attrib(idnc,dim,4,'cfrac','Cloud fraction','none',0.,1.)
-        endif
+        !endif
 
         write(6,*)'finished defining attributes'
 !       Leave define mode
@@ -530,27 +530,27 @@
 !         write(6,*)"k=",k," sig=",sig(k)
 !       enddo
 
-        ier = nf_inq_varid(idnc,'ds',idv)
-        rvals = ds
-        ier = nf_put_var_real(idnc,idv,rvals)
-        ier = nf_inq_varid(idnc,'tanl',idv)
-        rvals = tanl
-        ier = nf_put_var_real(idnc,idv,rvals)
-        ier = nf_inq_varid(idnc,'rnml',idv)
-        rvals = rnml
-        ier = nf_put_var_real(idnc,idv,rvals)
-        ier = nf_inq_varid(idnc,'du',idv)
-        rvals = du
-        ier = nf_put_var_real(idnc,idv,rvals)
-        ier = nf_inq_varid(idnc,'stl1',idv)
-        rvals = stl1
-        ier = nf_put_var_real(idnc,idv,rvals)
-        ier = nf_inq_varid(idnc,'stl2',idv)
-        rvals = stl2
-        ier = nf_put_var_real(idnc,idv,rvals)
-        ier = nf_inq_varid(idnc,'dt',idv)
-        rvals = dt
-        ier = nf_put_var_real(idnc,idv,rvals)
+!        ier = nf_inq_varid(idnc,'ds',idv)
+!        rvals = ds
+!        ier = nf_put_var_real(idnc,idv,rvals)
+!        ier = nf_inq_varid(idnc,'tanl',idv)
+!        rvals = tanl
+!        ier = nf_put_var_real(idnc,idv,rvals)
+!        ier = nf_inq_varid(idnc,'rnml',idv)
+!        rvals = rnml
+!        ier = nf_put_var_real(idnc,idv,rvals)
+!        ier = nf_inq_varid(idnc,'du',idv)
+!        rvals = du
+!        ier = nf_put_var_real(idnc,idv,rvals)
+!        ier = nf_inq_varid(idnc,'stl1',idv)
+!        rvals = stl1
+!        ier = nf_put_var_real(idnc,idv,rvals)
+!        ier = nf_inq_varid(idnc,'stl2',idv)
+!        rvals = stl2
+!        ier = nf_put_var_real(idnc,idv,rvals)
+!        ier = nf_inq_varid(idnc,'dt',idv)
+!        rvals = dt
+!        ier = nf_put_var_real(idnc,idv,rvals)
       endif ! iarch.eq.1
      
 !------------------------------------------------------------------      
@@ -563,10 +563,6 @@
 
 !     set time to number of minutes since start
       ier = nf_inq_varid(idnc,'time',idv)
-      if (ier/=0) then
-        write(6,*) "nf_inq_varid ier ",ier
-        stop
-      end if
       start = iarch
       ier = nf_put_var1_int(idnc,idv,start,int(time))
       write(6,*)"int(time)=",int(time)
@@ -686,7 +682,8 @@
 
       integer*2 minv, maxv, missval   ! was integer*2
       parameter(minv = -32500, maxv = 32500, missval = -32501)
-      integer cdfid, idv, dim(3)
+      integer ndim
+      integer cdfid, idv, dim(ndim)
       character name*(*), lname*(*), units*(*)
       real xmin, xmax
       real, dimension(1) :: rvals
@@ -775,11 +772,6 @@
 
 ! find variable index
       ier = nf_inq_varid(idnc,sname,mid)
-      if(ier.ne.0) then
-        write(6,*) "in histwrt3 ier not zero",ier
-        write(6,*) "in nf_inq_varid"
-        stop
-      end if
       ier = nf_get_att_real(idnc,mid,'add_offset',addoff)
       ier = nf_get_att_real(idnc,mid,'scale_factor',scale_f)
 
@@ -809,12 +801,7 @@
 
       ier = nf_inq_varndims(idnc,mid,ndims)
       ier = nf_put_vara_int2(idnc, mid, start(1:ndims), count(1:ndims), ipack)
-      if(ier.ne.0) then
-        write(6,*) "in histwrt3 ier not zero",ier
-        write(6,*) "ndims,mid ",ndims,mid
-        write(6,*) "start,count ",start(1:ndims),count(1:ndims)
-        stop
-      end if
+      if(ier.ne.0)stop "in histwrt3 ier not zero"
 
       write(6,'("histwrt3:",a7," nt=",i4," n=",f12.4," ij=",2i4," x=",f12.4," ij=",2i4)') sname,iarch,varn,imn,jmn,varx,imx,jmx
 
