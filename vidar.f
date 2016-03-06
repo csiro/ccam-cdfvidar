@@ -410,9 +410,9 @@ c start interpolating from pressure to sigma
       write(6,*)"************************************> have_gp=",have_gp
       g=grav
 c***********************************************************************
-      do i=1, npts
+      if ( have_gp ) then
 c***********************************************************************
-       if ( have_gp ) then
+       do i=1, npts          
 c loop through pressure levels ( bottom -> up )
 c loop through pressure levels ( top-down? )
         do kk=1,nplevsm
@@ -481,8 +481,13 @@ c isothermal case
           endif
 
 c calculate surface pressure
-          pr=pm(kk+1)
-          if ( osig_in ) pr=calc_p(psg_m(i),pm(kk+1))
+          if ( osig_in ) then
+            pr=calc_p(psg_m(i),pm(kk+1))
+          else
+            pr=pm(kk+1)    
+          end if
+          
+          rem2 = max( min( rem2, 60. ), -60. ) ! MJT suggestion for single precision
 
           ps(i)=pr*exp(-rem2)
 
@@ -525,9 +530,10 @@ c end of pressure loop
           endif
         enddo ! kk
  173    continue
-       else ! if ( ! have_gp ) then
+       enddo ! i        
+      else ! if ( ! have_gp ) then
 
-
+       do i=1, npts
          k=nplevs+1-nint(validlevcc(i))
          avgtmp=tp(i,k)
          
@@ -541,10 +547,11 @@ c end of pressure loop
            write(6,*)"pmsl(i),grav,zs(i),rrr,tp(i,1),ps(i)"
            write(6,'(6f11.3)')pmsl(i),grav,zs(i),rrr,tp(i,1),ps(i)
          endif
-       endif ! if ( have_gp ) then
+
 c***********************************************************************
 c end of npts (xy) loop
-      enddo ! i
+       enddo ! i
+      endif ! if ( have_gp ) then       
       print *,'calc ps(1),(npts)=',ps(1),ps(npts)
       call amap ( ps, imt, jmt, 'calculated ps', 4., 1.e3 )
       call prt_pan(ps,il,jl,2,'ps(Pa)')

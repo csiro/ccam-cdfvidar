@@ -20,6 +20,8 @@
 !------------------------------------------------------------------------------
       
       subroutine dryadj ( t, pd, pt, len, icnt, len3, dsg, sgml, lm )
+      
+      implicit none
 c
 c**********************************************************************c
 c                                                                      c
@@ -36,12 +38,20 @@ c**********************************************************************c
 c
       include 'lmax.h'
 c
-      dimension dsg(lm), sgml(lm)
-      dimension papai(lmax), rdsd(lmax)
-      dimension t(len3,lm), pd(len)
+      integer len, icnt, len3, lm
+      integer lmm1, i, l
+c
+      real, dimension(lm) :: dsg, sgml
+      real, dimension(lmax) :: papai, rdsd
+      real, dimension(len3,lm) :: t
+      real, dimension(len) :: pd
+      real pt, pplp1, ppl, thl, thlp1, dtlp1
+      real dth, dtl
 c
       logical drca
 c
+      real rn
+      
       data rn/3.e-3/
 c
 c***********************************************************************
@@ -52,27 +62,29 @@ c
       endif
 c
       lmm1=lm-1
-      do 100 l=1,lmm1
+      do l=1,lmm1
         rdsd(l)=dsg(l)/dsg(l+1)
- 100  continue
+      end do
 c
 c.......................................................................
 c
 c main horizontal loop
 c
-      do 230 i=1,len
+      do i=1,len
 c
 c.......................................................................
 c
-          pdij=pd(i)
+        do l=1,lm
+          papai(l)=max(pt+sgml(l)*pd(i),0.)**(-.2858964143)
+        end do
 c
-          do 451 l=1,lm
- 451        papai(l)=(pt+sgml(l)*pdij)**(-.2858964143)
-c
- 232      drca=.false.
+ 232    drca=.true.
+        do while ( drca )
+          drca=.false.
+    
           pplp1=papai(1)
 c
-          do 231 l=1,lmm1
+          do l=1,lmm1
 c
             ppl=pplp1
             pplp1=papai(l+1)
@@ -91,15 +103,15 @@ c
 c
             endif
 c
- 231      continue
+          end do
 c
-          if (drca) go to 232
+        end do ! drca
 c
 c.......................................................................
 c
 c end of horizontal loop
 c
- 230  continue
+      end do ! i
 c
 c.......................................................................
 c
