@@ -20,6 +20,8 @@
 !------------------------------------------------------------------------------
       
       subroutine mslp ( ps, pmsl, zs, t, sig, ndim, npts, kl )
+      
+      implicit none
 c------------------------------------------------------------------------------
 c
 c routine to calculate the mean sea level pressure
@@ -37,12 +39,21 @@ c     ps = mslp (same units as ps)
 c
 c------------------------------------------------------------------------------
 
-      parameter ( c=9.806/6.5e-3, conr=c/287., rconr=287./c )
+      real, parameter :: c=9.806/6.5e-3
+      real, parameter :: conr=c/287.
+      real, parameter :: rconr=287./c
 
-      dimension t(ndim,kl),ps(ndim),pmsl(ndim),zs(ndim)
-      dimension sig(kl)
+      integer :: ndim, kl, npts
+      integer :: i
+      real :: con
+      
+      real, dimension(ndim,kl) :: t
+      real, dimension(ndim) :: ps,pmsl,zs
+      real, dimension(kl) :: sig
+      
+      integer ktemp
 
-      data ktemp/2/
+      ktemp = 2
 
       con=sig(ktemp)**rconr/c
 
@@ -50,7 +61,7 @@ c------------------------------------------------------------------------------
 
       do i=1,npts
 !       write(6,*)i,ps(i),zs(i),t(i,ktemp)
-        pmsl(i) = ps(i)*(1.+con*zs(i)/t(i,ktemp))**conr
+        pmsl(i) = ps(i)*min(1.+con*zs(i)/t(i,ktemp),1.e5)**conr ! MJT suggestion for single precision
       end do ! i=1,npts
 
       return
