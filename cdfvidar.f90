@@ -1348,6 +1348,7 @@
       ier = nf_inq_varid(ncid,'snod',idvar)
       write(6,*)"ier=",ier," idvar=",idvar
 
+      snod(:) = 0.
       if ( ier .eq. 0 ) then
 
          call ncread_2d(ncid,iarch,idvar,ix,iy,datan(1:ix*iy))

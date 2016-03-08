@@ -663,7 +663,7 @@
       end if
       
       if ( any( snod >= 0. ) ) then
-        call histwrt3(snod,'snod',idnc,iarch,il)
+        call histwrt3(snod,'snd',idnc,iarch,il)
       end if
       
 
