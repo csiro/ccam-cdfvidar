@@ -478,9 +478,14 @@
         lname = 'Soil moisture bottom'
         call attrib(idnc,idim2,3,'wfb',lname,'none',0.,.4)
 
-        if (any(fracice.ge.0.)) then
+        if (any(fracice>=0.)) then
           lname = 'Sea ice fraction'
           call attrib(idnc,idim2,3,'fracice',lname,'none',0.,6.5)
+        end if
+        
+        if (any(snod>=0.)) then
+          lname = 'Snow depth (liquid water)'
+          call attrib(idnc,idim2,3,'snd',lname,'none',0.,6500.)
         end if
 
         write(6,*)'3d variables'
@@ -656,6 +661,11 @@
       if ( any( fracice >= 0. ) ) then
         call histwrt3(fracice,'fracice',idnc,iarch,il)
       end if
+      
+      if ( any( snod >= 0. ) ) then
+        call histwrt3(snod,'snod',idnc,iarch,il)
+      end if
+      
 
 !     call histwrt3(sicedep,'siced',idnc,iarch)
 !     call histwrt3(snowd,'snd',idnc,iarch)

@@ -348,8 +348,8 @@
         liernc=-1
         open(inzs,file=zsfil,form='formatted',recl=il*7,status='old')
         write(6,*)'read zsfil header'
-        read(inzs,*,err=25)ilt,jlk,ds,du,tanl,rnml,stl1,stl2
- 25     if(ilt.eq.0.or.jlk.eq.0)then
+        read(inzs,*)ilt,jlk,ds,du,tanl,rnml,stl1,stl2
+        if(ilt.eq.0.or.jlk.eq.0)then
            write(6,*)'no header in newtopo file'
         else
            write(6,*)'Header information for topofile'
@@ -1106,7 +1106,7 @@
            end do
          end do
 
-      else
+     else
            write(6,*)"No sfcp data found, setting to -999."
            do i=1,ifull
              psg_m(i)=-999.
@@ -1134,13 +1134,13 @@
         spval=-1.e10
         write(6,*)"spval=",spval
 	
-	if (any(datan(1:ix*iy).gt.400.)) then
-	  write(6,*) "Missing data found in sfc temp"
-	  where (datan(1:ix*iy).gt.400.)
-	    datan(1:ix*iy)=spval
-	  end where
-        call fill(datan(1:ix*iy),ix,iy,.1*spval,datan(1+2*ix*iy:3*ix*iy))
-	end if
+        if (any(datan(1:ix*iy).gt.400.)) then
+          write(6,*) "Missing data found in sfc temp"
+          where (datan(1:ix*iy).gt.400.)
+            datan(1:ix*iy)=spval
+          end where
+          call fill(datan(1:ix*iy),ix,iy,.1*spval,datan(1+2*ix*iy:3*ix*iy))
+        end if
 
         call amap ( datan(1:ix*iy), ix, iy, 'gbl sfct', 0., 0. )
 
@@ -1300,8 +1300,8 @@
             if ( lsm_gbl(iq) .ge. .5 ) then
               datan(iq+ix*iy)=spval                          ! ocean, fill in land pts
               nopnts=nopnts+1
-	    else
-	      nlpnts=nlpnts+1
+            else
+              nlpnts=nlpnts+1
             endif ! ( lsm_gbl(iq) .ge. .5 ) then
 
           endif!(olsm_gbl)then
@@ -1325,8 +1325,8 @@
         call prt_pan(fracice,il,jl,2,'fracice')
 
         where (lsm_m.ge.0.5)
-	  fracice=0.
-	end where
+          fracice=0.
+        end where
 
         write(6,*)"id,jd,fracice=",id,jd,fracice(ijd)
 
@@ -1343,6 +1343,33 @@
 
       call prt_pan(fracice,il,jl,2,'fracice')
 
+      write(6,*)"================================================snod"
+
+      ier = nf_inq_varid(ncid,'snod',idvar)
+      write(6,*)"ier=",ier," idvar=",idvar
+
+      if ( ier .eq. 0 ) then
+
+         call ncread_2d(ncid,iarch,idvar,ix,iy,datan(1:ix*iy))
+
+         call amap ( datan(1:ix*iy), ix, iy, 'snod', 0., 0. )
+
+         call sintp16(datan(1:ix*iy),ix,iy,snod,glon,glat,sdiag,il)
+
+      else
+         write(6,*)"No snod data found, setting to 0."
+         snod(:)=0.
+      endif ! ier
+
+      snod(:) = snod(:)*100./1000. ! equiv water
+      
+      where ( lsm_m(:)<0.5 )
+        snod(:)=0.
+      end where
+      
+      call prt_pan(snod,il,jl,2,'snod')
+
+      
 !############################################################################
 ! end sfc data
 !############################################################################
