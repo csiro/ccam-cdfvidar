@@ -104,19 +104,13 @@
       if ( iarch.eq.1 ) then
         write(6,*)'nccre of ',cdffile
 #ifdef usenc3
-      !idnc = nccre(cdffile, ncclob, ier)
-      !ier = nf_create(cdffile,nf_clobber,idnc)
       ier = nf_create(cdffile,NF_64BIT_OFFSET,idnc)
 #else
-	!ier=nf_create(cdffile,NF_NOCLOBBER,idnc)
-	!ier=nf_create(cdffile,NF_64BIT_OFFSET,idnc)
-	!ier=nf_create(cdffile,NF_NETCDF4.or.NF90_CLASSIC_MODEL,idnc)
-	ier=nf_create(cdffile,NF_NETCDF4,idnc)
+      ier = nf_create(cdffile,NF_NETCDF4,idnc)
 #endif
         write(6,*)'idnc,ier=',idnc,ier
 ! Turn off the data filling
         ier = nf_set_fill(idnc,nf_nofill,oldmode)
-        !write(6,*)'imode=',imode
 ! Create dimensions, lon, lat
         ier = nf_def_dim(idnc,'longitude', il,           xdim)
         ier = nf_def_dim(idnc,'latitude',  jl,           ydim)
@@ -423,8 +417,6 @@
         call attrib(idnc,idim2,3,'pmsl',lname,'hPa',800.,1200.)
         lname = 'Surface geopotential'
         call attrib(idnc,idim2,2,'zht',lname,'m2/s2',-2.e3,128.e3) ! MJT lsmask
-!       call attrib(idnc,idim2,2,'zht',lname,'m2/s2',-100.,90.e3)  ! MJT lsmask
-!       call attrib(idnc,idim2,2,'zht',lname,'m2/s2',-1.e6,90.e3) ! ocean too
         lname = 'Soil type'                                        ! MJT lsmask
         call attrib(idnc,idim2,2,'soilt',lname,'none',0.,65.e3)    ! MJT lsmask
 
@@ -447,8 +439,6 @@
 !       call attrib(idnc,idim2,3,'runoff',lname,'mm/day',0.,1000.)
 !       lname = 'Sea ice depth (Instantaneous)'
 !       call attrib(idnc,idim2,3,'siced',lname,'cm',0.,500.)
-!       lname = 'snow depth (liquid water)'
-!       call attrib(idnc,idim2,3,'snd',lname,'cm',0.,1000.)
 
 !       lname = 'Soil moisture as frac FC levels 1-2'
 !       call attrib(idnc,idim2,3,'wbfshal',lname,'frac',0.,4.)
@@ -648,15 +638,24 @@
       !call histwrt3(ts(1,2),'tgg5',idnc,iarch,il)
       !call histwrt3(ts(1,2),'tgg6',idnc,iarch,il)
 
-      call histwrt3(ts(:,2),'tb3',idnc,iarch,il) ! top
-      call histwrt3(ts(:,2),'tb2',idnc,iarch,il) ! bottom
+      if ( all(soiltemp<0.) ) then
+        soiltemp(:,1) = ts(:,2)
+        soiltemp(:,2) = ts(:,2)
+      end if
+      
+      call histwrt3(soiltemp(:,2),'tb3',idnc,iarch,il) ! top
+      call histwrt3(soiltemp(:,1),'tb2',idnc,iarch,il) ! bottom
 
-      aa(1:ifull)=0.14
+      if ( all(soilmoist<0.) ) then
+        soilmoist(:,1) = 0.14
+        soilmoist(:,2) = 0.14
+      end if
+      
       !call histwrt3(aa,'wbfshal',idnc,iarch,il)
       !call histwrt3(aa,'wbfroot',idnc,iarch,il)
       !call histwrt3(aa,'wbftot',idnc,iarch,il)
-      call histwrt3(aa,'wfg',idnc,iarch,il)
-      call histwrt3(aa,'wfb',idnc,iarch,il)
+      call histwrt3(soilmoist(:,1),'wfg',idnc,iarch,il)
+      call histwrt3(soilmoist(:,2),'wfb',idnc,iarch,il)
 
       if ( any( fracice >= 0. ) ) then
         call histwrt3(fracice,'fracice',idnc,iarch,il)

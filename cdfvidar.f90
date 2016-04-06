@@ -511,7 +511,7 @@
       osig_in = .false.
       if ( .01 .lt. xplev .and. xplev .lt. 800.  ) then
         write(6,*)"^^^^^^^^^actualy sigma levels^^^^^^^ fix plevs"
-        osig_in = .true.
+        !osig_in = .true. ! MJT bug fix
         do k=1,nplev
           plev(k)=plev(k)*1000. !
         enddo
