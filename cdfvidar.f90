@@ -170,6 +170,11 @@
 
       save
 
+      ! Start banner
+      write(6,*) "=================================================================================="
+      write(6,*) "CCAM: Starting cdfvidar"
+      write(6,*) "=================================================================================="
+
    
       slon=0.
       slat=90.
@@ -513,7 +518,7 @@
         write(6,*)"^^^^^^^^^actualy sigma levels^^^^^^^ fix plevs"
         !osig_in = .true. ! MJT bug fix
         do k=1,nplev
-          plev(k)=plev(k)*1000. !
+          plev(k)=plev(k)*1000.
         enddo
         write(6,*)"plevs=",(plev(k),k=1,nplev)
       else if ( xplev .le. .01  ) then
@@ -1038,7 +1043,7 @@
 
 !         call ncread_2d(ncid,iarch,idvar,ix,iy,lsm_gbl)
          call ncread_2d(ncid,1,idvar,ix,iy,datan(1:ix*iy))	! MJT quick fix 
-	 datan(1:ix*iy)=abs(datan(1:ix*iy))                     ! MJT quick fix
+         datan(1:ix*iy)=abs(datan(1:ix*iy))                 ! MJT quick fix
          lsm_gbl=datan(1:ix*iy)
 
          ! MJT quick fix 
@@ -1362,7 +1367,7 @@
          snod(:)=0.
       endif ! ier
 
-      snod(:) = snod(:)*100./1000. ! equiv water
+      snod(:) = snod(:)*100./1000. ! convert to equiv water
       
       where ( lsm_m(:)<0.5 )
         snod(:)=0.
@@ -1375,6 +1380,35 @@
 ! end sfc data
 !############################################################################
 
+!############################################################################
+! soil data
+!############################################################################
+      
+      write(6,*)"============================================soil_temp"
+
+      soiltemp(:,:)=-1.
+      ier = nf_inq_varid(ncid,'soil_temp',idvar)
+      write(6,*)"ier=",ier," idvar=",idvar
+
+      if ( ier .eq. 0 ) then ! we have soil_temp data
+
+      end if
+      
+      write(6,*)"============================================soil_mois"
+
+      soilmoist(:,:)=-1.
+      ier = nf_inq_varid(ncid,'soil_mois',idvar)
+      write(6,*)"ier=",ier," idvar=",idvar
+
+      if ( ier .eq. 0 ) then ! we have soil_moist data
+
+      end if
+      
+      
+!############################################################################
+! end soil data
+!############################################################################
+      
       write(6,*)"check of temp data to ensure all is going okay"
       write(6,*)" findxn model temp(1)"
       call findxn(temp(:,:,1),ifull,-1.e29,xa,kx,an,kn)
@@ -1551,6 +1585,14 @@
       call clldealloc
       call comsigdealloc
 
+      ! Complete
+      write(6,*) "CCAM: cdfvidar completed successfully"
+      
+      ! End banner
+      write(6,*) "=================================================================================="
+      write(6,*) "CCAM: Finished cdfvidar"
+      write(6,*) "=================================================================================="
+      
       stop
       end ! cdfvidar
 !***************************************************************************
