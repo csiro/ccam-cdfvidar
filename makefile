@@ -29,6 +29,14 @@ clean:
 	rm -f *.o core cdfvidar *.mod
 
 .SUFFIXES:.f90
+
+version.h: FORCE
+	rm -f brokenver tmpver
+	echo "      character(len=*), parameter :: version ='CDFVIDAR r'" > brokenver
+	echo "      character(len=*), parameter :: version ='CDFVIDAR r`svnversion .`'" > tmpver
+	grep exported tmpver || grep Unversioned tmpver || cmp tmpver brokenver || cmp tmpver version.h || mv tmpver version.h
+FORCE:
+
 .f.o:
 	$(FC) -c $(FFLAGS) $(INC) $(PPFLAG77) $<
 .f90.o:
@@ -39,7 +47,7 @@ cdfvidar.o sintp16.o setxyz.o: latlong_m.o
 cdfvidar.o vidar.o : comsig_m.o
 cdfvidar.o outcdf.o : cll_m.o
 cdfvidar.o vidar.o : sigdata_m.o
-cdfvidar.o : ccinterp.o
+cdfvidar.o : ccinterp.o version.h
 cdfvidar.o vispl.o dryadj.o : lmax.h
 cdfvidar.o vidar.o vispl.o : nplevs.h
 cdfvidar.o vidar.o : vidar.h

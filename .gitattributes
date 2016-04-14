@@ -35,6 +35,7 @@
 /setxyz_m.f90 -text
 /sigdata_m.f90 -text
 /sintp16.f -text
+/version.h -text
 /vidar.f -text
 /vidar.h -text
 /vispl.f -text
