@@ -3,7 +3,7 @@ ifneq ($(CUSTOM),yes)
 FC = ifort
 LIBS = -L $(NETCDF_ROOT)/lib -lnetcdf -lnetcdff
 INC = -I $(NETCDF_ROOT)/include
-FFLAGS =
+FFLAGS = 
 PPFLAG90 = -fpp
 PPFLAG77 = -fpp
 endif
@@ -62,7 +62,7 @@ precis_m.o : precis_m.f90
 indices_m.o : indices_m.f90
 parm_m.o : parm_m.f90 precis_m.o 
 ind_m.o : ind_m.f90 newmpar_m.o 
-jimcc_m.o : jimcc_m.f90 parm_m.o precis_m.o 
+jimcc_m.o : jimcc_m.f90 parm_m.o precis_m.o xyzinfo_m.o
 jimco_m.o : jimco_m.f90 precis_m.o jim_utils.o nfft_m.o 
 jim_utils.o : jim_utils.f90 precis_m.o 
 nfft_m.o : nfft_m.f90 precis_m.o 

@@ -46,7 +46,7 @@ ifull=il*jl
 allocate(pmsl(ifull),sfct(ifull),zs(ifull),ps(ifull),fracice(ifull),snod(ifull))
 allocate(psg_m(ifull),zsi_m(ifull),lsm_m(ifull))
 allocate(us(ifull,kl),vs(ifull,kl),ts(ifull,kl),rs(ifull,kl),hs(ifull,kl))
-allocate( soiltemp(ifull,2), soilmoist(ifull,2) )
+allocate( soiltemp(ifull,6), soilmoist(ifull,6) )
 
 soiltemp(:,:) = -1.
 soilmoist(:,:) = -1.
@@ -61,6 +61,7 @@ implicit none
 deallocate(pmsl,sfct,zs,ps,fracice,snod)
 deallocate(psg_m,zsi_m,lsm_m)
 deallocate(us,vs,ts,rs,hs)
+deallocate( soiltemp, soilmoist )
 
 return
 end subroutine sigdatadealloc

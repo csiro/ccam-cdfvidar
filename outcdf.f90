@@ -447,26 +447,45 @@
 !       lname = 'Soil moisture as frac FC levels 1-6'
 !       call attrib(idnc,idim2,3,'wbftot',lname,'frac',0.,4.)
 
-!       lname = 'Soil temperature lev 1'
-!       call attrib(idnc,idim2,3,'tgg1',lname,'K',100.,400.)
-!       lname = 'Soil temperature lev 2'
-!       call attrib(idnc,idim2,3,'tgg2',lname,'K',100.,400.)
-!       lname = 'Soil temperature lev 3'
-!       call attrib(idnc,idim2,3,'tgg3',lname,'K',100.,400.)
-!       lname = 'Soil temperature lev 4'
-!       call attrib(idnc,idim2,3,'tgg4',lname,'K',100.,400.)
-!       lname = 'Soil temperature lev 5'
-!       call attrib(idnc,idim2,3,'tgg5',lname,'K',100.,400.)
-!       lname = 'Soil temperature lev 6'
-!       call attrib(idnc,idim2,3,'tgg6',lname,'K',100.,400.)
+      if ( all(soiltemp<0.) ) then
         lname = 'Soil temperature top'
         call attrib(idnc,idim2,3,'tb3',lname,'K',100.,400.)
         lname = 'Soil temperature bottom'
         call attrib(idnc,idim2,3,'tb2',lname,'K',100.,400.)
+      else
+        lname = 'Soil temperature lev 1'
+        call attrib(idnc,idim2,3,'tgg1',lname,'K',100.,400.)
+        lname = 'Soil temperature lev 2'
+        call attrib(idnc,idim2,3,'tgg2',lname,'K',100.,400.)
+        lname = 'Soil temperature lev 3'
+        call attrib(idnc,idim2,3,'tgg3',lname,'K',100.,400.)
+        lname = 'Soil temperature lev 4'
+        call attrib(idnc,idim2,3,'tgg4',lname,'K',100.,400.)
+        lname = 'Soil temperature lev 5'
+        call attrib(idnc,idim2,3,'tgg5',lname,'K',100.,400.)
+        lname = 'Soil temperature lev 6'
+        call attrib(idnc,idim2,3,'tgg6',lname,'K',100.,400.)
+      end if
+      
+      if ( all(soilmoist<0.) ) then
         lname = 'Soil moisture top'
         call attrib(idnc,idim2,3,'wfg',lname,'none',0.,.4)
         lname = 'Soil moisture bottom'
         call attrib(idnc,idim2,3,'wfb',lname,'none',0.,.4)
+      else
+        lname = 'Soil moisture 1'
+        call attrib(idnc,idim2,3,'wb1',lname,'m3/m3',0.,2.)
+        lname = 'Soil moisture 2'
+        call attrib(idnc,idim2,3,'wb2',lname,'m3/m3',0.,2.)
+        lname = 'Soil moisture 3'
+        call attrib(idnc,idim2,3,'wb3',lname,'m3/m3',0.,2.)
+        lname = 'Soil moisture 4'
+        call attrib(idnc,idim2,3,'wb4',lname,'m3/m3',0.,2.)
+        lname = 'Soil moisture 5'
+        call attrib(idnc,idim2,3,'wb5',lname,'m3/m3',0.,2.)
+        lname = 'Soil moisture 6'
+        call attrib(idnc,idim2,3,'wb6',lname,'m3/m3',0.,2.)
+      end if
 
         if (any(fracice>=0.)) then
           lname = 'Sea ice fraction'
@@ -630,32 +649,35 @@
 
       call histwrt3(sfct,'tsu',idnc,iarch,il)
 
-      !call histwrt3(sfct,'tgg1',idnc,iarch,il)
-
-      !call histwrt3(ts(1,2),'tgg2',idnc,iarch,il)
-      !call histwrt3(ts(1,2),'tgg3',idnc,iarch,il)
-      !call histwrt3(ts(1,2),'tgg4',idnc,iarch,il)
-      !call histwrt3(ts(1,2),'tgg5',idnc,iarch,il)
-      !call histwrt3(ts(1,2),'tgg6',idnc,iarch,il)
-
       if ( all(soiltemp<0.) ) then
         soiltemp(:,1) = ts(:,2)
         soiltemp(:,2) = ts(:,2)
+        call histwrt3(soiltemp(:,2),'tb3',idnc,iarch,il) ! top
+        call histwrt3(soiltemp(:,1),'tb2',idnc,iarch,il) ! bottom
+      else
+        call histwrt3(soiltemp(:,1),'tgg1',idnc,iarch,il)
+        call histwrt3(soiltemp(:,2),'tgg2',idnc,iarch,il)
+        call histwrt3(soiltemp(:,3),'tgg3',idnc,iarch,il)
+        call histwrt3(soiltemp(:,4),'tgg4',idnc,iarch,il)
+        call histwrt3(soiltemp(:,5),'tgg5',idnc,iarch,il)
+        call histwrt3(soiltemp(:,6),'tgg6',idnc,iarch,il)
       end if
       
-      call histwrt3(soiltemp(:,2),'tb3',idnc,iarch,il) ! top
-      call histwrt3(soiltemp(:,1),'tb2',idnc,iarch,il) ! bottom
 
       if ( all(soilmoist<0.) ) then
         soilmoist(:,1) = 0.14
         soilmoist(:,2) = 0.14
+        call histwrt3(soilmoist(:,1),'wfg',idnc,iarch,il)
+        call histwrt3(soilmoist(:,2),'wfb',idnc,iarch,il)
+      else
+        call histwrt3(soilmoist(:,1),'wb1',idnc,iarch,il)
+        call histwrt3(soilmoist(:,2),'wb2',idnc,iarch,il)
+        call histwrt3(soilmoist(:,3),'wb3',idnc,iarch,il)
+        call histwrt3(soilmoist(:,4),'wb4',idnc,iarch,il)
+        call histwrt3(soilmoist(:,5),'wb5',idnc,iarch,il)
+        call histwrt3(soilmoist(:,6),'wb6',idnc,iarch,il)
       end if
       
-      !call histwrt3(aa,'wbfshal',idnc,iarch,il)
-      !call histwrt3(aa,'wbfroot',idnc,iarch,il)
-      !call histwrt3(aa,'wbftot',idnc,iarch,il)
-      call histwrt3(soilmoist(:,1),'wfg',idnc,iarch,il)
-      call histwrt3(soilmoist(:,2),'wfb',idnc,iarch,il)
 
       if ( any( fracice >= 0. ) ) then
         call histwrt3(fracice,'fracice',idnc,iarch,il)

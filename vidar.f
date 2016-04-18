@@ -146,15 +146,19 @@ c top down
        write(6,*)"convert pm from hPa to Pa  osig_in=",osig_in
        write(6,*)"then precompute alog(pm)"
 
-       do k=1,nplevs
-             pm(k)=pm(k)*1.e2 ! pm now Pa
-             if(osig_in)then
-               pr = calc_p(psg_m(idiag),pm(k)) ! psg_m(Pa), pm(sig*1.e5)-now
-             else
-               pr = pm(k)
-             endif
-             alpm(k)=alog(pr)
-       end do ! m=1,nplevs
+       if (osig_in) then
+         idiag = il/2+(jl/2-1)*il
+         do k=1,nplevs
+            pm(k)=pm(k)*1.e2 ! pm now Pa
+            pr = calc_p(psg_m(idiag),pm(k)) ! psg_m(Pa), pm(sig*1.e5)-now
+            alpm(k)=alog(pr)
+         end do ! m=1,nplevs
+       else
+         do k=1,nplevs
+           pm(k)=pm(k)*1.e2 ! pm now Pa
+           alpm(k)=alog(pm(k))
+         end do ! m=1,nplevs
+       end if
 
 c print out values determined in sigma
 
