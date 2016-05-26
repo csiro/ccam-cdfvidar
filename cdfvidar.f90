@@ -194,7 +194,7 @@
 
       if (kl.gt.lmax) then
         write(6,*) "ERROR: kl is greater than lmax"
-        stop
+        stop -1
       end if
 
       call comsigalloc(kl)
@@ -236,8 +236,8 @@
                 sgx(l+1)=sgx(l)+dsgx(l)
               end do ! l=1,kl
            else
-	      write(6,*)"Wrong sigma specification: STOP"
-              stop
+              write(6,*)"Wrong sigma specification: STOP"
+              stop -1
            endif
            sgx(kl+1)=1.
 
@@ -256,7 +256,7 @@
           iernc=nf_get_att_real(lncid,nf_global,"lon0",rlong0)
           if (iernc/=0) then
             write(6,*) "ERROR reading lon0 ",iernc
-            stop
+            stop -1
           end if
           iernc=nf_get_att_real(lncid,nf_global,"lat0",rlat0)
           iernc=nf_get_att_real(lncid,nf_global,"schmidt",schmidt)
@@ -360,7 +360,10 @@
         else
            write(6,*)'Header information for topofile'
            write(6,*)'ilt,jlk,ds,du,tanl,rnml,stl1,stl2',ilt,jlk,ds,du,tanl,rnml,stl1,stl2
-           if(ilt.ne.il.or.jlk.ne.jl)stop 'wrong topofile supplied'
+           if(ilt.ne.il.or.jlk.ne.jl) then
+             write(6,*) 'wrong topofile supplied'
+             stop -1
+           end if
         endif     ! (ilt.eq.0.or.jlk.eq.0)
         write(6,*)"set up model grid params by calling lconset ds=",ds
         call lconset(ds)
@@ -396,7 +399,7 @@
       write(6,*)'ncid=',ncid
       if(ier.ne.0) then
         write(6,*)' cannot open netCDF file; error code ',ier
-        stop
+        stop -1
       end if
 
 !####################### get attributes of input netcdf file ############################
@@ -541,7 +544,8 @@
           plev(k)=plevin(k)
         end do
         write(6,*)"plevs=",(plev(k),k=1,nplev)
-        stop 'xplev < 800 in cdfvidar'
+        write(6,*) 'xplev < 800 in cdfvidar'
+        stop -1
       end if
 
       ier = nf_inq_dimid(ncid,'time',idtim)
@@ -581,7 +585,7 @@
         cu=timorg
         ier = nf_get_att_text(ncid,ivtim,'time_origin',timorg)
         write(6,*)"ier=",ier," timorg=",timorg
-        if (ier.ne.0) stop "timorg"
+        if (ier.ne.0) stop -1
         read(timorg,'(i2)') idy
         read(timorg,'(3x,a3)') cmonth
         write(6,*)"cmonth=",cmonth
@@ -700,7 +704,7 @@
           ! no change	
         case DEFAULT
           write(6,*) "cannot convert unknown time unit ",trim(cu)
-          stop
+          stop -1
       end select
 
       write(6,*)"time=",time
@@ -708,7 +712,7 @@
       if ( time>1.E9 ) then
         write(6,*) "ERROR: Time too large for real variable"
         write(6,*) "Consider adjusting base date"
-        stop
+        stop -1
       end if
 
       write(6,*)" input levels are bottom-up"
@@ -1576,7 +1580,7 @@
          write(6,*)"var(il*jl)=",var(il*jl)
       else
          write(6,*)"variable is unknown"
-         stop
+         stop -1
       endif
 
 ! obtain scaling factors and offsets from attributes
@@ -1676,7 +1680,7 @@
          var=real(dvar)
       else
          write(6,*)"variable is unknown"
-         stop
+         stop -1
       endif
 
       addoff=0.
@@ -1793,7 +1797,7 @@
         ie = ix*iy*k
         if (all(datan(is:ie)>1.E10)) then
           write(6,*) "ERROR: No valid data on level"
-          stop
+          stop -1
         end if
         
         datatemp(:) = datan(is:ie)  
