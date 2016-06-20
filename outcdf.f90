@@ -628,7 +628,6 @@
       call prt_pan(zs,il,jl,2,'zs(m)')
       call prt_pan(zsi_m,il,jl,2,'zs*g(m2/s2)')
 
-print *,"zsi_m9 ",maxval(zsi_m),minval(zsi_m)
       call histwrt3(zsi_m,'zht',idnc,iarch,il)   ! always from 13/9/02
       call histwrt3(lsm_m*65.e3,'soilt',idnc,iarch,il)
 
