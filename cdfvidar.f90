@@ -138,7 +138,7 @@
       character*3 cmonth
       character*80 zsavn,lsavn
       character*10 header,moistvar
-      character*10 soilunits
+      character*10 soilunits, geopotunits
 
       namelist/gnml/inf,vfil,ds,du,tanl,rnml,stl1,stl2,inzs,zsfil   &
                    ,ints,tsfil, ogbl,zsavn,inzsavn,lsavn,inlsavn    &
@@ -370,9 +370,9 @@
       endif ! ( ogbl ) then
 
       if (liernc==nf_noerr) then
-        write(6,*)'read model grid zsg = g*zs'
+        write(6,*)'read model grid zs'
         iernc=nf_inq_varid(lncid,"zs",varid)
-        iernc=nf_get_var_real(lncid,varid,zsg)
+        iernc=nf_get_var_real(lncid,varid,zs)
         write(6,*)'read model grid land-sea mask (0=ocean, 1=land)'
         iernc=nf_inq_varid(lncid,"lsm",varid)
         iernc=nf_get_var_real(lncid,varid,lsm_m)
@@ -383,10 +383,9 @@
         write(6,*)'read model grid land-sea mask (0=ocean, 1=land)'
         read(inzs,*)lsm_m
         close(inzs)
+        write(6,*)'convert g*zs to zs(m)'
+        zs(1:ifull)=zsg(1:ifull)/g ! convert ascii read in zs*g to zs(m)
       end if
-
-      write(6,*)'convert g*zs to zs(m)'
-      zs(1:ifull)=zsg(1:ifull)/g ! convert ascii read in zs*g to zs(m)
       
       ijd=id+il*(jd-1)
       write(6,*)"ijd=",ijd," zs(m)=",zs(ijd)," lsm_m=",lsm_m(ijd)
@@ -730,7 +729,7 @@
 
       if ( ier .eq. 0 ) then
 
-        write(6,*)ncid,iarch,idvar,ix,iy,nplev
+        write(6,*) ncid,iarch,idvar,ix,iy,nplev
         call ncread_3d(ncid,iarch,idvar,ix,iy,nplev,datan)
 
         call amap (datan(1:ix*iy),ix,iy,'input hgt',0.,0.)
@@ -942,7 +941,13 @@
       endif
       
       if ( ier .eq. 0 ) then
+         geopotunits="gpm"
+         ier = nf_get_att_text(ncid,idvar,'units',geopotunits)
          call ncread_2d(ncid,iarch,idvar,ix,iy,datan(1:ix*iy))  ! zsi(m)
+         if ( geopotunits=="m" ) then
+            write(6,*) "Converting from meters to gpm"
+            datan(1:ix*iy) = datan(1:ix*iy)*g
+         end if
          call amap ( datan(1:ix*iy), ix, iy, 'gbl zs', 0., 0. )
          call sintp16(datan(1:ix*iy),ix,iy,zsi_m,glon,glat,sdiag,il)  ! (m)
          write(6,*)" findxn zsi_m(m)"
@@ -1634,13 +1639,21 @@
 
       use netcdf_m
       
+      implicit none
+      
 !     include 'gblparm.h'
 
-      integer start(4),count(4)
+      integer, dimension(4) :: start,count
+      integer, intent(in) :: idhist, iarch, idvar
+      integer, intent(in) :: il, jl, kl
+      integer ier, itype, i, j, k, ijk
+      
+      real addoff, sf
+      real dx, dn
 
       integer*2, dimension(il*jl*kl) :: ivar
       double precision, dimension(il*jl*kl) :: dvar
-      real, dimension(il*jl*kl) :: var
+      real, dimension(il*jl*kl), intent(out) :: var
       character*30 name
 
       write(6,*)"ncread_2d idhist=",idhist
