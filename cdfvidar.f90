@@ -455,13 +455,16 @@
       write(6,*)"==================> slon=",slon," elon=",elon," ix=",ix
       write(6,*)"==================> slat=",slat," elat=",elat," iy=",iy
 
+      ier = nf_inq_varid(ncid,'pres',ivpres)
       ier = nf_inq_dimid(ncid,'pres',idpres)
       in_type="p"
       if ( ier .ne. 0 ) then
+         ier = nf_inq_varid(ncid,'plev',ivpres) 
          ier = nf_inq_dimid(ncid,'plev',idpres)
          in_type="p"
       endif
       if ( ier .ne. 0 ) then
+         ier = nf_inq_varid(ncid,'lvl',ivpres) 
          ier = nf_inq_dimid(ncid,'lvl',idpres)
          in_type="s"
       endif
@@ -470,13 +473,6 @@
       ier= nf_inq_dimlen(ncid,idpres,nplev)
       write(6,*)"ier=",ier," nplev=",nplev
 
-      ier = nf_inq_varid(ncid,'pres',ivpres)
-      if ( ier .ne. 0 ) then
-         ier = nf_inq_varid(ncid,'plev',ivpres)
-      endif
-      if ( ier .ne. 0 ) then
-         ier = nf_inq_varid(ncid,'lvl',ivpres)
-      endif
       write(6,*)"ier=",ier," ivpres=",ivpres
 
       ier = nf_get_var_real(ncid,ivpres,plev)
