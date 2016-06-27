@@ -31,6 +31,11 @@ c     routine fills in interior of an array which has undefined points
       data in/-1,-1,-1,0,1,1, 1, 0/
       data jn/-1, 0, 1,1,1,0,-1,-1/
 
+      if ( all(a(:,:).lt.value) ) then
+        write(6,*) "WARN: No valid data for fill"
+        return
+      end if
+      
       write(6,*)"fill il,jl,value=",il,jl,value
 
 2     nrem=0
