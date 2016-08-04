@@ -290,7 +290,7 @@
       use cll_m
       use netcdf_m
       use sigdata_m
-      use xyzinfo_m, only : em,f
+      !use xyzinfo_m, only : em,f
 
 !     this routine creates attributes and writes output
 
@@ -421,10 +421,10 @@
         call attrib(idnc,idim2,2,'soilt',lname,'none',0.,65.e3)    ! MJT lsmask
 
 !       For time invariant surface fields
-        lname = 'Map factor'
-        call attrib(idnc,idim2,2,'map',lname,'none',0.,20.)
-        lname = 'Coriolis factor'
-        call attrib(idnc,idim2,2,'cor',lname,'1/sec',-1.5e-4,1.5e-4)
+        !lname = 'Map factor'
+        !call attrib(idnc,idim2,2,'map',lname,'none',0.,20.)
+        !lname = 'Coriolis factor'
+        !call attrib(idnc,idim2,2,'cor',lname,'1/sec',-1.5e-4,1.5e-4)
 !       lname = 'Initial wetness fraction layer 3'
 !       call attrib(idnc,idim2,2,'wetfrac',lname,'none',-2.,2.)
         lname = 'clon'
@@ -601,8 +601,8 @@
 
       if(ktau.eq.0.or.itype.eq.-1)then  ! also for restart file
 !       write time-invariant fields      
-        call histwrt3(real(em),'map',idnc,iarch,il)
-        call histwrt3(real(f),'cor',idnc,iarch,il)
+        !call histwrt3(real(em),'map',idnc,iarch,il)
+        !call histwrt3(real(f),'cor',idnc,iarch,il)
         call histwrt3(clon,'clon',idnc,iarch,il)
         call histwrt3(clat,'clat',idnc,iarch,il)
       endif ! (ktau.eq.0) 
