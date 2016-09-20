@@ -23,7 +23,7 @@
 
       logical splineu,splinev,splinet,zerowinds,osig_in
 
-      character*120 zsfil,tsfil,smfil,vfil
+      character*1024 zsfil,tsfil,smfil,vfil
 
       common / vi / ntimes,spline,mxcyc,nvsig,nrh,                       &
      &              oesig,ptop,debug,notop,opre,have_gp,                 &
