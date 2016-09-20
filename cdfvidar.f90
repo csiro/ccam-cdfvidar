@@ -73,7 +73,7 @@
       real rnml,stl1,stl2
       real rlon
 
-      character*80 inf
+      character*1024 inf
 
       common/mapproj/du,tanl,rnml,stl1,stl2
       include 'nplevs.h' ! maxplev
@@ -393,7 +393,7 @@
 
 !####################### open input netcdf file ############################
       write(6,*)'inf='
-      write(6,*)inf
+      write(6,*) trim(inf)
       ier = nf_open(inf,nf_nowrite,ncid)
       write(6,*)'ncid=',ncid
       if(ier.ne.0) then
