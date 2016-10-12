@@ -182,6 +182,10 @@
       write(6,*) "============================================================================="
       write(6,*) version
 
+#ifndef stacklimit
+      ! For linux only - removes stacklimit on all processors
+      call setstacklimit(-1)
+#endif 
    
       slon=0.
       slat=90.

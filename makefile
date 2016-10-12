@@ -20,7 +20,8 @@ OBJ2= dryadj.o findxn.o filt.o sintp16.o vidar.o invert.o\
       setxyz_m.o ccinterp.o jimcc_m.o \
       latltoij_m.o xyzinfo_m.o newmpar_m.o indices_m.o \
       parm_m.o precis_m.o ind_m.o jimco_m.o jim_utils.o nfft_m.o \
-      latlong_m.o comsig_m.o cll_m.o sigdata_m.o netcdf_m.o
+      latlong_m.o comsig_m.o cll_m.o sigdata_m.o netcdf_m.o \
+      stacklimit.o
 
 cdfvidar : $(OBJ2)
 	$(FC) $(FFLAGS) $(OBJ2) $(LIBS) -o cdfvidar
@@ -30,6 +31,8 @@ clean:
 
 .SUFFIXES:.f90
 
+stacklimit.o: stacklimit.c
+	cc -c stacklimit.c
 version.h: FORCE
 	rm -f brokenver tmpver
 	echo "      character(len=*), parameter :: version ='CDFVIDAR r'" > brokenver
