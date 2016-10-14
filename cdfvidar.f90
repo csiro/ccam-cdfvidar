@@ -61,7 +61,7 @@
       real g,pi,rlonx,rlatx
       real rlonn,rlatn
       real rlong0,rlat0,schmidt
-      real elon,elat,xplev
+      real elon,elat,xplev,tohpa
       real time,xa,an
       real spval,sinlong,coslat
       real coslong,polenz,poleny
@@ -465,6 +465,11 @@
       if ( ier .ne. 0 ) then
          ier = nf_inq_varid(ncid,'plev',ivpres) 
          ier = nf_inq_dimid(ncid,'plev',idpres)
+         in_type="p"
+      endif
+      if ( ier .ne. 0 ) then
+         ier = nf_inq_varid(ncid,'lev',ivpres) 
+         ier = nf_inq_dimid(ncid,'lev',idpres)
          in_type="p"
       endif
       if ( ier .ne. 0 ) then
@@ -1479,8 +1484,13 @@
       write(6,'(6a10," at i,j=",2i3)') "p","z","t","u","v","rh",i,j
       write(6,*)"invert order of plev  nplev=",nplev
       write(6,'(6a10)')"plev","hgt","temp","u","v","rh/mr"
+      xplev = maxval( plev(1:nplev) )
+      tohpa = 1.
+      if ( xplev > 1500. ) then
+        tohpa = 0.01
+      end if
       do k=1,nplev
-          cplev(k)=plev(nplev+1-k)
+          cplev(k)=tohpa*plev(nplev+1-k)
           write(6,'(5f10.2,f10.5)') cplev(k),hgt(i,j,k),temp(i,j,k),u(i,j,k),v(i,j,k),rh(i,j,k)
       enddo ! k=1,nplev
 
