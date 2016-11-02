@@ -583,8 +583,15 @@
         read(timorg(1:4),*) iyr
         read(timorg(6:7),*) imn
         read(timorg(9:10),*) idy
-        read(timorg(12:13),*) ihr
-        read(timorg(15:16),*) imi 
+        read(timorg(12:13),*,IOSTAT=ier) ihr
+        if ( ier .ne. 0 ) then
+          write(6,*)"something wrong ier=",ier
+          read(timorg(11:12),*) ihr
+          read(timorg(14:15),*) imi
+        else
+          read(timorg(12:13),*) ihr
+          read(timorg(15:16),*) imi
+        endif
       else
         cu=timorg
         ier = nf_get_att_text(ncid,ivtim,'time_origin',timorg)
