@@ -198,6 +198,7 @@
 
       if (kl.gt.lmax) then
         write(6,*) "ERROR: kl is greater than lmax"
+        call finishbanner
         stop -1
       end if
 
@@ -241,6 +242,7 @@
               end do ! l=1,kl
            else
               write(6,*)"Wrong sigma specification: STOP"
+              call finishbanner
               stop -1
            endif
            sgx(kl+1)=1.
@@ -260,6 +262,7 @@
           iernc=nf_get_att_real(lncid,nf_global,"lon0",rlong0)
           if (iernc/=0) then
             write(6,*) "ERROR reading lon0 ",iernc
+            call finishbanner
             stop -1
           end if
           iernc=nf_get_att_real(lncid,nf_global,"lat0",rlat0)
@@ -366,6 +369,7 @@
            write(6,*)'ilt,jlk,ds,du,tanl,rnml,stl1,stl2',ilt,jlk,ds,du,tanl,rnml,stl1,stl2
            if(ilt.ne.il.or.jlk.ne.jl) then
              write(6,*) 'wrong topofile supplied'
+             call finishbanner
              stop -1
            end if
         endif     ! (ilt.eq.0.or.jlk.eq.0)
@@ -402,6 +406,7 @@
       write(6,*)'ncid=',ncid
       if(ier.ne.0) then
         write(6,*)' cannot open netCDF file; error code ',ier
+        call finishbanner
         stop -1
       end if
 
@@ -549,6 +554,7 @@
         end do
         write(6,*)"plevs=",(plev(k),k=1,nplev)
         write(6,*) 'xplev < 800 in cdfvidar'
+        call finishbanner
         stop -1
       end if
 
@@ -568,46 +574,78 @@
       ier = nf_get_att_text(ncid,ivtim,'units',timorg) ! MJT quick fix
       write(6,*)"ier=",ier," timorg=",trim(timorg)
 
-      if (ier.eq.0) then
-        i=index(timorg,'since')
-      else
-        timorg='hours'
-        i=0
-      end if
 
-      if (i.ne.0) then
-        i=scan(timorg,' ')-1
-        cu=''
-        cu(1:i)=timorg(1:i)
-        timorg(1:19)=timorg(i+8:i+26)
-        read(timorg(1:4),*) iyr
-        read(timorg(6:7),*) imn
-        read(timorg(9:10),*) idy
-        read(timorg(12:13),*,IOSTAT=ier) ihr
-        if ( ier .ne. 0 ) then
-          write(6,*)"something wrong ier=",ier
-          read(timorg(11:12),*) ihr
-          read(timorg(14:15),*) imi
-        else
-          read(timorg(12:13),*) ihr
-          read(timorg(15:16),*) imi
-        endif
-      else
-        cu=timorg
+!     if (ier.eq.0) then
+!       i=index(timorg,'since')
+!     else
+!       timorg='hours'
+!       i=0
+!     end if
+
+!     if (i.ne.0) then
+!       i=scan(timorg,' ')-1
+!       cu=''
+!       cu(1:i)=timorg(1:i)
+!       timorg(1:19)=timorg(i+8:i+26)
+!       read(timorg(1:4),*) iyr
+!       read(timorg(6:7),*) imn
+!       read(timorg(9:10),*) idy
+
+!       read(timorg(12:13),*,IOSTAT=ier) ihr
+!       if ( ier .ne. 0 ) then
+!         write(6,*)"something wrong ier=",ier
+!         read(timorg(11:12),*) ihr
+!         read(timorg(14:15),*) imi
+!       else
+!         read(timorg(12:13),*) ihr
+!         read(timorg(15:16),*) imi
+!       endif
+!     else
+!       cu=timorg
+!       ier = nf_get_att_text(ncid,ivtim,'time_origin',timorg)
+!       write(6,*)"ier=",ier," timorg=",timorg
+!       if (ier.ne.0) stop -1
+!       read(timorg,'(i2)') idy
+!       read(timorg,'(3x,a3)') cmonth
+!       write(6,*)"cmonth=",cmonth
+!       imn = icmonth_to_imn(cmonth)
+!       write(6,*)"imn=",imn
+!       read(timorg,'(9x,i2)') iyr
+!       read(timorg,'(12x,i2)') ihr
+!       read(timorg,'(15x,i2)') imi
+!     end if
+
+! new code to handle date time info (like onthefly)
+      if (ier.ne.0) then
         ier = nf_get_att_text(ncid,ivtim,'time_origin',timorg)
         write(6,*)"ier=",ier," timorg=",timorg
-        if (ier.ne.0) stop -1
-        read(timorg,'(i2)') idy
-        read(timorg,'(3x,a3)') cmonth
-        write(6,*)"cmonth=",cmonth
-        imn = icmonth_to_imn(cmonth)
-        write(6,*)"imn=",imn
-        read(timorg,'(9x,i2)') iyr
-        read(timorg,'(12x,i2)') ihr
-        read(timorg,'(15x,i2)') imi
+        if (ier.ne.0) then
+           write(6,*)"cannot find valid timorg"
+           call finishbanner
+           stop -1
+        endif
       end if
 
+      i=scan(timorg,' ')-1
+      cu=''  ! clear string to ensure blank
+      cu(1:i)=timorg(1:i)
+      if ( cu(1:i) == "since" ) then
+        cu="hours"
+      endif
+!     if (ier.eq.0) then
+!       i=scan(timorg,' ')-1
+!       cu=''
+!       cu(1:i)=timorg(1:i)
+!       i=index(timorg,'since')
+!     else
+!       timorg='hours'
+!       i=0
+!     end if
+
+      call processdatestring(timorg,iyr,imn,idy,ihr,imi)
+
       write(6,'("iyr,imn,idy,ihr,imi=",5i4)')iyr,imn,idy,ihr,imi
+      write(6,*)"cu=",cu
 
       do j=1,iy
        do i=1,ix
@@ -708,13 +746,14 @@
       
       select case(cu) ! MJT quick fix
         case('days')
-          time=time*1440. 	
+          time=time*1440. 
         case('hours')
-          time=time*60. 	
+          time=time*60. 
         case('minutes')
           ! no change	
         case DEFAULT
           write(6,*) "cannot convert unknown time unit ",trim(cu)
+          call finishbanner
           stop -1
       end select
 
@@ -723,6 +762,7 @@
       if ( time>1.E9 ) then
         write(6,*) "ERROR: Time too large for real variable"
         write(6,*) "Consider adjusting base date"
+        call finishbanner
         stop -1
       end if
 
@@ -1537,9 +1577,7 @@
       write(6,*) "CCAM: cdfvidar completed successfully"
       
       ! End banner
-      write(6,*) "=============================================================================="
-      write(6,*) "CCAM: Finished cdfvidar"
-      write(6,*) "=============================================================================="
+      call finishbanner
       
       stop
       end ! cdfvidar
@@ -1602,6 +1640,7 @@
          write(6,*)"var(il*jl)=",var(il*jl)
       else
          write(6,*)"variable is unknown"
+         call finishbanner
          stop -1
       endif
 
@@ -1710,6 +1749,7 @@
          var=real(dvar)
       else
          write(6,*)"variable is unknown"
+         call finishbanner
          stop -1
       endif
 
@@ -1827,6 +1867,7 @@
         ie = ix*iy*k
         if (all(datan(is:ie)>1.E10)) then
           write(6,*) "ERROR: No valid data on level"
+          call finishbanner
           stop -1
         end if
         
@@ -1887,4 +1928,89 @@
       
       return
       end subroutine filldat
+
+subroutine processdatestring(datestring,yyyy,mm,dd,hh,mt)
+
+implicit none
+
+integer, intent(out) :: yyyy, mm, dd, hh, mt
+integer iposa, iposb, ierx
+character(len=*), intent(in) :: datestring
+
+!if ( datestring(1:7)/='minutes' ) then
+!  write(6,*) "ERROR: Time units expected to be minutes"
+!  write(6,*) "Found ",trim(datestring)
+!  stop -1
+!end if
+
+! process year
+iposa = index(trim(datestring),'since')
+iposa = iposa + 5 ! skip 'since'
+iposb = index(trim(datestring(iposa:)),'-')
+iposb = iposa + iposb - 2 ! remove '-'
+read(datestring(iposa:iposb),FMT=*,iostat=ierx) yyyy
+if ( ierx/=0 ) then
+  write(6,*) "ERROR reading time units.  Expecting year but found ",datestring(iposa:iposb)
+  call finishbanner
+  stop -1
+end if
+
+! process month
+iposa = iposb + 2 ! skip '-'
+iposb = index(trim(datestring(iposa:)),'-')
+iposb = iposa + iposb - 2 ! remove '-'
+read(datestring(iposa:iposb),FMT=*,iostat=ierx) mm
+if ( ierx/=0 ) then
+  write(6,*) "ERROR reading time units.  Expecting month but found ",datestring(iposa:iposb)
+  call finishbanner
+  stop -1
+end if
+
+! process day
+iposa = iposb + 2 ! skip '-'
+iposb = index(trim(datestring(iposa:)),' ')
+iposb = iposa + iposb - 2 ! remove ' '
+read(datestring(iposa:iposb),FMT=*,iostat=ierx) dd
+if ( ierx/=0 ) then
+  write(6,*) "ERROR reading time units.  Expecting day but found ",datestring(iposa:iposb)
+  call finishbanner
+  stop -1
+end if
+
+! process hour
+iposa = iposb + 2 ! skip ' '
+iposb = index(trim(datestring(iposa:)),':')
+iposb = iposa + iposb - 2 ! remove ':'
+read(datestring(iposa:iposb),FMT=*,iostat=ierx) hh
+if ( ierx/=0 ) then
+  write(6,*) "ERROR reading time units.  Expecting hour but found ",datestring(iposa:iposb)
+  call finishbanner
+  stop -1
+end if
+
+! process mins
+iposa = iposb + 2 ! skip ':'
+iposb = index(trim(datestring(iposa:)),':')
+iposb = iposa + iposb - 2 ! remove ':'
+read(datestring(iposa:iposb),FMT=*,iostat=ierx) mt
+if ( ierx/=0 ) then
+  write(6,*) "ERROR reading time units.  Expecting minutes but found ",datestring(iposa:iposb)
+  call finishbanner
+  stop -1
+end if
+
+return
+end subroutine processdatestring
+
+subroutine finishbanner
+
+implicit none
+
+! End banner
+write(6,*) "=============================================================================="
+write(6,*) "CCAM: Finished cdfvidar"
+write(6,*) "=============================================================================="
+
+return
+end
 
