@@ -3,7 +3,7 @@ ifneq ($(CUSTOM),yes)
 FC = ifort
 LIBS = -L $(NETCDF_ROOT)/lib -lnetcdf -lnetcdff
 INC = -I $(NETCDF_ROOT)/include
-FFLAGS = 
+FFLAGS =  -xHost -fp-model precise -traceback
 PPFLAG90 = -fpp
 PPFLAG77 = -fpp
 endif

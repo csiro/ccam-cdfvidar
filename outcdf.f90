@@ -104,7 +104,11 @@
       if ( iarch.eq.1 ) then
         write(6,*)'nccre of ',cdffile
 #ifdef usenc3
+#ifdef no64bit_offset
+      ier = nf_create(cdffile,NF_CLOBBER,idnc)
+#else
       ier = nf_create(cdffile,NF_64BIT_OFFSET,idnc)
+#endif
 #else
       ier = nf_create(cdffile,NF_NETCDF4,idnc)
 #endif
@@ -248,21 +252,21 @@
         ier = nf_put_att_text(idnc,nf_global,'date_header',10,rundate)
         if(ier.ne.0)write(6,*)"ncaptc date idnc,ier=",idnc,ier
 
-        dimids = 0
-        ier = nf_def_var(idnc,'ds',nf_float,0,dimids,idv)
-        if(ier.ne.0)write(6,*)"ncvdef ds idnc,ier=",idnc,ier
-        ier = nf_def_var(idnc,'du',nf_float,0,dimids,idv)
-        if(ier.ne.0)write(6,*)"ncvdef du idnc,ier=",idnc,ier
-        ier = nf_def_var(idnc,'rnml',nf_float,0,dimids,idv)
-        if(ier.ne.0)write(6,*)"ncvdef rnml idnc,ier=",idnc,ier
-        ier = nf_def_var(idnc,'tanl',nf_float,0,dimids,idv)
-        if(ier.ne.0)write(6,*)"ncvdef tanl idnc,ier=",idnc,ier
-        ier = nf_def_var(idnc,'stl1',nf_float,0,dimids,idv)        
-        if(ier.ne.0)write(6,*)"ncvdef stl1 idnc,ier=",idnc,ier
-        ier = nf_def_var(idnc,'stl2',nf_float,0,dimids,idv)
-        if(ier.ne.0)write(6,*)"ncvdef stl2 idnc,ier=",idnc,ier
-        ier = nf_def_var(idnc,'dt',nf_float,0,dimids,idv)        
-        if(ier.ne.0)write(6,*)"ncvdef dt idnc,ier=",idnc,ier
+        !dimids = 0
+        !ier = nf_def_var(idnc,'ds',nf_float,0,dimids,idv)
+        !if(ier.ne.0)write(6,*)"ncvdef ds idnc,ier=",idnc,ier
+        !ier = nf_def_var(idnc,'du',nf_float,0,dimids,idv)
+        !if(ier.ne.0)write(6,*)"ncvdef du idnc,ier=",idnc,ier
+        !ier = nf_def_var(idnc,'rnml',nf_float,0,dimids,idv)
+        !if(ier.ne.0)write(6,*)"ncvdef rnml idnc,ier=",idnc,ier
+        !ier = nf_def_var(idnc,'tanl',nf_float,0,dimids,idv)
+        !if(ier.ne.0)write(6,*)"ncvdef tanl idnc,ier=",idnc,ier
+        !ier = nf_def_var(idnc,'stl1',nf_float,0,dimids,idv)        
+        !if(ier.ne.0)write(6,*)"ncvdef stl1 idnc,ier=",idnc,ier
+        !ier = nf_def_var(idnc,'stl2',nf_float,0,dimids,idv)
+        !if(ier.ne.0)write(6,*)"ncvdef stl2 idnc,ier=",idnc,ier
+        !ier = nf_def_var(idnc,'dt',nf_float,0,dimids,idv)        
+        !if(ier.ne.0)write(6,*)"ncvdef dt idnc,ier=",idnc,ier
       endif ! ( iarch=1 ) then
 
       write(6,*)'call openhist for itype= ',itype
@@ -647,6 +651,12 @@
          enddo ! iq=1,ifull
       endif ! ( xsfct .lt. 200. ) then
 
+      if ( any( sfct<100. .or. sfct>400. ) ) then
+        write(6,*) "ERROR: Invalid sfct"
+        write(6,*) "minval,maxval ",minval(sfct),maxval(sfct)
+        stop
+      end if 
+      
       call histwrt3(sfct,'tsu',idnc,iarch,il)
 
       if ( all(soiltemp<0.) ) then

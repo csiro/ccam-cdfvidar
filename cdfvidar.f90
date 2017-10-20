@@ -1108,9 +1108,9 @@
         call ncread_2d(ncid,iarch,idvar,ix,iy,datan(1:ix*iy))
         spval=-1.e10
         write(6,*)"spval=",spval
-        if (any(datan(1:ix*iy).gt.400.)) then
+        if (any(datan(1:ix*iy)<100..or.datan(1:ix*iy)>400.)) then
           write(6,*) "Missing data found in sfc temp"
-          where (datan(1:ix*iy).gt.400.)
+          where (datan(1:ix*iy)<100..or.datan(1:ix*iy)>400.)
             datan(1:ix*iy)=spval
           end where
           call fill(datan(1:ix*iy),ix,iy,.1*spval,datan(1+2*ix*iy:3*ix*iy))
