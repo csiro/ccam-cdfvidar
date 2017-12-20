@@ -72,8 +72,9 @@
       real vmer,ther,ds,du,tanl
       real rnml,stl1,stl2
       real rlon
+      real llrng,minlon,maxlon,minlat,maxlat
 
-      character*1024 inf
+      character(len=1024) inf
 
       common/mapproj/du,tanl,rnml,stl1,stl2
       include 'nplevs.h' ! maxplev
@@ -139,6 +140,8 @@
       character*80 zsavn,lsavn
       character*10 header,moistvar
       character*10 soilunits, geopotunits
+      
+      logical merge
 
       namelist/gnml/inf,vfil,ds,du,tanl,rnml,stl1,stl2,inzs,zsfil   &
                    ,ints,tsfil, ogbl,zsavn,inzsavn,lsavn,inlsavn    &
@@ -150,7 +153,7 @@
                    ,insm,smfil                                      &
                    ,splineu,splinev,splinet,zerowinds               &
                    ,grdx,grdy,slon,slat                             &
-                   ,moistvar,kl
+                   ,moistvar,kl,merge,llrng
 
       data khin/0/,kuin/0/,kvin/0/,ktin/0/,krin/0/
       data igd/1/,jgd/1/,id/1/,jd/1/,mtimer/0/
@@ -175,6 +178,7 @@
       data zerowinds/.true./
       data grdx/1./
       data grdy/-1./
+      data merge/.false./,llrng/0./
 
       ! Start banner
       write(6,*) "=============================================================================="
@@ -196,8 +200,9 @@
       write(6,nml=gnml)
 !####################### read namelist ############################
 
-      if (kl.gt.lmax) then
+      if (kl>lmax) then
         write(6,*) "ERROR: kl is greater than lmax"
+        write(6,*) "kl= ",kl," lmax=",lmax
         call finishbanner
         stop -1
       end if
@@ -211,41 +216,41 @@
 ! set up what sigma levels the outgoing data will have
 ! assumes top down, ie. sg(1)=0., dsg>0
 
-           sgx(1)=0.
-           if ( sgmlx(kl/2).gt.0. ) then
+      sgx(1)=0.
+      if ( sgmlx(kl/2).gt.0. ) then
 ! dsg=0, sgml>0
-              do l=2,kl
-                sgx(l)=.5*(sgmlx(l-1)+sgmlx(l))
-              end do ! l=2,kl
-              do l=2,kl+1
-                dsgx(l-1)=sgx(l)-sgx(l-1)
-              end do ! l=2,kl+1
-           elseif ( dsgx(kl/2).gt.0. ) then
+         do l=2,kl
+           sgx(l)=.5*(sgmlx(l-1)+sgmlx(l))
+         end do ! l=2,kl
+         do l=2,kl+1
+           dsgx(l-1)=sgx(l)-sgx(l-1)
+         end do ! l=2,kl+1
+      elseif ( dsgx(kl/2).gt.0. ) then
 ! sgml=0, dsg>0
-              do l=2,kl-1
-                sgx(l)=sgx(l-1)+dsgx(l-1)
-              end do ! l=2,kl-1
-              do l=1,kl
-                sgmlx(l)=.5*(sgx(l)+sgx(l+1))
-              end do ! l=1,kl
-           elseif ( kl.eq.35 ) then
-              call calcsig(sgx,kl)
-              do l=1,kl
-                sgmlx(l)=.5*(sgx(l)+sgx(l+1))
-                dsgx(l)=sgx(l+1)-sgx(l)
-              end do ! l=1,kl
-           elseif ( oesig ) then
-              do l=1,kl
-                dsgx(l)=1./float(kl)
-                sgmlx(l)=(l-.5)/float(kl)
-                sgx(l+1)=sgx(l)+dsgx(l)
-              end do ! l=1,kl
-           else
-              write(6,*)"Wrong sigma specification: STOP"
-              call finishbanner
-              stop -1
-           endif
-           sgx(kl+1)=1.
+         do l=2,kl-1
+           sgx(l)=sgx(l-1)+dsgx(l-1)
+         end do ! l=2,kl-1
+         do l=1,kl
+           sgmlx(l)=.5*(sgx(l)+sgx(l+1))
+         end do ! l=1,kl
+      elseif ( kl.eq.35 ) then
+         call calcsig(sgx,kl)
+         do l=1,kl
+           sgmlx(l)=.5*(sgx(l)+sgx(l+1))
+           dsgx(l)=sgx(l+1)-sgx(l)
+         end do ! l=1,kl
+      elseif ( oesig ) then
+         do l=1,kl
+           dsgx(l)=1./float(kl)
+           sgmlx(l)=(l-.5)/float(kl)
+           sgx(l+1)=sgx(l)+dsgx(l)
+         end do ! l=1,kl
+      else
+         write(6,*)"Wrong sigma specification: STOP"
+         call finishbanner
+         stop -1
+      endif
+      sgx(kl+1)=1.
 
 !####################### read topography data ############################
       write(6,*)'open ',inzs,' zsfil=',zsfil
@@ -367,7 +372,7 @@
         else
            write(6,*)'Header information for topofile'
            write(6,*)'ilt,jlk,ds,du,tanl,rnml,stl1,stl2',ilt,jlk,ds,du,tanl,rnml,stl1,stl2
-           if(ilt.ne.il.or.jlk.ne.jl) then
+           if(ilt/=il.or.jlk/=jl) then
              write(6,*) 'wrong topofile supplied'
              call finishbanner
              stop -1
@@ -461,6 +466,20 @@
       elon = glon(ix)
       slat = glat(1)
       elat = glat(iy)
+      if ( slon<elon ) then
+        minlon = glon(2)
+        maxlon = glon(ix-2)
+      else
+        minlon = glon(ix-2)
+        maxlon = glon(2)
+      end if    
+      if ( slat<elat ) then
+        minlat = glat(2)
+        maxlat = glat(iy-2)
+      else
+        minlat = glat(iy-2)
+        maxlat = glat(2)
+      end if
       write(6,*)"==================> slon=",slon," elon=",elon," ix=",ix
       write(6,*)"==================> slat=",slat," elat=",elat," iy=",iy
 
@@ -553,7 +572,7 @@
           plev(k)=plevin(k)
         end do
         write(6,*)"plevs=",(plev(k),k=1,nplev)
-        write(6,*) 'xplev < 800 in cdfvidar'
+        write(6,*) 'xplev < 0.01 in cdfvidar'
         call finishbanner
         stop -1
       end if
@@ -575,46 +594,6 @@
       write(6,*)"ier=",ier," timorg=",trim(timorg)
 
 
-!     if (ier.eq.0) then
-!       i=index(timorg,'since')
-!     else
-!       timorg='hours'
-!       i=0
-!     end if
-
-!     if (i.ne.0) then
-!       i=scan(timorg,' ')-1
-!       cu=''
-!       cu(1:i)=timorg(1:i)
-!       timorg(1:19)=timorg(i+8:i+26)
-!       read(timorg(1:4),*) iyr
-!       read(timorg(6:7),*) imn
-!       read(timorg(9:10),*) idy
-
-!       read(timorg(12:13),*,IOSTAT=ier) ihr
-!       if ( ier .ne. 0 ) then
-!         write(6,*)"something wrong ier=",ier
-!         read(timorg(11:12),*) ihr
-!         read(timorg(14:15),*) imi
-!       else
-!         read(timorg(12:13),*) ihr
-!         read(timorg(15:16),*) imi
-!       endif
-!     else
-!       cu=timorg
-!       ier = nf_get_att_text(ncid,ivtim,'time_origin',timorg)
-!       write(6,*)"ier=",ier," timorg=",timorg
-!       if (ier.ne.0) stop -1
-!       read(timorg,'(i2)') idy
-!       read(timorg,'(3x,a3)') cmonth
-!       write(6,*)"cmonth=",cmonth
-!       imn = icmonth_to_imn(cmonth)
-!       write(6,*)"imn=",imn
-!       read(timorg,'(9x,i2)') iyr
-!       read(timorg,'(12x,i2)') ihr
-!       read(timorg,'(15x,i2)') imi
-!     end if
-
 ! new code to handle date time info (like onthefly)
       if (ier.ne.0) then
         ier = nf_get_att_text(ncid,ivtim,'time_origin',timorg)
@@ -632,15 +611,6 @@
       if ( cu(1:i) == "since" ) then
         cu="hours"
       endif
-!     if (ier.eq.0) then
-!       i=scan(timorg,' ')-1
-!       cu=''
-!       cu(1:i)=timorg(1:i)
-!       i=index(timorg,'since')
-!     else
-!       timorg='hours'
-!       i=0
-!     end if
 
       call processdatestring(timorg,iyr,imn,idy,ihr,imi)
 
@@ -1304,6 +1274,10 @@
       snod(:) = 0.
       if ( ier .eq. 0 ) then
          call ncread_2d(ncid,iarch,idvar,ix,iy,datan(1:ix*iy))
+         ! fix for missing values
+         where ( datan(1:ix*iy) > 1000. )
+           datan(1:ix*iy)=0.
+         end where
          call amap ( datan(1:ix*iy), ix, iy, 'snod', 0., 0. )
          call sintp16(datan(1:ix*iy),ix,iy,snod,glon,glat,sdiag,il)
       else
@@ -1553,7 +1527,8 @@
       if2=0
 
 !#######################################################################
-      call vidar(nplev,hgt,temp,u,v,rh,validlevcc,iyr,imn,idy,ihr,iarch,time,mtimer,cplev,io_out,il,kl)
+      call vidar(nplev,hgt,temp,u,v,rh,validlevcc,iyr,imn,idy,ihr,iarch,time,mtimer,cplev,io_out,il,kl,merge, &
+                 minlon,maxlon,minlat,maxlat,llrng)
 !#######################################################################
 
       enddo ! narch
