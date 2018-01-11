@@ -1001,10 +1001,14 @@
          ier = nf_inq_varid(ncid,'land_mask',idvar)
          write(6,*)"ier=",ier," idvar=",idvar
       endif
+      if ( ier .ne. 0 ) then
+         ier = nf_inq_varid(ncid,'lnd_mask',idvar)
+         write(6,*)"ier=",ier," idvar=",idvar
+      end if
 
       if ( ier .eq. 0 ) then
          olsm_gbl = .true.
-         call ncread_2d(ncid,1,idvar,ix,iy,datan(1:ix*iy))	! MJT quick fix 
+         call ncread_2d(ncid,1,idvar,ix,iy,datan(1:ix*iy))  ! MJT quick fix 
          datan(1:ix*iy)=abs(datan(1:ix*iy))                 ! MJT quick fix
          lsm_gbl(1:ix*iy)=datan(1:ix*iy)
          ! MJT quick fix 
