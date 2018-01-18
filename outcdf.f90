@@ -62,7 +62,7 @@
       real sig(kl)
       real time,dt,ds
 
-      character cdffile*80
+      character(len=*) cdffile
 
       common/cdfind/ixp,iyp,idlev,idnt
 

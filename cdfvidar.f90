@@ -139,7 +139,7 @@
       character*3 cmonth
       character*80 zsavn,lsavn
       character*10 header,moistvar
-      character*10 soilunits, geopotunits
+      character*10 soilunits, geopotunits, presunits
       
       logical merge
 
@@ -513,6 +513,9 @@
       write(6,*)"input nplev=",nplev
       write(6,*)"plevs=",(plev(k),k=1,nplev)
 
+      ier = nf_get_att_text(ncid,ivpres,'units',presunits)
+      write(6,*)"ier=",ier," presunits=",trim(presunits)     
+      
       orev = plev(nplev).gt.plev(1)
       write(6,*)"#################################### orev=",orev
 
@@ -565,6 +568,7 @@
         do k=1,nplev
           plev(k)=plev(k)*1000. !
         enddo
+        presunits="hPa"
         write(6,*)"plevs=",(plev(k),k=1,nplev)
       else if ( xplev .le. .01  ) then
         write(6,*)"^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ fix plevs"
@@ -577,6 +581,19 @@
         stop -1
       end if
 
+      if ( presunits=="Pa" ) then
+        write(6,*) "Converting pressure levels from Pa to hPa"  
+        plev = plev/100.
+        presunits="hPa"
+      end if
+      
+      if ( presunits/="hPa" ) then
+        write(6,*) "ERROR: Could not convert vertical levels to hPa"
+        write(6,*) "Vertical level units was read as ",trim(presunits)
+        call finishbanner
+        stop -1
+      end if
+      
       ier = nf_inq_dimid(ncid,'time',idtim)
       write(6,*)"ier=",ier," idtim=",idtim
 
@@ -1004,11 +1021,11 @@
       if ( ier .ne. 0 ) then
          ier = nf_inq_varid(ncid,'lnd_mask',idvar)
          write(6,*)"ier=",ier," idvar=",idvar
-      end if
+      endif
 
       if ( ier .eq. 0 ) then
          olsm_gbl = .true.
-         call ncread_2d(ncid,1,idvar,ix,iy,datan(1:ix*iy))  ! MJT quick fix 
+         call ncread_2d(ncid,1,idvar,ix,iy,datan(1:ix*iy))	! MJT quick fix 
          datan(1:ix*iy)=abs(datan(1:ix*iy))                 ! MJT quick fix
          lsm_gbl(1:ix*iy)=datan(1:ix*iy)
          ! MJT quick fix 
