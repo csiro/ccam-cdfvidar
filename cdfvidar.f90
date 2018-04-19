@@ -771,6 +771,10 @@
         write(6,*) ncid,iarch,idvar,ix,iy,nplev
         call ncread_3d(ncid,iarch,idvar,ix,iy,nplev,datan)
 
+        ! MJT quick fix
+        call getvalidlev(validlevhost,datan,ix,iy,nplev)
+        call filldat(datan,ix,iy,nplev)
+
         call amap (datan(1:ix*iy),ix,iy,'input hgt',0.,0.)
         call amap (datan(1+ix*iy*(nplev-1):ix*iy*nplev),ix,iy,'input hgt',0.,0.)
 
@@ -983,6 +987,7 @@
          geopotunits="gpm"
          ier = nf_get_att_text(ncid,idvar,'units',geopotunits)
          call ncread_2d(ncid,iarch,idvar,ix,iy,datan(1:ix*iy))  ! zsi(m)
+         call findxn(zsi_m,ifull,-1.e29,xa,kx,an,kn)
          if ( geopotunits=="m" ) then
             write(6,*) "Converting from meters to gpm"
             datan(1:ix*iy) = datan(1:ix*iy)*g
@@ -990,7 +995,6 @@
          call amap ( datan(1:ix*iy), ix, iy, 'gbl zs', 0., 0. )
          call sintp16(datan(1:ix*iy),ix,iy,zsi_m,glon,glat,sdiag,il)  ! (m)
          write(6,*)" findxn zsi_m(m)"
-         call findxn(zsi_m,ifull,-1.e29,xa,kx,an,kn)
 !        if ( an .gt. 2000. ) then
 !           write(6,*)"#########################convert m2/s2 to m"
 !           do i=1,ifull
@@ -1594,6 +1598,7 @@
       real dx, dn
 
       integer*2, dimension(:), allocatable :: ivar
+      double precision, dimension(:), allocatable :: dvar
 !     integer*2 ivar(nnx*nny)
 
       character*30 name
@@ -1634,6 +1639,12 @@
          ier = nf_get_vara_real(idhist,idvar,start,count,var)
          write(6,*)"var(1)=",var(1)," ier=",ier
          write(6,*)"var(il*jl)=",var(il*jl)
+      else if ( itype .eq. nf_double ) then
+         allocate(dvar(il*jl))
+         write(6,*)"variable is double"
+         ier = nf_get_vara_real(idhist,idvar,start,count,dvar)
+         write(6,*)"dvar(1)=",dvar(1)," ier=",ier
+         write(6,*)"dvar(il*jl)=",dvar(il*jl) 
       else
          write(6,*)"variable is unknown"
          call finishbanner
@@ -1667,9 +1678,12 @@
       	  if ( itype .eq. nf_short ) then
            if(i.eq.1.and.j.eq.1) write(6,*)"ivar,sf,addoff=",ivar(ij),sf,addoff
             var(ij) = ivar(ij)*sf + addoff
-          else
+          else if ( itype .eq. nf_float ) then
            if(i.eq.1.and.j.eq.1) write(6,*)"var,sf,addoff=",var(ij),sf,addoff
             var(ij) = var(ij)*sf + addoff
+          else
+           if(i.eq.1.and.j.eq.1) write(6,*)"var,sf,addoff=",dvar(ij),sf,addoff
+            var(ij) = dvar(ij)*sf + addoff 
           endif
           dx=max(dx,var(ij))
           dn=min(dn,var(ij))
@@ -1682,6 +1696,9 @@
       if ( itype .eq. nf_short ) then
          deallocate(ivar)
       endif
+      if ( itype .eq. nf_double ) then
+         deallocate(dvar)
+      end if
 
       return ! ncread_2d
       end
@@ -1853,7 +1870,7 @@
       real, dimension(ix*iy) :: datatemp
       real datasum
 
-      if ( any(datan(:)>1.e10) ) then
+      if ( any(datan(:)>9.e9) ) then
         write(6,*) "Using filldat to remove missing values"
       end if
       
@@ -1861,7 +1878,7 @@
           
         is = ix*iy*(k-1) + 1
         ie = ix*iy*k
-        if (all(datan(is:ie)>1.E10)) then
+        if (all(datan(is:ie)>9.E9)) then
           write(6,*) "ERROR: No valid data on level"
           call finishbanner
           stop -1
@@ -1869,25 +1886,25 @@
         
         datatemp(:) = datan(is:ie)  
         
-        do while ( any(datatemp(:)>1.E10) )
+        do while ( any(datatemp(:)>9.E9) )
           
           do j = 1,iy
             do i = 1,ix
                 
               iqk = i + ix*(j-1) ! no vertical dimension for datatemp
-              if (datatemp(iqk)>1.e10) then
+              if (datatemp(iqk)>9.e9) then
                 ncount = 0
                 datasum = 0.
                 if ( j<iy ) then
                   iqn = i + ix*j + ix*iy*(k-1)
-                  if ( datan(iqn)<1.e10 ) then
+                  if ( datan(iqn)<=9.e9 ) then
                     datasum = datasum + datan(iqn)
                     ncount = ncount + 1
                   end if
                 end if
                 if ( j>1 ) then
                   iqn = i + ix*(j-2) + ix*iy*(k-1)
-                  if ( datan(iqn)<1.e10 ) then
+                  if ( datan(iqn)<=9.e9 ) then
                     datasum = datasum + datan(iqn)
                     ncount = ncount + 1
                   end if
@@ -1897,7 +1914,7 @@
                 else
                   iqn = 1 + ix*(j-1) + ix*iy*(k-1)	
                 end if
-                if ( datan(iqn)<1.e10 ) then
+                if ( datan(iqn)<=9.e9 ) then
                   datasum = datasum + datan(iqn)
                   ncount = ncount + 1
                 end if
@@ -1906,7 +1923,7 @@
                 else
                   iqn = ix + ix*(j-1) + ix*iy*(k-1)
                 end if
-                if ( datan(iqn)<1.e10 ) then
+                if ( datan(iqn)<=9.e9 ) then
                   datasum = datasum + datan(iqn)
                   ncount = ncount + 1
                 end if
