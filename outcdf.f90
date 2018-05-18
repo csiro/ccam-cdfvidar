@@ -73,6 +73,10 @@
 
       jl=6*il
       ifull=il*jl
+      
+      nahead = 0
+      ahead = 0.
+      ddss = 0.
 
       write(6,*)"outcdf ihr,idy,imon,iyr,iout=",ihr,idy,imon,iyr,iout
       write(6,*)"time=",time
@@ -336,7 +340,7 @@
       integer, dimension(4) :: ostart, ocount
       integer nrun
       real, dimension(:), allocatable :: xpnt,ypnt
-      real, dimension(:), allocatable :: sig
+      real, dimension(kl), intent(in) :: sig
       logical, intent(in) :: merge
       real, intent(in) :: minlon, maxlon, minlat, maxlat, llrng
 
@@ -349,17 +353,18 @@
       
       integer iq, varid
       real x_wgt, y_wgt
-      real, dimension(6*il*il) :: cc_wgt, origdata2d
-      real, dimension(6*il*il,kl) :: origdata3d
+      real, dimension(:), allocatable :: cc_wgt, origdata2d
+      real, dimension(:,:), allocatable :: origdata3d
 
       jl=6*il
       ifull=il*jl
       
       allocate( xpnt(il),ypnt(6*il) )
-      allocate( sig(kl) )
       allocate( tst(6*il*il),tsb(6*il*il) )
       allocate( aa(6*il*il),bb(6*il*il),cc(6*il*il) )
       allocate( cfrac(6*il*il,kl) )
+      allocate( cc_wgt(6*il*il),origdata2d(6*il*il) )
+      allocate( origdata3d(6*il*il,kl) )
 
       write(6,*)'openhist iarch,idnc,itype=',iarch,idnc,itype
 
@@ -816,10 +821,11 @@
       call histwrt4(rs,'mixr',idnc,iarch,il,kl)
 
       deallocate( xpnt,ypnt )
-      deallocate( sig )
       deallocate( tst,tsb )
       deallocate( aa,bb,cc )
       deallocate( cfrac )
+      deallocate( cc_wgt,origdata2d )
+      deallocate( origdata3d )
       
       return ! subroutine openhist(idnc,iarch,itype,dim,sig
       end
@@ -904,13 +910,12 @@
       integer, intent(in) :: idnc
       integer ier
 
-      real, dimension(:,:), allocatable :: var
+      real, dimension(il,6*il), intent(in) :: var
 
       jl=6*il
       ifull=il*jl
       
       allocate( ipack(il,6*il) )
-      allocate( var(il,6*il) )
 
       write(6,*)"histwrt3 sname=",sname," iarch=",iarch," idnc=",idnc
 
@@ -957,7 +962,6 @@
       write(6,'("histwrt3:",a7," nt=",i4," n=",f12.4," ij=",2i4," x=",f12.4," ij=",2i4)') sname,iarch,varn,imn,jmn,varx,imx,jmx
 
       deallocate( ipack )
-      deallocate( var )
       
       return
       end ! histwrt3
@@ -980,13 +984,12 @@
       parameter(minv = -32500, maxv = 32500, missval = -32501)
       real addoff, scale_f
 
-      real, dimension(:,:,:), allocatable :: var
+      real, dimension(il,6*il,kl), intent(in) :: var
 
       jl=6*il
       ifull=il*jl
 
       allocate( ipack(il,6*il,kl) )
-      allocate( var(il,6*il,kl) )
       
       write(6,*)"histwrt4 sname=",sname," iarch=",iarch," idnc=",idnc
 
@@ -1044,7 +1047,6 @@
           sname,iarch,varn,imn,jmn,kmn,varx,imx,jmx,kmx
 
       deallocate( ipack )
-      deallocate( var )
       
       return
       end ! histwrt4
