@@ -20,7 +20,8 @@
 !------------------------------------------------------------------------------
       
       subroutine vidar(nplevs,zp,tp,up,vp,hp,validlevcc
-     &                ,iyr,imon,idy,ihr,nt,time,mtimer,pm,io_out,il,kl)
+     &                ,iyr,imon,idy,ihr,nt,time,mtimer,pm,io_out,il,kl
+     &                ,merge,minlon,maxlon,minlat,maxlat,llrng)
      
       use comsig_m, dsg => dsgx, sgml => sgmlx, sg => sgx
       use sigdata_m
@@ -41,50 +42,24 @@ c   nt : time period to process
 c   ptop : pressure at top sigma level (0.0 mb)
 
 c***********************************************************************
-      !include 'newmpar.h'
 
       integer il,jl,kl,ifull
       integer imf,jmf,lm,im,imp1,imid
-      !parameter ( imf=il, jmf=jl, lm=kl )
 
       include 'nplevs.h' ! maxplev
 
-      !parameter ( im=imf )
-
-      !parameter ( lmp1 = lm+1 )
-      !parameter ( imid = il/2+il*(jl/2-1) )
-
-      !common / comsig / dsg(kl), sgml(kl), sg(kl+1)
 
 c**********************************************************************
 
       include 'vidar.h'
 
-!        logical spline,oesig,debug,notop,opre,calout,oform,have_gp
-!        logical splineu,splinev,splinet,zerowinds,osig_in
-!        character*80 zsfil,tsfil,smfil,vfil
-!        common / vi / ntimes,spline,mxcyc,nvsig,nrh
-!       &             ,oesig,ptop,debug,notop,opre,have_gp
-!       &             ,in,calout
-!       &             ,iout,oform,osig_in
-!       &             ,inzs,zsfil,ints,tsfil,insm,smfil
-!       &             ,vfil
-!       &             ,splineu,splinev,splinet,zerowinds
 c**********************************************************************
 
       real zp(6*il*il,maxplev),tp(6*il*il,maxplev),rp(6*il*il,maxplev)
      &    ,hp(6*il*il,maxplev),up(6*il*il,maxplev),vp(6*il*il,maxplev)
       real validlevcc(6*il*il)
-
-      !include 'sigdata.h'
-!n    common/sigdata/pmsl(ifull),sfct(ifull),zs(ifull),ps(ifull)
-!n   &             ,us(ifull,kl)    ,vs(ifull,kl)    ,ts(ifull,kl)
-!n   &             ,rs(ifull,kl)    ,hs(ifull,kl)    ,psg_m(ifull)
-!n   &             ,zsi_m(ifull)
-!o    common/sigdata/pmsl(ifull),sfct(ifull),zs(ifull),ps(ifull)
-!o   &             ,us(ifull,lm),vs(ifull,lm),ts(ifull,lm)
-!o   &             ,rs(ifull,lm),hs(ifull,lm),psg_m(ifull)
-!o   &             ,zsi_m(ifull)
+      
+      real, intent(in) :: minlon, maxlon, minlat, maxlat, llrng
 
       common/datatype/moist_var,in_type ! set in cdfvidar
       character*1 in_type
@@ -100,10 +75,12 @@ c**********************************************************************
 
       real pm(maxplev), alpm(maxplev)
       real ac(kl+1), bc(kl+1), cc(kl+1), dc(kl+1)
-      real tpold(6*il*il,maxplev) ! MJT suggestion
+      real, dimension(:,:), allocatable :: tpold
 
       integer pcoun
       integer dypmo(12)
+      
+      logical, intent(in) :: merge
 
 c**********************************************************************
 
@@ -123,6 +100,8 @@ c***********************************************************************
       im=imf
       lmp1 = lm+1
       imid = il/2+il*(jl/2-1)
+      
+      allocate( tpold(6*il*il,maxplev) ) ! MJT suggestion
 
       write(6,*)"#####################################################"
 
@@ -874,7 +853,7 @@ c read replacement sfct if ints>0
 c write out file
         if ( io_out .eq. 3 ) then
            write(6,*)"io_out=3 no longer supported!!!!!!!!!!"
-           stop
+           stop -1
         else
            call invert1(sgml,kl)
            call invert3(ts,il,kl)
@@ -883,11 +862,14 @@ c write out file
            call invert3(vs,il,kl)
 
            call outcdf(ihr,idy,imon,iyr,iout,nt,time,mtimer
-     &                 ,sgml,vfil,ds,il,kl)
+     &                 ,sgml,vfil,ds,il,kl,merge
+     &                 ,minlon,maxlon,minlat,maxlat,llrng)
 
            call invert1(sgml,kl)
 
         endif
+        
+        deallocate( tpold )
 c***********************************************************************
       return ! vidar
       end ! vidar
