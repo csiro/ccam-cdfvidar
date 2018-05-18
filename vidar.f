@@ -55,9 +55,11 @@ c**********************************************************************
 
 c**********************************************************************
 
-      real zp(6*il*il,maxplev),tp(6*il*il,maxplev),rp(6*il*il,maxplev)
-     &    ,hp(6*il*il,maxplev),up(6*il*il,maxplev),vp(6*il*il,maxplev)
-      real validlevcc(6*il*il)
+      real, intent(inout) :: zp(6*il*il,maxplev),tp(6*il*il,maxplev)
+      real, intent(inout) :: hp(6*il*il,maxplev)
+      real, intent(inout) :: up(6*il*il,maxplev),vp(6*il*il,maxplev)
+      real, intent(inout) :: validlevcc(6*il*il)
+      real, dimension(:,:), allocatable :: rp
       
       real, intent(in) :: minlon, maxlon, minlat, maxlat, llrng
 
@@ -66,14 +68,15 @@ c**********************************************************************
       character*2 moist_var
       character*10 header
 
-      real alm(6*il*il),prein(6*il*il)
+      real, dimension(:), allocatable :: alm,prein
 
       common / labcom / lab(17)
                         character*4 lab
 
       common / mapproj / du,tanl,rnml,stl1,stl2
 
-      real pm(maxplev), alpm(maxplev)
+      real, intent(inout) :: pm(maxplev)
+      real, dimension(:), allocatable :: alpm
       real ac(kl+1), bc(kl+1), cc(kl+1), dc(kl+1)
       real, dimension(:,:), allocatable :: tpold
 
@@ -101,6 +104,9 @@ c***********************************************************************
       lmp1 = lm+1
       imid = il/2+il*(jl/2-1)
       
+      allocate( rp(6*il*il,maxplev) )
+      allocate( alpm(maxplev) )
+      allocate( alm(6*il*il),prein(6*il*il) )
       allocate( tpold(6*il*il,maxplev) ) ! MJT suggestion
 
       write(6,*)"#####################################################"
@@ -869,6 +875,9 @@ c write out file
 
         endif
         
+        deallocate( rp )
+        deallocate( alpm )
+        deallocate( alm,prein )
         deallocate( tpold )
 c***********************************************************************
       return ! vidar
