@@ -128,6 +128,7 @@
       real, dimension(6), parameter :: soildepth_ccam = (/ 0.011, 0.051, 0.157, 0.4385, 1.1855, 3.164 /)
       real, dimension(6), parameter :: soilthick_ccam = (/ 0.022, 0.058, 0.154, 0.409,  1.085,  2.872 /)
       real, parameter :: rhowater = 1000.
+      real fill_float
 
       common/datatype/moist_var,in_type
       character*1 in_type
@@ -772,6 +773,15 @@
         call ncread_3d(ncid,iarch,idvar,ix,iy,nplev,datan)
 
         ! MJT quick fix
+        ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
+        if ( ier .ne. 0 ) then
+          ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)  
+        end if
+        if ( ier .eq. 0 ) then
+          where ( datan==fill_float )
+            datan = 1.e10
+          end where
+        end if
         call getvalidlev(validlevhost,datan,ix,iy,nplev)
         call filldat(datan,ix,iy,nplev)
 
@@ -805,6 +815,15 @@
       call ncread_3d(ncid,iarch,idvar,ix,iy,nplev,datan)
 
       ! MJT quick fix
+      ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
+      if ( ier .ne. 0 ) then
+        ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)  
+      end if
+      if ( ier .eq. 0 ) then
+        where ( datan==fill_float )
+          datan = 1.e10
+        end where
+      end if
       call getvalidlev(validlevhost,datan,ix,iy,nplev)
       call filldat(datan,ix,iy,nplev)
 
@@ -830,7 +849,16 @@
 
       call ncread_3d(ncid,iarch,idvar,ix,iy,nplev,datan)
 
-      ! MJT quick fix 
+      ! MJT quick fix
+      ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
+      if ( ier .ne. 0 ) then
+        ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)  
+      end if
+      if ( ier .eq. 0 ) then
+        where ( datan==fill_float )
+          datan = 1.e10
+        end where
+      end if
       call getvalidlev(validlevhost,datan,ix,iy,nplev)
       call filldat(datan,ix,iy,nplev)
 
@@ -857,6 +885,15 @@
       call ncread_3d(ncid,iarch,idvar,ix,iy,nplev,datan)
 
       ! MJT quick fix 
+      ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
+      if ( ier .ne. 0 ) then
+        ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)  
+      end if
+      if ( ier .eq. 0 ) then
+        where ( datan==fill_float )
+          datan = 1.e10
+        end where
+      end if
       call getvalidlev(validlevhost,datan,ix,iy,nplev)
       call filldat(datan,ix,iy,nplev)
 
@@ -902,6 +939,15 @@
       call ncread_3d(ncid,iarch,idvar,ix,iy,nplev,datan)
 
       ! MJT quick fix 
+      ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
+      if ( ier .ne. 0 ) then
+        ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)  
+      end if
+      if ( ier .eq. 0 ) then
+        where ( datan==fill_float )
+          datan = 1.e10
+        end where
+      end if
       call getvalidlev(validlevhost,datan,ix,iy,nplev)
       call filldat(datan,ix,iy,nplev)
 
@@ -1642,7 +1688,7 @@
       else if ( itype .eq. nf_double ) then
          allocate(dvar(il*jl))
          write(6,*)"variable is double"
-         ier = nf_get_vara_real(idhist,idvar,start,count,dvar)
+         ier = nf_get_vara_double(idhist,idvar,start,count,dvar)
          write(6,*)"dvar(1)=",dvar(1)," ier=",ier
          write(6,*)"dvar(il*jl)=",dvar(il*jl) 
       else
@@ -1720,8 +1766,8 @@
       real addoff, sf
       real dx, dn
 
-      integer*2, dimension(il*jl*kl) :: ivar
-      double precision, dimension(il*jl*kl) :: dvar
+      integer*2, dimension(:), allocatable :: ivar
+      double precision, dimension(:), allocatable :: dvar
       real, dimension(il*jl*kl), intent(out) :: var
       character*30 name
 
@@ -1750,14 +1796,19 @@
       ier = nf_inq_vartype(idhist,idvar,itype)
       write(6,*)"ier=",ier," itype=",itype
 
+      addoff=0.
+      sf=1.
+      
       if ( itype .eq. nf_short ) then
          write(6,*)"variable is short"
+         allocate( ivar(il*jl*kl) )
          ier = nf_get_vara_int2(idhist,idvar,start,count,ivar)
       else if ( itype .eq. nf_float ) then
          write(6,*)"variable is float"
          ier = nf_get_vara_real(idhist,idvar,start,count,var)
       else if ( itype .eq. nf_double ) then
          write(6,*)"variable is double"
+         allocate( dvar(il*jl*kl) )
          ier = nf_get_vara_double(idhist,idvar,start,count,dvar)
          var=real(dvar)
       else
@@ -1766,8 +1817,7 @@
          stop -1
       endif
 
-      addoff=0.
-      sf=1.
+
       if ( itype .eq. nf_short ) then
       write(6,*)"obtain scaling factors and offsets from attributes"
       ier = nf_get_att_real(idhist,idvar,'add_offset',addoff)
@@ -1800,6 +1850,13 @@
         end do
        end do
       end do
+      
+      if ( itype .eq. nf_short ) then
+        deallocate( ivar )    
+      end if
+      if ( itype .eq. nf_double ) then
+        deallocate( dvar )  
+      end if
 
       write(6,*)"ncread_3d idvar=",idvar," iarch=",iarch
       write(6,*)"ncread_3d dx=",dx," dn=",dn
