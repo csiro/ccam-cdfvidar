@@ -19,7 +19,8 @@
 
 !------------------------------------------------------------------------------
     
-      subroutine outcdf(ihr,idy,imon,iyr,iout,nt,time,mtimer,sig,cdffile,ddss,il,kl)
+      subroutine outcdf(ihr,idy,imon,iyr,iout,nt,time,mtimer,sig,cdffile,ddss,il,kl,merge, &
+                        minlon,maxlon,minlat,maxlat,llrng)
 
       use netcdf_m
       
@@ -31,17 +32,7 @@
       real ddss
       real du,tanl,rnml,stl1,stl2
 
-      !include 'newmpar.h'
-!     include 'darcdf.h'   ! idnc,ncid,idifil  - stuff for netcdf
-!     include 'dates.h' ! ktime,kdate,timer,timeg,xg,yg,mtimer
-!     include 'filnames.h'  ! list of files, read in once only
-!     include 'kuocom.h'
-!     include 'liqwpar.h'  ! ifullw
       common/mapproj/du,tanl,rnml,stl1,stl2
-!     include 'parm.h'
-!     include 'parmdyn.h'  
-!     include 'parmhor.h'  ! mhint, m_bs, nt_adv, ndept
-!     include 'parmvert.h'
 
       character rundate*10
 
@@ -55,6 +46,8 @@
       parameter(nihead=54)
       integer nahead(nihead)
       integer, dimension(1) :: dimids
+      logical, intent(in) :: merge
+      real, intent(in) :: minlon, maxlon, minlat, maxlat, llrng
 
       parameter(nrhead=14)
       real ahead(nrhead)
@@ -62,7 +55,8 @@
       real sig(kl)
       real time,dt,ds
 
-      character(len=*) cdffile
+      !character(len=*) cdffile
+      character(len=1024) cdffile
 
       common/cdfind/ixp,iyp,idlev,idnt
 
@@ -82,8 +76,6 @@
 
       write(6,*)"outcdf ihr,idy,imon,iyr,iout=",ihr,idy,imon,iyr,iout
       write(6,*)"time=",time
-!     write(6,*)"sig=",sig
-!     write(6,*)"ddss=",ddss
 
       dt=0
       kdate=iyr*10000+imon*100+idy
@@ -102,178 +94,213 @@
 
       if ( iarch.lt.1 ) stop "wrong iarch in outcdf"
       if ( iarch.eq.1 ) then
-        write(6,*)'nccre of ',cdffile
+        
+        if ( merge ) then
+          ! expect to merge into existing file  
+          ier = nf_open(cdffile,nf_write,idnc)  ! read-write access
+          if ( ier/=0 ) then
+            write(6,*)"ERROR: merge was requested, but the cdffile cannot be opened"
+            write(6,*)"cdffile= ",trim(cdffile)
+            call finishbanner
+            stop -1
+          end if
+          
+          ier = nf_get_att_int(idnc,nf_global,'int_header',nahead)
+          ier = nf_get_att_real(idnc,nf_global,'real_header',ahead)
+          
+          if ( nahead(1)/=il ) then
+            write(6,*) "ERROR: Mismatch in nahead with il ",nahead(1),il
+            call finishbanner
+            stop -1
+          end if
+          if ( nahead(2)/=jl ) then
+            write(6,*) "ERROR: Mismatch in nahead with jl ",nahead(2),jl
+            call finishbanner
+            stop -1
+          end if
+          if ( nahead(3)/=kl ) then
+            write(6,*) "ERROR: Mismatch in nahead with kl ",nahead(3),kl
+            call finishbanner
+            stop -1
+          end if
+          if ( abs(ahead(5)-du)>1.e-6 ) then
+            write(6,*) "ERROR: Mismatch in ahead with rlon ",ahead(5),du
+            call finishbanner
+            stop -1
+          end if
+          if ( abs(ahead(6)-tanl)>1.e-6 ) then
+            write(6,*) "ERROR: Mismatch in ahead with rlat ",ahead(6),tanl
+            call finishbanner
+            stop -1
+          end if
+          if ( abs(ahead(7)-rnml)>1.e-6 ) then
+            write(6,*) "ERROR: Mismatch in ahead with schmidt ",ahead(7),rnml
+            call finishbanner
+            stop -1
+          end if
+          
+        else  
+          ! expect to create new file  
+          write(6,*)'nccre of ',cdffile
+        
 #ifdef usenc3
 #ifdef no64bit_offset
-      ier = nf_create(cdffile,NF_CLOBBER,idnc)
+          ier = nf_create(cdffile,NF_CLOBBER,idnc)
 #else
-      ier = nf_create(cdffile,NF_64BIT_OFFSET,idnc)
+          ier = nf_create(cdffile,NF_64BIT_OFFSET,idnc)
 #endif
 #else
-      ier = nf_create(cdffile,NF_NETCDF4,idnc)
+          ier = nf_create(cdffile,NF_NETCDF4,idnc)
 #endif
-        write(6,*)'idnc,ier=',idnc,ier
+          write(6,*)'idnc,ier=',idnc,ier
 ! Turn off the data filling
-        ier = nf_set_fill(idnc,nf_nofill,oldmode)
+          ier = nf_set_fill(idnc,nf_nofill,oldmode)
 ! Create dimensions, lon, lat
-        ier = nf_def_dim(idnc,'longitude', il,           xdim)
-        ier = nf_def_dim(idnc,'latitude',  jl,           ydim)
-        ier = nf_def_dim(idnc,'lev',       kl,           zdim)
-        ier = nf_def_dim(idnc,'time',      nf_unlimited, tdim)
-        write(6,*) "xdim=",xdim," ydim=",ydim," zdim=",zdim," tdim=",tdim
+          ier = nf_def_dim(idnc,'longitude', il,           xdim)
+          ier = nf_def_dim(idnc,'latitude',  jl,           ydim)
+          ier = nf_def_dim(idnc,'lev',       kl,           zdim)
+          ier = nf_def_dim(idnc,'time',      nf_unlimited, tdim)
+          write(6,*) "xdim=",xdim," ydim=",ydim," zdim=",zdim," tdim=",tdim
 
 ! define coords.
-        dimids = xdim
-        ier = nf_def_var(idnc,'longitude',nf_float,1,dimids,ixp)
-        ier = nf_put_att_text(idnc,ixp,'point_spacing',4,'even')
-        ier = nf_put_att_text(idnc,ixp,'units',12,'degrees_east')
-        dimids = ydim
-        ier = nf_def_var(idnc,'latitude',nf_float,1,dimids,iyp)
-        ier = nf_put_att_text(idnc,iyp,'point_spacing',4,'even')
-        ier = nf_put_att_text(idnc,iyp,'units',13,'degrees_north')
-        write(6,*)'ixp,iyp=',ixp,iyp
+          dimids = xdim
+          ier = nf_def_var(idnc,'longitude',nf_float,1,dimids,ixp)
+          ier = nf_put_att_text(idnc,ixp,'point_spacing',4,'even')
+          ier = nf_put_att_text(idnc,ixp,'units',12,'degrees_east')
+          dimids = ydim
+          ier = nf_def_var(idnc,'latitude',nf_float,1,dimids,iyp)
+          ier = nf_put_att_text(idnc,iyp,'point_spacing',4,'even')
+          ier = nf_put_att_text(idnc,iyp,'units',13,'degrees_north')
+          write(6,*)'ixp,iyp=',ixp,iyp
 
-        dimids = zdim
-        ier = nf_def_var(idnc,'lev',nf_float,1,dimids,idlev)
-        write(6,*)'idlev,ier=',idlev,ier
-        ier = nf_put_att_text(idnc,idlev,'positive',4,'down')
-        ier = nf_put_att_text(idnc,idlev,'point_spacing',6,'uneven')
-        ier = nf_put_att_text(idnc,idlev,'units',11,'sigma_level')
-        ier = nf_put_att_text(idnc,idlev,'long_name',11,'sigma_level')
-        write(6,*)'idlev=',idlev
+          dimids = zdim
+          ier = nf_def_var(idnc,'lev',nf_float,1,dimids,idlev)
+          write(6,*)'idlev,ier=',idlev,ier
+          ier = nf_put_att_text(idnc,idlev,'positive',4,'down')
+          ier = nf_put_att_text(idnc,idlev,'point_spacing',6,'uneven')
+          ier = nf_put_att_text(idnc,idlev,'units',11,'sigma_level')
+          ier = nf_put_att_text(idnc,idlev,'long_name',11,'sigma_level')
+          write(6,*)'idlev=',idlev
 
-        write(6,*)'tdim,idnc=',tdim,idnc
-        dimids = tdim
-        ier = nf_def_var(idnc,'time',nf_int,1,dimids,idnt)
-        write(6,*)'idnt=',idnt
-        ier = nf_put_att_text(idnc,idnt,'point_spacing',4,'even')
+          write(6,*)'tdim,idnc=',tdim,idnc
+          dimids = tdim
+          ier = nf_def_var(idnc,'time',nf_int,1,dimids,idnt)
+          write(6,*)'idnt=',idnt
+          ier = nf_put_att_text(idnc,idnt,'point_spacing',4,'even')
 
-        !write(6,*)'kdate,ktime,ktau=',kdate,ktime,ktau
-        write(6,*)'kdate,ktime=',kdate,ktime
+          write(6,*)'kdate,ktime=',kdate,ktime
 
-        icy=kdate/10000
-        icm=max(1,min(12,(kdate-icy*10000)/100))
-        icd=max(1,min(31,(kdate-icy*10000-icm*100)))
-        ! disabled by MJT
-        !if(icy.lt.100)icy=icy+1900
-        ich=ktime/100
-        icmi=(ktime-ich*100)
-        ics=0
-        write(6,*) icy,icm,icd,ich,icmi,ics
-        write(timorg,'(i2.2,"-",a3,"-",i4.4,3(":",i2.2))') icd,month(icm),icy,ich,icmi,ics
-        write(6,*)'timorg=',timorg
-        ier = nf_put_att_text(idnc,idnt,'time_origin',20,timorg)
+          icy=kdate/10000
+          icm=max(1,min(12,(kdate-icy*10000)/100))
+          icd=max(1,min(31,(kdate-icy*10000-icm*100)))
+          ich=ktime/100
+          icmi=(ktime-ich*100)
+          ics=0
+          write(6,*) icy,icm,icd,ich,icmi,ics
+          write(timorg,'(i2.2,"-",a3,"-",i4.4,3(":",i2.2))') icd,month(icm),icy,ich,icmi,ics
+          write(6,*)'timorg=',timorg
+          ier = nf_put_att_text(idnc,idnt,'time_origin',20,timorg)
 
-        write(grdtim,'("minutes since ",i4.4,"-",i2.2,"-",i2.2," ",2(i2.2,":"),i2.2)') icy,icm,icd,ich,icmi,ics
-        write(6,*)'grdtim=',grdtim
-        ier = nf_put_att_text(idnc,idnt,'units',33,grdtim)
+          write(grdtim,'("minutes since ",i4.4,"-",i2.2,"-",i2.2," ",2(i2.2,":"),i2.2)') icy,icm,icd,ich,icmi,ics
+          write(6,*)'grdtim=',grdtim
+          ier = nf_put_att_text(idnc,idnt,'units',33,grdtim)
 
-        dim(1) = xdim
-        dim(2) = ydim
-        dim(3) = zdim
-        dim(4) = tdim
+          dim(1) = xdim
+          dim(2) = ydim
+          dim(3) = zdim
+          dim(4) = tdim
 
 ! create the attributes of the header record of the file
-        nahead(1)=il         ! needed by cc2hist
-        nahead(2)=jl         ! needed by cc2hist
-        nahead(3)=kl         ! needed by cc2hist
-        nahead(4)=0 !m
-        nahead(5)=0 !nsd        ! not needed now
-        nahead(6)=0 !io_in
-        nahead(7)=0 !nbd
-        nahead(8)=0 !nps
-        nahead(9)=0 !mex
-        nahead(10)=0 !mup
-        nahead(11)=0 !nem
-        nahead(12)=mtimer ! should be mtimer
-        nahead(13)=0 ! nmi
-        nahead(14)=0 !ndt       ! needed by cc2hist
-        nahead(15)=0 !npsav
-        nahead(16)=0 !nhor
-        nahead(17)=0 !nkuo
-        nahead(18)=0 !khdif
-        nahead(19)=0 !kwt       ! needed by cc2hist
-        nahead(20)=0 !iaa
-        nahead(21)=0 !jaa
-        nahead(22)=0 !nvad
-        nahead(23)=0 !nqg       ! not needed now      
-        nahead(24)=0 !lbd
-        nahead(25)=0 !nrun
-        nahead(26)=0 !nrunx
-        nahead(27)=0 !khor
-        nahead(28)=0 !ksc
-        nahead(29)=0 !kountr
-        nahead(30)=0 !ndiur
-        nahead(31)=0 !nspare
-        nahead(32)=0 !nhorps
-        nahead(33)=0 !nsoil
-        nahead(34)=0 !ms        ! needed by cc2hist
-        nahead(35)=0 !ntsur
-        nahead(36)=0 !nrad
-        nahead(37)=0 !kuocb
-        nahead(38)=0 !nvmix
-        nahead(39)=0 !ntsea
-        nahead(40)=0
-        nahead(41)=0 !nextout
-        nahead(42)=0 !ilt
-        nahead(43)=0 !ntrac     ! needed by cc2hist
-        nahead(44)=0 !nsib
-        nahead(45)=0 !nrungcm
-        nahead(46)=0 !ncvmix
-        nahead(47)=0 !ngwd
-        nahead(48)=0 !lgwd
-        nahead(49)=0 !mup
-        nahead(50)=0 !nritch
-        nahead(51)=0 !ifullw
-        nahead(52)=0 !nevapls
-        nahead(53)=0 !nevapcc
-        nahead(54)=0.!nhadq
-        write(6,'("nahead=",(20i4))') nahead
-        ds=ddss
-        ahead(1)=ds
-        ahead(2)=0.  !difknbd
-        ahead(3)=0.  ! was rhkuo for kuo scheme
-        ahead(4)=0.  !du
-        ahead(5)=du ! rlong0     ! needed by cc2hist
-        ahead(6)=tanl ! rlat0      ! needed by cc2hist
-        ahead(7)=rnml ! schmidt    ! needed by cc2hist
-        ahead(8)=0.  !stl2
-        ahead(9)=0.  !relaxt
-        ahead(10)=0.  !hourbd
-        ahead(11)=0. !tss_sh
-        ahead(12)=0 !vmodmin
-        ahead(13)=0 !av_vmod
-        ahead(14)=0 !epsp
-        write(6,*) "ahead=",ahead
-        ier = nf_put_att_int(idnc,nf_global,'int_header',nf_int,nihead,nahead)
-        if(ier.ne.0)write(6,*)"ncapt int idnc,ier=",idnc,ier
-        ier = nf_put_att_real(idnc,nf_global,'real_header',nf_float,nrhead,ahead)
-        if(ier.ne.0)write(6,*)"ncapt real idnc,ier=",idnc,ier
-        ier = nf_put_att_text(idnc,nf_global,'date_header',10,rundate)
-        if(ier.ne.0)write(6,*)"ncaptc date idnc,ier=",idnc,ier
+          nahead(1)=il         ! needed by cc2hist
+          nahead(2)=jl         ! needed by cc2hist
+          nahead(3)=kl         ! needed by cc2hist
+          nahead(4)=0 !m
+          nahead(5)=0 !nsd        ! not needed now
+          nahead(6)=0 !io_in
+          nahead(7)=0 !nbd
+          nahead(8)=0 !nps
+          nahead(9)=0 !mex
+          nahead(10)=0 !mup
+          nahead(11)=0 !nem
+          nahead(12)=mtimer ! should be mtimer
+          nahead(13)=0 ! nmi
+          nahead(14)=0 !ndt       ! needed by cc2hist
+          nahead(15)=0 !npsav
+          nahead(16)=0 !nhor
+          nahead(17)=0 !nkuo
+          nahead(18)=0 !khdif
+          nahead(19)=0 !kwt       ! needed by cc2hist
+          nahead(20)=0 !iaa
+          nahead(21)=0 !jaa
+          nahead(22)=0 !nvad
+          nahead(23)=0 !nqg       ! not needed now      
+          nahead(24)=0 !lbd
+          nahead(25)=0 !nrun
+          nahead(26)=0 !nrunx
+          nahead(27)=0 !khor
+          nahead(28)=0 !ksc
+          nahead(29)=0 !kountr
+          nahead(30)=0 !ndiur
+          nahead(31)=0 !nspare
+          nahead(32)=0 !nhorps
+          nahead(33)=0 !nsoil
+          nahead(34)=0 !ms        ! needed by cc2hist
+          nahead(35)=0 !ntsur
+          nahead(36)=0 !nrad
+          nahead(37)=0 !kuocb
+          nahead(38)=0 !nvmix
+          nahead(39)=0 !ntsea
+          nahead(40)=0
+          nahead(41)=0 !nextout
+          nahead(42)=0 !ilt
+          nahead(43)=0 !ntrac     ! needed by cc2hist
+          nahead(44)=0 !nsib
+          nahead(45)=0 !nrungcm
+          nahead(46)=0 !ncvmix
+          nahead(47)=0 !ngwd
+          nahead(48)=0 !lgwd
+          nahead(49)=0 !mup
+          nahead(50)=0 !nritch
+          nahead(51)=0 !ifullw
+          nahead(52)=0 !nevapls
+          nahead(53)=0 !nevapcc
+          nahead(54)=0.!nhadq
+          write(6,'("nahead=",(20i4))') nahead
+          ds=ddss
+          ahead(1)=ds
+          ahead(2)=0.  !difknbd
+          ahead(3)=0.  ! was rhkuo for kuo scheme
+          ahead(4)=0.  !du
+          ahead(5)=du ! rlong0     ! needed by cc2hist
+          ahead(6)=tanl ! rlat0      ! needed by cc2hist
+          ahead(7)=rnml ! schmidt    ! needed by cc2hist
+          ahead(8)=0.  !stl2
+          ahead(9)=0.  !relaxt
+          ahead(10)=0.  !hourbd
+          ahead(11)=0. !tss_sh
+          ahead(12)=0 !vmodmin
+          ahead(13)=0 !av_vmod
+          ahead(14)=0 !epsp
+          write(6,*) "ahead=",ahead
+          ier = nf_put_att_int(idnc,nf_global,'int_header',nf_int,nihead,nahead)
+          if(ier.ne.0)write(6,*)"ncapt int idnc,ier=",idnc,ier
+          ier = nf_put_att_real(idnc,nf_global,'real_header',nf_float,nrhead,ahead)
+          if(ier.ne.0)write(6,*)"ncapt real idnc,ier=",idnc,ier
+          ier = nf_put_att_text(idnc,nf_global,'date_header',10,rundate)
+          if(ier.ne.0)write(6,*)"ncaptc date idnc,ier=",idnc,ier
 
-        !dimids = 0
-        !ier = nf_def_var(idnc,'ds',nf_float,0,dimids,idv)
-        !if(ier.ne.0)write(6,*)"ncvdef ds idnc,ier=",idnc,ier
-        !ier = nf_def_var(idnc,'du',nf_float,0,dimids,idv)
-        !if(ier.ne.0)write(6,*)"ncvdef du idnc,ier=",idnc,ier
-        !ier = nf_def_var(idnc,'rnml',nf_float,0,dimids,idv)
-        !if(ier.ne.0)write(6,*)"ncvdef rnml idnc,ier=",idnc,ier
-        !ier = nf_def_var(idnc,'tanl',nf_float,0,dimids,idv)
-        !if(ier.ne.0)write(6,*)"ncvdef tanl idnc,ier=",idnc,ier
-        !ier = nf_def_var(idnc,'stl1',nf_float,0,dimids,idv)        
-        !if(ier.ne.0)write(6,*)"ncvdef stl1 idnc,ier=",idnc,ier
-        !ier = nf_def_var(idnc,'stl2',nf_float,0,dimids,idv)
-        !if(ier.ne.0)write(6,*)"ncvdef stl2 idnc,ier=",idnc,ier
-        !ier = nf_def_var(idnc,'dt',nf_float,0,dimids,idv)        
-        !if(ier.ne.0)write(6,*)"ncvdef dt idnc,ier=",idnc,ier
+        end if ! merge ..else..
+        
       endif ! ( iarch=1 ) then
 
       write(6,*)'call openhist for itype= ',itype
-      call openhist(idnc,iarch,itype,dim,sig,kdate,ktime,time,mtimer,il,kl)
+      call openhist(idnc,iarch,itype,dim,sig,kdate,ktime,time,mtimer,il,kl,merge, &
+                    minlon,maxlon,minlat,maxlat,llrng)
 
-      ier = nf_sync(idnc)
-      if(ier.ne.0)write(6,*)"ncsnc idnc,ier=",idnc,ier
+      !ier = nf_sync(idnc)
+      !if(ier.ne.0)write(6,*)"ncsnc idnc,ier=",idnc,ier
+      
+      ier = nf_close(idnc)
 
       if ( itype.eq.1 ) then
 !       itype=1 outfile
@@ -289,7 +316,8 @@
       return ! outcdf
       end
 !=======================================================================
-      subroutine openhist(idnc,iarch,itype,dim,sig,kdate,ktime,time,mtimer,il,kl)
+      subroutine openhist(idnc,iarch,itype,dim,sig,kdate,ktime,time,mtimer,il,kl,merge, &
+          minlon,maxlon,minlat,maxlat,llrng)
 
       use cll_m
       use netcdf_m
@@ -300,69 +328,44 @@
 
       integer il,jl,kl,ifull
 
-      !include 'newmpar.h'
-!     include 'aalat.h'
-!     include 'arrays.h'
-!     include 'darcdf.h'   ! idnc,ncid,idifil  - stuff for netcdf
-!     include 'dates.h' ! ktime,kdate,timer,timeg,xg,yg,mtimer
-!     include 'extraout.h'
-!     include 'filnames.h' ! list of files, read in once only
-!     include 'kuocom.h'
-!     include 'liqwpar.h'  ! ifullw
-      !include 'map.h'
-!     include 'mapproj.h'
-!     include 'morepbl.h'
-!     include 'nsibd.h' ! rsmin,ivegt,sigmf,tgg,tgf,ssdn,res,rmc,isoilm,ico2em
-      !include 'parm.h'
-!     include 'parmdyn.h'
-!     include 'parmvert.h'
-!     include 'pbl.h'
-!     include 'prec.h'
-!     include 'scamdim.h'
-!     include 'screen.h'
-!     include 'sigs.h'
-      !common/cll/clon(ifull),clat(ifull)
-
-      !include 'sigdata.h'
-!n    common/sigdata/pmsl(ifull),sfct(ifull),zs(ifull),ps(ifull)
-!n   &             ,us(ifull,kl)    ,vs(ifull,kl)    ,ts(ifull,kl)
-!n   &             ,rs(ifull,kl)    ,hs(ifull,kl)    ,psg_m(ifull)
-!n   &             ,zsi_m(ifull)
-!o    common/sigdata/pmsl(ifull),sfct(ifull),zs(ifull),ps(ifull)
-!o   &             ,u(ifull,kl)    ,v(ifull,kl)    ,t(ifull,kl)
-!o   &             ,qg(ifull,kl)   ,hs(ifull,kl)
-
       character lname*50,expdesc*50
       integer dim(4)
       integer idim2(3)
       integer, dimension(1) :: ivals
       integer, dimension(1) :: start, ncount
+      integer, dimension(4) :: ostart, ocount
       integer nrun
-      real xpnt(il),ypnt(6*il)
-      real sig(kl)
+      real, dimension(:), allocatable :: xpnt,ypnt
+      real, dimension(:), allocatable :: sig
+      logical, intent(in) :: merge
+      real, intent(in) :: minlon, maxlon, minlat, maxlat, llrng
 
       common/cdfind/ixp,iyp,idlev,idnt
-      real tst(6*il*il),tsb(6*il*il)
+      real, dimension(:), allocatable :: tst,tsb
 !       *** qscrn_ave not presently written     
-      real aa(6*il*il),bb(6*il*il),cc(6*il*il)
-      real cfrac(6*il*il,kl)
+      real, dimension(:), allocatable :: aa,bb,cc
+      real, dimension(:,:), allocatable :: cfrac
       real, dimension(1) :: rvals
+      
+      integer iq, varid
+      real x_wgt, y_wgt
+      real, dimension(6*il*il) :: cc_wgt, origdata2d
+      real, dimension(6*il*il,kl) :: origdata3d
 
       jl=6*il
       ifull=il*jl
-
-!     character*3 mon(12)
-!     data mon/'JAN','FEB','MAR','APR','MAY','JUN'
-!    &        ,'JUL','AUG','SEP','OCT','NOV','DEC'/
+      
+      allocate( xpnt(il),ypnt(6*il) )
+      allocate( sig(kl) )
+      allocate( tst(6*il*il),tsb(6*il*il) )
+      allocate( aa(6*il*il),bb(6*il*il),cc(6*il*il) )
+      allocate( cfrac(6*il*il,kl) )
 
       write(6,*)'openhist iarch,idnc,itype=',iarch,idnc,itype
 
-!     if(itype.ne.-1)then  ! don't scale up for restart file as done already
-!       insert stuff here if re-scaling clouds etc
-!     endif  ! (itype.ne.-1)
-
 !     if this is the first archive, set up some global attributes
       if(iarch.eq.1) then
+       if(.not.merge) then
         write(6,*)'dim=',dim
         idim2(1)=dim(1)
         idim2(2)=dim(2)
@@ -425,12 +428,6 @@
         call attrib(idnc,idim2,2,'soilt',lname,'none',0.,65.e3)    ! MJT lsmask
 
 !       For time invariant surface fields
-        !lname = 'Map factor'
-        !call attrib(idnc,idim2,2,'map',lname,'none',0.,20.)
-        !lname = 'Coriolis factor'
-        !call attrib(idnc,idim2,2,'cor',lname,'1/sec',-1.5e-4,1.5e-4)
-!       lname = 'Initial wetness fraction layer 3'
-!       call attrib(idnc,idim2,2,'wetfrac',lname,'none',-2.,2.)
         lname = 'clon'
         call attrib(idnc,idim2,2,'clon',lname,'none',-360.,360.)
         lname = 'clat'
@@ -439,17 +436,6 @@
 !       For time varying surface fields
         lname = 'Surface temperature'
         call attrib(idnc,idim2,3,'tsu',lname,'K',0.,350.)
-!       lname = 'Runoff'
-!       call attrib(idnc,idim2,3,'runoff',lname,'mm/day',0.,1000.)
-!       lname = 'Sea ice depth (Instantaneous)'
-!       call attrib(idnc,idim2,3,'siced',lname,'cm',0.,500.)
-
-!       lname = 'Soil moisture as frac FC levels 1-2'
-!       call attrib(idnc,idim2,3,'wbfshal',lname,'frac',0.,4.)
-!       lname = 'Soil moisture as frac FC levels 3-4'
-!       call attrib(idnc,idim2,3,'wbfroot',lname,'frac',0.,4.)
-!       lname = 'Soil moisture as frac FC levels 1-6'
-!       call attrib(idnc,idim2,3,'wbftot',lname,'frac',0.,4.)
 
       if ( all(soiltemp<0.) ) then
         lname = 'Soil temperature top'
@@ -507,11 +493,6 @@
         call attrib(idnc,dim,4,'v','y-component wind','m/s',-150.,150.)
         lname= 'Water mixing ratio'
         call attrib(idnc,dim,4,'mixr',lname,'kg/kg',0.,.05)
-        !if(ifullw.eq.ifull)then
-        !  call attrib(idnc,dim,4,'qfg','Frozen water','kg/kg',0.,.02)
-        !  call attrib(idnc,dim,4,'qlg','Liquid water','kg/kg',0.,.02)
-        !  call attrib(idnc,dim,4,'cfrac','Cloud fraction','none',0.,1.)
-        !endif
 
         write(6,*)'finished defining attributes'
 !       Leave define mode
@@ -540,35 +521,169 @@
         ncount = kl
         ier = nf_put_vara_real(idnc,idv,start,ncount,sig)
 
-        !ier = nf_inq_varid(idnc,'lev',idv)
-        !start = 1
-        !ncount = kl
-        !ier = nf_put_vara_real(idnc,idv,start,ncount,sig)
-!       do k = kl,1,-1
-!         write(6,*)"k=",k," sig=",sig(k)
-!       enddo
+      else 
+          
+          write(6,*) "Merging data between conformal cubic files"
+          do iq = 1,ifull
+            if ( clon(iq)<minlon ) then
+              x_wgt = 1.
+            else if ( clon(iq)<minlon+llrng ) then
+              x_wgt = (minlon+llrng-clon(iq))/llrng
+            else if ( clon(iq)<maxlon-llrng ) then  
+              x_wgt = 0.
+            else if ( clon(iq)<maxlon ) then
+              x_wgt = 1.-(maxlon-clon(iq))/llrng
+            else
+              x_wgt = 1.
+            end if  
+            if ( clat(iq)<minlat ) then
+              y_wgt = 1.
+            else if ( clat(iq)<minlat+llrng ) then
+              y_wgt = (minlat+rng-clat(iq))/llrng
+            else if ( clat(iq)<maxlon-llrng ) then  
+              y_wgt = 0.
+            else if ( clat(iq)<maxlon ) then
+              y_wgt = 1.-(maxlon-clat(iq))/llrng
+            else
+              y_wgt = 1.
+            end if
+            cc_wgt(iq) = sqrt(0.5*(x_wgt*x_wgt+y_wgt*y_wgt))
+          end do  
+          
+          ostart(1) = 1
+          ostart(2) = 1
+          ostart(3) = iarch
+          ocount(1) = il
+          ocount(2) = jl
+          ocount(3) = 1
+          
+          ier = nf_inq_varid(idnc,'psf',varid)
+          ier = nf_get_vara_real(idnc,varid,ostart(1:3),ocount(1:3),origdata2d)
+          origdata2d = 1.e5*exp(origdata2d)
+          ps = ps*cc_wgt + origdata2d*(1.-cc_wgt)
+          
+          ier = nf_inq_varid(idnc,'tsu',varid)
+          ier = nf_get_vara_real(idnc,varid,ostart(1:3),ocount(1:3),origdata2d)
+          sfct = sfct*cc_wgt + origdata2d*(1.-cc_wgt)
+          
+          if ( any(soiltemp>0.) ) then
+            ier = nf_inq_varid(idnc,'tgg1',varid)
+            ier = nf_get_vara_real(idnc,varid,ostart(1:3),ocount(1:3),origdata2d)
+            if ( ier/=0 ) then
+              soiltemp(:,1) = soiltemp(:,1)*cc_wgt + origdata2d*(1.-cc_wgt)       
+            end if  
+            ier = nf_inq_varid(idnc,'tgg2',varid)
+            ier = nf_get_vara_real(idnc,varid,ostart(1:3),ocount(1:3),origdata2d)
+            if ( ier/=0 ) then
+              soiltemp(:,2) = soiltemp(:,2)*cc_wgt + origdata2d*(1.-cc_wgt)
+            end if  
+            ier = nf_inq_varid(idnc,'tgg3',varid)
+            ier = nf_get_vara_real(idnc,varid,ostart(1:3),ocount(1:3),origdata2d)
+            if ( ier/=0 ) then
+              soiltemp(:,3) = soiltemp(:,3)*cc_wgt + origdata2d*(1.-cc_wgt) 
+            end if  
+            ier = nf_inq_varid(idnc,'tgg4',varid)
+            ier = nf_get_vara_real(idnc,varid,ostart(1:3),ocount(1:3),origdata2d)
+            if ( ier/=0 ) then
+              soiltemp(:,4) = soiltemp(:,4)*cc_wgt + origdata2d*(1.-cc_wgt) 
+            end if  
+            ier = nf_inq_varid(idnc,'tgg5',varid)
+            ier = nf_get_vara_real(idnc,varid,ostart(1:3),ocount(1:3),origdata2d)
+            if ( ier/=0 ) then
+              soiltemp(:,5) = soiltemp(:,5)*cc_wgt + origdata2d*(1.-cc_wgt) 
+            end if  
+            ier = nf_inq_varid(idnc,'tgg6',varid)
+            ier = nf_get_vara_real(idnc,varid,ostart(1:3),ocount(1:3),origdata2d)
+            if ( ier/=0 ) then
+              soiltemp(:,6) = soiltemp(:,6)*cc_wgt + origdata2d*(1.-cc_wgt) 
+            end if  
+          end if
+          
+          if ( any(soilmoist>0.) ) then
+            ier = nf_inq_varid(idnc,'wb1',varid)
+            ier = nf_get_vara_real(idnc,varid,ostart(1:3),ocount(1:3),origdata2d)
+            if ( ier/=0 ) then
+              soilmoist(:,1) = soilmoist(:,1)*cc_wgt + origdata2d*(1.-cc_wgt)       
+            end if  
+            ier = nf_inq_varid(idnc,'wb2',varid)
+            ier = nf_get_vara_real(idnc,varid,ostart(1:3),ocount(1:3),origdata2d)
+            if ( ier/=0 ) then
+              soilmoist(:,2) = soilmoist(:,2)*cc_wgt + origdata2d*(1.-cc_wgt)
+            end if  
+            ier = nf_inq_varid(idnc,'wb3',varid)
+            ier = nf_get_vara_real(idnc,varid,ostart(1:3),ocount(1:3),origdata2d)
+            if ( ier/=0 ) then
+              soilmoist(:,3) = soilmoist(:,3)*cc_wgt + origdata2d*(1.-cc_wgt) 
+            end if  
+            ier = nf_inq_varid(idnc,'wb4',varid)
+            ier = nf_get_vara_real(idnc,varid,ostart(1:3),ocount(1:3),origdata2d)
+            if ( ier/=0 ) then
+              soilmoist(:,4) = soilmoist(:,4)*cc_wgt + origdata2d*(1.-cc_wgt) 
+            end if 
+            ier = nf_inq_varid(idnc,'wb5',varid)
+            ier = nf_get_vara_real(idnc,varid,ostart(1:3),ocount(1:3),origdata2d)
+            if ( ier/=0 ) then
+              soilmoist(:,5) = soilmoist(:,5)*cc_wgt + origdata2d*(1.-cc_wgt) 
+            end if  
+            ier = nf_inq_varid(idnc,'wb6',varid)
+            ier = nf_get_vara_real(idnc,varid,ostart(1:3),ocount(1:3),origdata2d)
+            if ( ier/=0 ) then
+              soilmoist(:,6) = soilmoist(:,6)*cc_wgt + origdata2d*(1.-cc_wgt) 
+            end if  
+          end if
+          
+          if ( any(fracice>=0.) ) then
+            ier = nf_inq_varid(idnc,'fracice',varid)
+            ier = nf_get_vara_real(idnc,varid,ostart(1:3),ocount(1:3),origdata2d)
+            if ( ier/=0 ) then
+              fracice = fracice*cc_wgt + origdata2d*(1.-cc_wgt)
+            end if  
+          end if  
+          
+          if ( any(snod>=0.) ) then
+            ier = nf_inq_varid(idnc,'snd',varid)
+            ier = nf_get_vara_real(idnc,varid,ostart(1:3),ocount(1:3),origdata2d)
+            if ( ier/=0 ) then
+              snod = snod*cc_wgt + origdata2d*(1.-cc_wgt)   
+            end if  
+          end if  
+          
+          ostart(1) = 1
+          ostart(2) = 1
+          ostart(3) = 1
+          ostart(4) = iarch
+          ocount(1) = il
+          ocount(2) = jl
+          ocount(3) = kl
+          ocount(4) = 1
+          
+          ier = nf_inq_varid(idnc,'temp',varid)
+          ier = nf_get_vara_real(idnc,varid,ostart(1:4),ocount(1:4),origdata3d)
+          do k = 1,kl
+            ts(:,k) = ts(:,k)*cc_wgt + origdata3d(:,k)*(1.-cc_wgt)  
+          end do  
 
-!        ier = nf_inq_varid(idnc,'ds',idv)
-!        rvals = ds
-!        ier = nf_put_var_real(idnc,idv,rvals)
-!        ier = nf_inq_varid(idnc,'tanl',idv)
-!        rvals = tanl
-!        ier = nf_put_var_real(idnc,idv,rvals)
-!        ier = nf_inq_varid(idnc,'rnml',idv)
-!        rvals = rnml
-!        ier = nf_put_var_real(idnc,idv,rvals)
-!        ier = nf_inq_varid(idnc,'du',idv)
-!        rvals = du
-!        ier = nf_put_var_real(idnc,idv,rvals)
-!        ier = nf_inq_varid(idnc,'stl1',idv)
-!        rvals = stl1
-!        ier = nf_put_var_real(idnc,idv,rvals)
-!        ier = nf_inq_varid(idnc,'stl2',idv)
-!        rvals = stl2
-!        ier = nf_put_var_real(idnc,idv,rvals)
-!        ier = nf_inq_varid(idnc,'dt',idv)
-!        rvals = dt
-!        ier = nf_put_var_real(idnc,idv,rvals)
+          ier = nf_inq_varid(idnc,'u',varid)
+          ier = nf_get_vara_real(idnc,varid,ostart(1:4),ocount(1:4),origdata3d)
+          do k = 1,kl
+            us(:,k) = us(:,k)*cc_wgt + origdata3d(:,k)*(1.-cc_wgt)  
+          end do  
+
+          ier = nf_inq_varid(idnc,'v',varid)
+          ier = nf_get_vara_real(idnc,varid,ostart(1:4),ocount(1:4),origdata3d)
+          do k = 1,kl
+            vs(:,k) = vs(:,k)*cc_wgt + origdata3d(:,k)*(1.-cc_wgt)  
+          end do  
+          
+          ier = nf_inq_varid(idnc,'mixr',varid)
+          ier = nf_get_vara_real(idnc,varid,ostart(1:4),ocount(1:4),origdata3d)
+          do k = 1,kl
+            rs(:,k) = rs(:,k)*cc_wgt + origdata3d(:,k)*(1.-cc_wgt)  
+          end do    
+          
+          write(6,*) "Finished merging data"
+          
+       end if ! if ( .not.merge ) ..else..   
       endif ! iarch.eq.1
      
 !------------------------------------------------------------------      
@@ -604,9 +719,6 @@
       write(6,*)'now write out variables'
 
       if(ktau.eq.0.or.itype.eq.-1)then  ! also for restart file
-!       write time-invariant fields      
-        !call histwrt3(real(em),'map',idnc,iarch,il)
-        !call histwrt3(real(f),'cor',idnc,iarch,il)
         call histwrt3(clon,'clon',idnc,iarch,il)
         call histwrt3(clat,'clat',idnc,iarch,il)
       endif ! (ktau.eq.0) 
@@ -697,23 +809,18 @@
         call histwrt3(snod,'snd',idnc,iarch,il)
       end if
       
-
-!     call histwrt3(sicedep,'siced',idnc,iarch)
-!     call histwrt3(snowd,'snd',idnc,iarch)
-      
       write(6,*)'netcdf save of 3d variables'
       call histwrt4(ts,'temp',idnc,iarch,il,kl)
       call histwrt4(us,'u',idnc,iarch,il,kl)
       call histwrt4(vs,'v',idnc,iarch,il,kl)
       call histwrt4(rs,'mixr',idnc,iarch,il,kl)
-      !write(6,*)"ifullw,ifull=",ifullw,ifull
 
-      !if(ifullw.eq.ifull)then
-      !  call histwrt4(qfg,'qfg',idnc,iarch,il,kl)
-      !  call histwrt4(qlg,'qlg',idnc,iarch,il,kl)
-      !  call histwrt4(cfrax,'cfrac',idnc,iarch,il,kl)
-      !endif
-
+      deallocate( xpnt,ypnt )
+      deallocate( sig )
+      deallocate( tst,tsb )
+      deallocate( aa,bb,cc )
+      deallocate( cfrac )
+      
       return ! subroutine openhist(idnc,iarch,itype,dim,sig
       end
 !=======================================================================
@@ -787,7 +894,7 @@
       integer mid, start(3), count(3)
       integer imn, imx, jmn, jmx
       integer i, j, ndims
-      integer(kind=2) ipack(il,6*il) ! was integer*2 
+      integer(kind=2), dimension(:,:), allocatable :: ipack ! was integer*2 
       character(len=*), intent(in) :: sname
 !     character*8 sname
       integer(kind=2) minv, maxv, missval ! was integer*2 
@@ -797,10 +904,13 @@
       integer, intent(in) :: idnc
       integer ier
 
-      real var(il,6*il)
+      real, dimension(:,:), allocatable :: var
 
       jl=6*il
       ifull=il*jl
+      
+      allocate( ipack(il,6*il) )
+      allocate( var(il,6*il) )
 
       write(6,*)"histwrt3 sname=",sname," iarch=",iarch," idnc=",idnc
 
@@ -846,6 +956,9 @@
 
       write(6,'("histwrt3:",a7," nt=",i4," n=",f12.4," ij=",2i4," x=",f12.4," ij=",2i4)') sname,iarch,varn,imn,jmn,varx,imx,jmx
 
+      deallocate( ipack )
+      deallocate( var )
+      
       return
       end ! histwrt3
 !=======================================================================
@@ -860,18 +973,21 @@
       !include 'parm.h'
 
       integer mid, start(4), count(4)
-      integer*2 ipack(il,6*il,kl) ! was integer*2 
+      integer*2, dimension(:,:,:), allocatable :: ipack ! was integer*2 
       character(len=*), intent(in) :: sname
 !     character*8 sname
       integer*2 minv, maxv, missval ! was integer*2 
       parameter(minv = -32500, maxv = 32500, missval = -32501)
       real addoff, scale_f
 
-      real var(il,6*il,kl)
+      real, dimension(:,:,:), allocatable :: var
 
       jl=6*il
       ifull=il*jl
 
+      allocate( ipack(il,6*il,kl) )
+      allocate( var(il,6*il,kl) )
+      
       write(6,*)"histwrt4 sname=",sname," iarch=",iarch," idnc=",idnc
 
       start(1) = 1
@@ -927,6 +1043,9 @@
       write(6,'("histwrt4:",a7," nt=",i4," n=",f12.4," ijk=",3i4," x=",f12.4," ijk=",3i4)') &
           sname,iarch,varn,imn,jmn,kmn,varx,imx,jmx,kmx
 
+      deallocate( ipack )
+      deallocate( var )
+      
       return
       end ! histwrt4
      
