@@ -1,6 +1,6 @@
 ! Conformal Cubic Atmospheric Model
     
-! Copyright 2015 Commonwealth Scientific Industrial Research Organisation (CSIRO)
+! Copyright 2015-2018 Commonwealth Scientific Industrial Research Organisation (CSIRO)
     
 ! This file is part of the Conformal Cubic Atmospheric Model (CCAM)
 !
@@ -771,7 +771,8 @@
       if ( any( sfct<100. .or. sfct>400. ) ) then
         write(6,*) "ERROR: Invalid sfct"
         write(6,*) "minval,maxval ",minval(sfct),maxval(sfct)
-        stop
+        call finishbanner
+        stop -1
       end if 
       
       call histwrt3(sfct,'tsu',idnc,iarch,il)
