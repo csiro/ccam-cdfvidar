@@ -1,6 +1,6 @@
 ! Conformal Cubic Atmospheric Model
     
-! Copyright 2015 Commonwealth Scientific Industrial Research Organisation (CSIRO)
+! Copyright 2015-2018 Commonwealth Scientific Industrial Research Organisation (CSIRO)
     
 ! This file is part of the Conformal Cubic Atmospheric Model (CCAM)
 !
@@ -253,7 +253,7 @@ c***********************************************************************
             ! why was this here ????? hp(iq,2)=hp(iq,1) ! removed 07 dec 2005
             pr = pm(k) ! Pa
             if ( osig_in ) pr = calc_p(psg_m(iq),pm(k)) ! Pa
-            rp(iq,k)=0.622*rp(iq,k)/(pr-rp(iq,k)) ! sat. mix.rat. from es
+            rp(iq,k)=0.622*rp(iq,k)/max(pr-rp(iq,k),.1) ! sat. mix.rat. from es
             rp(iq,k)=hp(iq,k)*rp(iq,k)*.01 ! actual mix.rat. = rh*qsat
           enddo ! iq=1, npts
 
@@ -284,7 +284,7 @@ c***********************************************************************
             pr = pm(k)
             if ( osig_in ) pr = calc_p(psg_m(iq),pm(k))
             q = hp(iq,k)
-            satmr=0.622*rp(iq,k)/(pr-rp(iq,k)) ! sat. mix.rat. from es
+            satmr=0.622*rp(iq,k)/max(pr-rp(iq,k),.1) ! sat. mix.rat. from es
             if ( satmr .gt. 1.e-10 ) then
               hp(iq,k)=100.*q/satmr              ! rh(%) = 100 * actual mix.rat. / qsat
             else
