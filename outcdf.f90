@@ -301,10 +301,11 @@
       call openhist(idnc,iarch,itype,dim,sig,kdate,ktime,time,mtimer,il,kl,merge, &
                     minlon,maxlon,minlat,maxlat,llrng)
 
-      !ier = nf_sync(idnc)
-      !if(ier.ne.0)write(6,*)"ncsnc idnc,ier=",idnc,ier
+      ! MJT notes - nf_sync is used for multiple time-steps in output file
+      ier = nf_sync(idnc)
+      if(ier.ne.0)write(6,*)"ncsnc idnc,ier=",idnc,ier
       
-      ier = nf_close(idnc)
+      !ier = nf_close(idnc)
 
       if ( itype.eq.1 ) then
 !       itype=1 outfile
@@ -958,7 +959,10 @@
 
       ier = nf_inq_varndims(idnc,mid,ndims)
       ier = nf_put_vara_int2(idnc, mid, start(1:ndims), count(1:ndims), ipack)
-      if(ier.ne.0)stop "in histwrt3 ier not zero"
+      if(ier.ne.0) then
+        write(6,*) "in histwrt3 ier not zero",ier,sname
+        stop
+      end if  
 
       write(6,'("histwrt3:",a7," nt=",i4," n=",f12.4," ij=",2i4," x=",f12.4," ij=",2i4)') sname,iarch,varn,imn,jmn,varx,imx,jmx
 
