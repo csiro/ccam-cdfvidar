@@ -1,7 +1,10 @@
 
 ifneq ($(CUSTOM),yes)
 FC = ifort
-LIBS = -L $(NETCDF_ROOT)/lib -lnetcdf -lnetcdff
+LIBS = -L $(NETCDF_ROOT)/lib -lnetcdf
+ifneq ($(NCCLIB),yes)
+LIBS += -lnetcdff
+endif
 INC = -I $(NETCDF_ROOT)/include
 FFLAGS =  -xHost -fp-model precise -traceback
 PPFLAG90 = -fpp
@@ -13,6 +16,11 @@ FC = gfortran
 PPFLAG90 = -x f95-cpp-input
 PPFLAG77 = -x f77-cpp-input
 endif
+
+ifeq ($(NCCLIB),yes)
+FFLAGS += -Dncclib
+endif
+
 
 OBJ2= dryadj.o findxn.o filt.o sintp16.o vidar.o invert.o\
       cdfvidar.o vispl.o esmtrv.o amap.o mslp.o lconset.o \
