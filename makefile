@@ -13,6 +13,7 @@ endif
 
 ifeq ($(GFORTRAN),yes)
 FC = gfortran
+FFLAGS = -O2 -mtune=native -march=native -I $(NETCDF_ROOT)/include
 PPFLAG90 = -x f95-cpp-input
 PPFLAG77 = -x f77-cpp-input
 endif
