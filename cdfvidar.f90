@@ -1,6 +1,6 @@
 ! Conformal Cubic Atmospheric Model
     
-! Copyright 2015 Commonwealth Scientific Industrial Research Organisation (CSIRO)
+! Copyright 2015-2018 Commonwealth Scientific Industrial Research Organisation (CSIRO)
     
 ! This file is part of the Conformal Cubic Atmospheric Model (CCAM)
 !
@@ -1351,17 +1351,15 @@
          end where
          call amap ( datan(1:ix*iy), ix, iy, 'snod', 0., 0. )
          call sintp16(datan(1:ix*iy),ix,iy,snod,glon,glat,sdiag,il)
+         ! convert to equiv water
+         snod(:) = snod(:)*100./1000. 
+         where ( lsm_m(:)<0.5 )
+           snod(:)=0.
+         end where
       else
          write(6,*)"No snod data found, setting to 0."
          snod(:)=0.
       endif ! ier
-      
-      ! convert to equiv water
-      snod(:) = snod(:)*100./1000. 
- 
-      where ( lsm_m(:)<0.5 )
-        snod(:)=0.
-      end where
       
       call prt_pan(snod,il,jl,2,'snod')
 

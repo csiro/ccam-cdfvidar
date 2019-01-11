@@ -9,6 +9,7 @@ INC = -I $(NETCDF_ROOT)/include
 FFLAGS =  -xHost -fp-model precise -traceback
 PPFLAG90 = -fpp
 PPFLAG77 = -fpp
+DEBUGFLAG = -check all -debug all -traceback -fpe0
 endif
 
 ifeq ($(GFORTRAN),yes)
@@ -16,6 +17,20 @@ FC = gfortran
 FFLAGS = -O2 -mtune=native -march=native -I $(NETCDF_ROOT)/include
 PPFLAG90 = -x f95-cpp-input
 PPFLAG77 = -x f77-cpp-input
+DEBUGFLAG = -g -Wall -Wextra -fbounds-check -fbacktrace
+endif
+
+ifeq ($(CRAY),yes)
+FC = ftn
+FFLAGS = -h noomp
+PPFLAG90 = -eZ
+PPFLAG77 = -eZ
+DEBUGFLAG =
+endif
+
+# Testing - I/O and fpmodel
+ifeq ($(TEST),yes)
+FFLAGS += $(DEBUGFLAG)
 endif
 
 ifeq ($(NCCLIB),yes)
