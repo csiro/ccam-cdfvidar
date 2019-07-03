@@ -79,6 +79,7 @@ cdfvidar.o vispl.o dryadj.o : lmax.h
 cdfvidar.o vidar.o vispl.o : nplevs.h
 cdfvidar.o vidar.o : vidar.h
 cdfvidar.o outcdf.o : netcdf_m.o
+vidar.o : outcdf.o
 utilities.o : utilities.f90
 ccinterp.o : ccinterp.f90 setxyz_m.o xyzinfo_m.o latltoij_m.o newmpar_m.o indices_m.o precis_m.o
 latltoij_m.o : latltoij_m.f90 xyzinfo_m.o newmpar_m.o precis_m.o

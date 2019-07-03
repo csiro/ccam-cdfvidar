@@ -1,6 +1,6 @@
 ! Conformal Cubic Atmospheric Model
     
-! Copyright 2015-2018 Commonwealth Scientific Industrial Research Organisation (CSIRO)
+! Copyright 2015-2019 Commonwealth Scientific Industrial Research Organisation (CSIRO)
     
 ! This file is part of the Conformal Cubic Atmospheric Model (CCAM)
 !
@@ -21,10 +21,12 @@
       
       subroutine vidar(nplevs,zp,tp,up,vp,hp,validlevcc
      &                ,iyr,imon,idy,ihr,nt,time,mtimer,pm,io_out,il,kl
-     &                ,merge,minlon,maxlon,minlat,maxlat,llrng)
+     &                ,minlon,maxlon,minlat,maxlat,llrng
+     &                ,procformat_nproc)
      
       use comsig_m, dsg => dsgx, sgml => sgmlx, sg => sgx
       use sigdata_m
+      use outcdf_m
 ! version for globpe
 c**********************************************************************
 c   interpolation from nplevs pressure levels to lm sigma levels       
@@ -45,6 +47,7 @@ c***********************************************************************
 
       integer il,jl,kl,ifull
       integer imf,jmf,lm,im,imp1,imid
+      integer, intent(in) :: procformat_nproc
 
       include 'nplevs.h' ! maxplev
 
@@ -83,8 +86,6 @@ c**********************************************************************
       integer pcoun
       integer dypmo(12)
       
-      logical, intent(in) :: merge
-
 c**********************************************************************
 
       parameter (epsiln=0.05, rrr=287.04, grav=9.80665, ccp=1.00464e3)
@@ -868,8 +869,9 @@ c write out file
            call invert3(vs,il,kl)
 
            call outcdf(ihr,idy,imon,iyr,iout,nt,time,mtimer
-     &                 ,sgml,vfil,ds,il,kl,merge
-     &                 ,minlon,maxlon,minlat,maxlat,llrng)
+     &                 ,sgml,vfil,ds,il,kl
+     &                 ,minlon,maxlon,minlat,maxlat,llrng
+     &                 ,procformat_nproc)
 
            call invert1(sgml,kl)
 

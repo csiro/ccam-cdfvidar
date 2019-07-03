@@ -1,6 +1,6 @@
 ! Conformal Cubic Atmospheric Model
     
-! Copyright 2015-2018 Commonwealth Scientific Industrial Research Organisation (CSIRO)
+! Copyright 2015-2019 Commonwealth Scientific Industrial Research Organisation (CSIRO)
     
 ! This file is part of the Conformal Cubic Atmospheric Model (CCAM)
 !
@@ -97,6 +97,7 @@
       integer ncid
       integer iernc,liernc,lncid,varid,dimid
       integer idsoillvl, ivsoillvl, nsoillvl, ksearch, ktest
+      integer procformat_nproc
       integer, dimension(2) :: ccdim
       integer, dimension(2) :: start, ncount
 
@@ -141,8 +142,6 @@
       character*80 zsavn,lsavn
       character*10 header,moistvar
       character*10 soilunits, geopotunits, presunits
-      
-      logical merge
 
       namelist/gnml/inf,vfil,ds,du,tanl,rnml,stl1,stl2,inzs,zsfil   &
                    ,ints,tsfil, ogbl,zsavn,inzsavn,lsavn,inlsavn    &
@@ -154,7 +153,7 @@
                    ,insm,smfil                                      &
                    ,splineu,splinev,splinet,zerowinds               &
                    ,grdx,grdy,slon,slat                             &
-                   ,moistvar,kl,merge,llrng
+                   ,moistvar,kl,llrng,procformat_nproc
 
       data khin/0/,kuin/0/,kvin/0/,ktin/0/,krin/0/
       data igd/1/,jgd/1/,id/1/,jd/1/,mtimer/0/
@@ -179,7 +178,7 @@
       data zerowinds/.true./
       data grdx/1./
       data grdy/-1./
-      data merge/.false./,llrng/0./
+      data llrng/0./,procformat_nproc/0/
 
       ! Start banner
       write(6,*) "=============================================================================="
@@ -1596,8 +1595,8 @@
       if2=0
 
 !#######################################################################
-      call vidar(nplev,hgt,temp,u,v,rh,validlevcc,iyr,imn,idy,ihr,iarch,time,mtimer,cplev,io_out,il,kl,merge, &
-                 minlon,maxlon,minlat,maxlat,llrng)
+      call vidar(nplev,hgt,temp,u,v,rh,validlevcc,iyr,imn,idy,ihr,iarch,time,mtimer,cplev,io_out,il,kl, &
+                 minlon,maxlon,minlat,maxlat,llrng,procformat_nproc)
 !#######################################################################
 
       enddo ! narch
