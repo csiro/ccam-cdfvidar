@@ -20,7 +20,8 @@
 !------------------------------------------------------------------------------
       
       subroutine vidar(nplevs,zp,tp,up,vp,hp,validlevcc
-     &                ,iyr,imon,idy,ihr,nt,time,mtimer,pm,io_out,il,kl
+     &                ,iyr,imon,idy,ihr,nt,time,mtimer,pm,pm_b
+     &                ,io_out,il,kl
      &                ,minlon,maxlon,minlat,maxlat,llrng
      &                ,procformat_nproc)
      
@@ -74,11 +75,11 @@ c**********************************************************************
       real, dimension(:), allocatable :: alm,prein
 
       common / labcom / lab(17)
-                        character*4 lab
+      character*4 lab
 
       common / mapproj / du,tanl,rnml,stl1,stl2
 
-      real, intent(inout) :: pm(maxplev)
+      real, intent(inout) :: pm(maxplev), pm_b(maxplev)
       real, dimension(:), allocatable :: alpm
       real ac(kl+1), bc(kl+1), cc(kl+1), dc(kl+1)
       real, dimension(:,:), allocatable :: tpold
@@ -135,8 +136,10 @@ c top down
        if (osig_in) then
          idiag = il/2+(jl/2-1)*il
          do k=1,nplevs
-            pm(k)=pm(k)*1.e2 ! pm now Pa
+            pm(k)=pm(k)*1.e2     ! pm now Pa
+            pm_b(k)=pm_b(k)*1.e2 ! pm_b now Pa
             pr = calc_p(psg_m(idiag),pm(k)) ! psg_m(Pa), pm(sig*1.e5)-now
+            pr = pr + pm_b(k)
             alpm(k)=alog(pr)
          end do ! m=1,nplevs
        else
@@ -243,7 +246,10 @@ c***********************************************************************
      &                  ts(:,1), us(:,1), vs(:,1) )
 
           pr = .01*pm(k) ! hPa
-          if ( osig_in ) pr = .01*calc_p(psg_m(imid),pm(k)) ! hPa
+          if ( osig_in ) then
+            pr = .01*calc_p(psg_m(imid),pm(k)) ! hPa
+            pr = pr + 0.01*pm_b(k) ! hPa
+          end if  
 
           write(6,'("k,p(hPa),tp,h,esp=",i3,3f10.2,1p,e12.4)')
      &               k,pr,tp(imid,k),hp(imid,k),rp(imid,k)
@@ -253,13 +259,19 @@ c***********************************************************************
             hp(iq,k)=max(min(hp(iq,k),100.),0.) ! keep 0 < rh < 100
             ! why was this here ????? hp(iq,2)=hp(iq,1) ! removed 07 dec 2005
             pr = pm(k) ! Pa
-            if ( osig_in ) pr = calc_p(psg_m(iq),pm(k)) ! Pa
+            if ( osig_in ) then
+              pr = calc_p(psg_m(iq),pm(k)) ! Pa
+              pr = pr + pm_b(k) ! Pa
+            end if  
             rp(iq,k)=0.622*rp(iq,k)/max(pr-rp(iq,k),.1) ! sat. mix.rat. from es
             rp(iq,k)=hp(iq,k)*rp(iq,k)*.01 ! actual mix.rat. = rh*qsat
           enddo ! iq=1, npts
 
           pr = .01*pm(k) ! hPa
-          if ( osig_in ) pr = .01*calc_p(psg_m(imid),pm(k)) ! hPa
+          if ( osig_in ) then
+            pr = .01*calc_p(psg_m(imid),pm(k)) ! hPa
+            pr = pr + 0.01*pm_b(k) ! hPa
+          end if  
           write(6,'("k,p,tp,hp,rp=",i3,3f10.2,1p,e12.4)')
      &               k,pr,tp(imid,k),hp(imid,k),rp(imid,k)
 
@@ -276,14 +288,20 @@ c***********************************************************************
      &                  us(:,1), vs(:,1) )
 
           pr = .01*pm(k)
-          if ( osig_in ) pr = .01*calc_p(psg_m(imid),pm(k))
+          if ( osig_in ) then
+            pr = .01*calc_p(psg_m(imid),pm(k))
+            pr = pr + 0.01*pm_b(k) ! hPa
+          end if  
           write(6,'("k,p,tp,h,esp=",i3,3f10.2,1p,e12.4)')
      &               k,pr,tp(imid,k),hp(imid,k),rp(imid,k)
 
 ! calculate rel. hum. ( input hp = mixrat, rp = sat vp )
           do iq=1, npts
             pr = pm(k)
-            if ( osig_in ) pr = calc_p(psg_m(iq),pm(k))
+            if ( osig_in ) then
+              pr = calc_p(psg_m(iq),pm(k))
+              pr = pr + pm_b(k) ! Pa
+            end if  
             q = hp(iq,k)
             satmr=0.622*rp(iq,k)/max(pr-rp(iq,k),.1) ! sat. mix.rat. from es
             if ( satmr .gt. 1.e-10 ) then
@@ -296,7 +314,10 @@ c***********************************************************************
           enddo ! iq=1, npts
 
           pr = .01*pm(k)
-          if ( osig_in ) pr = .01*calc_p(psg_m(imid),pm(k))
+          if ( osig_in ) then
+            pr = .01*calc_p(psg_m(imid),pm(k))
+            pr = pr + 0.01*pm_b(k) ! hPa
+          end if  
           write(6,'("k,p,tp,hp,rp=",i3,3f10.2,1p,e12.4)')
      &               k,pr,tp(imid,k),hp(imid,k),rp(imid,k)
 
@@ -390,7 +411,10 @@ c convert sensible temp to virt. temp
           tp(i,k)=tp(i,k)*(rp(i,k)+.622)/(.622*(1.+rp(i,k)))
         enddo ! i=1,npts
         pr = .01*pm(k)  ! hPa
-        if(osig_in)pr  = .01*calc_p(psg_m(1),pm(k)) ! hPa
+        if(osig_in) then
+          pr  = .01*calc_p(psg_m(1),pm(k)) ! hPa
+          pr = pr + 0.01*pm_b(k) ! hPa
+        end if  
         write(6,'(i3,4f12.4,1p,2e12.4)')
      &         k,pr,zp(1,k),tp(1,k),tp(npts,k),rp(1,k),rp(npts,k)
       enddo ! k=1,nplevs
@@ -417,8 +441,8 @@ c loop through pressure levels ( top-down? )
           tem2=tp(i,kk+1)
 
           if ( osig_in ) then
-            alp  = alog(calc_p(psg_m(i),pm(kk  )))
-            alpp = alog(calc_p(psg_m(i),pm(kk+1)))
+            alp  = alog(calc_p(psg_m(i),pm(kk  ))+pm_b(kk))
+            alpp = alog(calc_p(psg_m(i),pm(kk+1))+pm_b(kk+1))
             if ( i .eq. idiag ) then
               write(6,*)"i,kk,psg_m,pm,calcp="
               write(6,*)i,kk,psg_m(i),pm(kk),calc_p(psg_m(i),pm(kk))
@@ -473,6 +497,7 @@ c isothermal case
 c calculate surface pressure
           if ( osig_in ) then
             pr=calc_p(psg_m(i),pm(kk+1))
+            pr=pr+pm_b(kk+1)
           else
             pr=pm(kk+1)    
           end if
@@ -496,7 +521,9 @@ c end of pressure loop
             if ( kk .eq. 1 ) then
               if ( osig_in ) then
                 pr1=calc_p(psg_m(i),pm(1))
+                pr1=pr1+pm_b(1)
                 pr2=calc_p(psg_m(i),pm(2))
+                pr2=pr2+pm_b(2)
               else
                 pr1=pm(1)
                 pr2=pm(2)
@@ -507,7 +534,9 @@ c end of pressure loop
             else
               if ( osig_in ) then
                 pr =calc_p(psg_m(i),pm(kk  ))
+                pr = pr + pm_b(kk)
                 prm=calc_p(psg_m(i),pm(kk-1))
+                prm = prm + pm_b(kk-1)
               else
                 pr =pm(kk)
                 prm=pm(kk-1)
@@ -570,7 +599,9 @@ c pressure level loop ( top down )
             prx = pm(nplevs)
             if ( osig_in ) then
               pr1 =calc_p(psg_m(i),pm(1))
+              pr1 = pr1 + pm_b(1)
               prx =calc_p(psg_m(i),pm(nplevs))
+              prx = prx + pm_b(nplevs)
             endif ! ( osig_in ) then
 
             if ( sigp.lt.pr1 ) then ! sigp above top press
@@ -615,7 +646,9 @@ c set top/bot input pressures
             presb=pm(lev+1) ! bottom pressure
             if ( osig_in ) then
               prest = calc_p(psg_m(i),pm(lev))
+              prest = prest + pm_b(lev)
               presb = calc_p(psg_m(i),pm(lev+1))
+              presb = presb + pm_b(lev+1)
             endif ! ( osig_in ) then
 c test to see if sigp between input pressures
             if ( sigp.lt.prest .or. sigp.gt.presb ) go to 360 ! go to next press
@@ -627,8 +660,8 @@ c test to see if sigp between input pressures
 c set up linear interpolation
             asigp=alog(sigp)
               if ( osig_in ) then
-                alp =alog(calc_p(ps(i),pm(lev)))
-                alpp=alog(calc_p(ps(i),pm(lev+1)))
+                alp =alog(calc_p(ps(i),pm(lev))+pm_b(lev))
+                alpp=alog(calc_p(ps(i),pm(lev+1))+pm_b(lev+1))
               else
                 alp =alpm(lev)
                 alpp=alpm(lev+1)
@@ -692,7 +725,10 @@ c and ts(lm) = bottom level sigma
            do i=1,npts
             sigp=sgml(k)*ps(i)+ptop
             prx = pm(nplevs)
-            if ( osig_in ) prx=calc_p(psg_m(i),pm(nplevs))
+            if ( osig_in ) then
+              prx=calc_p(psg_m(i),pm(nplevs))
+              prx=prx+pm_b(nplevs)
+            end if
             if ( sigp.gt.prx ) then
               ts(i,k)=tp(i,nplevs)-6.5e-3*(alog(prx/sigp))
      .               *(rrr*tp(i,nplevs))/grav
@@ -725,7 +761,10 @@ c and ps(lm) = bottom level sigma
           do i=1,npts
            sigp=sgml(k)*ps(i)+ptop
            prx = pm(nplevs)
-           if ( osig_in ) prx=calc_p(psg_m(i),pm(nplevs))
+           if ( osig_in ) then
+             prx=calc_p(psg_m(i),pm(nplevs))
+             prx=prx+pm_b(nplevs)
+           end if
            if ( sigp.gt.prx ) then
              if ( zerowinds ) then
                fac=1.-(prx-sigp)/(prx-ps(i))

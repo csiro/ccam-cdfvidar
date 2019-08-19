@@ -45,6 +45,8 @@
       integer irecd,ngatts,nvars
       integer ndims,idv,lonid,latid
       integer k,ivpres
+      integer ivpres_a, ivpres_b
+      integer ivpres_0
       integer narch,idtim,idpres
       integer ilonn,iyr,imn,idy
       integer ivtim,ihr,imi
@@ -73,13 +75,15 @@
       real rnml,stl1,stl2
       real rlon
       real llrng,minlon,maxlon,minlat,maxlat
+      real plev0
 
       character(len=1024) inf
 
       common/mapproj/du,tanl,rnml,stl1,stl2
       include 'nplevs.h' ! maxplev
-      real, dimension(maxplev) :: plev,cplev
-      common/levpre/nplev,plev
+      real, dimension(maxplev) :: plev,cplev,bplev
+      real, dimension(maxplev) :: plev_b
+      common/levpre/nplev,plev,plev_b ! does this need to be a common block?
 
       include 'lmax.h'
 
@@ -142,6 +146,7 @@
       character*80 zsavn,lsavn
       character*10 header,moistvar
       character*10 soilunits, geopotunits, presunits
+      character*80 presname
 
       namelist/gnml/inf,vfil,ds,du,tanl,rnml,stl1,stl2,inzs,zsfil   &
                    ,ints,tsfil, ogbl,zsavn,inzsavn,lsavn,inlsavn    &
@@ -501,6 +506,10 @@
          ier = nf_inq_dimid(ncid,'lvl',idpres)
          in_type="s"
       endif
+      ier = nf_get_att_text(ncid,ivpres,'long_name',presname)
+      if ( presname(1:32) == "hybrid sigma pressure coordinate" ) then
+        in_type="h"  
+      end if
       write(6,*)"ier=",ier," idpres=",idpres," in_type=",in_type
       
       ier= nf_inq_dimlen(ncid,idpres,nplev)
@@ -561,10 +570,31 @@
       xplev = maxval( plev(1:nplev) )
       write(6,*)"xplev=",xplev
 
+      plev_b = 0.
+      
       osig_in = .false.
-      if ( .01<xplev .and. xplev<800.  ) then
+      if ( in_type == "h" ) then
+        write(6,*)"^^^^^^^^^hybrid sigma levels^^^^^^^^"
+        osig_in = .true.
+        ier = nf_inq_varid(ncid,'a',ivpres_a)
+        ier = nf_get_var_real(ncid,ivpres_a,plev)
+        ier = nf_inq_varid(ncid,'b',ivpres_b)
+        ier = nf_get_var_real(ncid,ivpres_b,plev_b)
+        ier = nf_inq_varid(ncid,'p0',ivpres_0)
+        ier = nf_get_var_real(ncid,ivpres_0,plev0)
+        plev0 = plev0/100. ! convert to hPa
+        write(6,*) "a=",plev(1:nplev)
+        write(6,*) "b=",plev_b(1:nplev)
+        write(6,*) "p0=",plev0
+        do k = 1,nplev
+          plev_b(k) = plev_b(k)*plev0  
+          plev(k) = plev(k)*1000. ! updated later  
+        end do
+        presunits="hPa"  
+      else if ( .01<xplev .and. xplev<800.  ) then
         write(6,*)"^^^^^^^^^actualy sigma levels^^^^^^^ fix plevs"
         osig_in = .true.
+        plev_b = 0.
         do k=1,nplev
           plev(k)=plev(k)*1000. !
         enddo
@@ -1580,6 +1610,7 @@
       end if
       do k=1,nplev
           cplev(k)=tohpa*plev(nplev+1-k)
+          bplev(k)=tohpa*plev_b(nplev+1-k)
           write(6,'(5f10.2,f10.5)') cplev(k),hgt(i,j,k),temp(i,j,k),u(i,j,k),v(i,j,k),rh(i,j,k)
       enddo ! k=1,nplev
 
@@ -1595,8 +1626,8 @@
       if2=0
 
 !#######################################################################
-      call vidar(nplev,hgt,temp,u,v,rh,validlevcc,iyr,imn,idy,ihr,iarch,time,mtimer,cplev,io_out,il,kl, &
-                 minlon,maxlon,minlat,maxlat,llrng,procformat_nproc)
+      call vidar(nplev,hgt,temp,u,v,rh,validlevcc,iyr,imn,idy,ihr,iarch,time,mtimer,cplev,bplev, &
+                 io_out,il,kl,minlon,maxlon,minlat,maxlat,llrng,procformat_nproc)
 !#######################################################################
 
       enddo ! narch
