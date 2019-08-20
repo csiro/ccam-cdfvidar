@@ -54,7 +54,7 @@ integer, intent(in) :: procformat_nproc
 
 integer, save :: idnc0, idnc1, idncm1
 integer kdate, ktime, iarch
-integer idnc, ier, imode, ixp, iyp
+integer idnc, ier, imode
 integer ktau, icy, icm, icd
 integer ich, icmi, ics, mtimer, idv
 integer, parameter :: nextout=0
@@ -870,6 +870,8 @@ if ( vnode_nproc>0 ) then
       chunks = (/ dim(1), dim(2), 1, vnode_nproc, 1 /)
     case(4)
       chunks = (/ dim(1), dim(2), vnode_nproc, 1 /)  
+    case(3)
+      chunks = (/ dim(1), dim(2), vnode_nproc /)
     case default
       write(6,*) "ERROR: Invlid ndim in attrib ",ndim
       call finishbanner
