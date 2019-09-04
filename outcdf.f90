@@ -605,7 +605,7 @@ if(iarch.eq.1) then
     call attrib(idnc,idim2,id2len,'fracice',lname,'none',0.,6.5)
   end if
         
-  if (any(snod>=0.)) then
+  if (any(snod>1.e-8)) then
     lname = 'Snow depth (liquid water)'
     call attrib(idnc,idim2,id2len,'snd',lname,'none',0.,6500.)
   end if
@@ -819,7 +819,7 @@ if ( any( fracice >= 0. ) ) then
   call histwrt3(fracice,'fracice',idnc,iarch,il)
 end if
       
-if ( any( snod >= 0. ) ) then
+if ( any( snod > 1.e-8 ) ) then
   call histwrt3(snod,'snd',idnc,iarch,il)
 end if
       
@@ -1101,8 +1101,8 @@ if ( vnode_nproc>0 ) then
   start(3) = 1
   start(4) = 1
   start(5) = iarch
-  count(1) = il
-  count(2) = jl
+  count(1) = il_l
+  count(2) = jl_l
   count(3) = kl
   count(4) = vnode_nproc
   count(5) = 1
