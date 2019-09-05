@@ -611,13 +611,13 @@
         stop -1
       end if
 
-      if ( presunits=="Pa" ) then
+      if ( presunits(1:2)=="Pa" ) then
         write(6,*) "Converting pressure levels from Pa to hPa"  
         plev = plev/100.
         presunits="hPa"
       end if
       
-      if ( presunits/="hPa" ) then
+      if ( presunits(1:3)/="hPa" ) then
         write(6,*) "ERROR: Could not convert vertical levels to hPa"
         write(6,*) "Vertical level units was read as ",trim(presunits)
         call finishbanner
