@@ -22,8 +22,7 @@
       subroutine vidar(nplevs,zp,tp,up,vp,hp,validlevcc
      &                ,iyr,imon,idy,ihr,nt,time,mtimer,pm,pm_b
      &                ,io_out,il,kl
-     &                ,minlon,maxlon,minlat,maxlat,llrng
-     &                ,procformat_nproc)
+     &                ,minlon,maxlon,minlat,maxlat,llrng)
      
       use comsig_m, dsg => dsgx, sgml => sgmlx, sg => sgx
       use sigdata_m
@@ -48,7 +47,6 @@ c***********************************************************************
 
       integer il,jl,kl,ifull
       integer imf,jmf,lm,im,imp1,imid
-      integer, intent(in) :: procformat_nproc
 
       include 'nplevs.h' ! maxplev
 
@@ -909,8 +907,7 @@ c write out file
 
            call outcdf(ihr,idy,imon,iyr,iout,nt,time,mtimer
      &                 ,sgml,vfil,ds,il,kl
-     &                 ,minlon,maxlon,minlat,maxlat,llrng
-     &                 ,procformat_nproc)
+     &                 ,minlon,maxlon,minlat,maxlat,llrng)
 
            call invert1(sgml,kl)
 

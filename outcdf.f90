@@ -25,16 +25,11 @@ private
 public outcdf
 
 integer ixp, iyp, idlev, idnt
-integer idproc, idgpnode, idgpoff
-integer vnode_nproc, nxp, nyp
-integer il_l, jl_l, npan_l, ipan, jpan
-integer dlen
-integer, dimension(:), allocatable :: ipoff, jpoff, npoff
 
 contains
 
 subroutine outcdf(ihr,idy,imon,iyr,iout,nt,time,mtimer,sig,cdffile_in,ddss,il,kl, &
-                  minlon,maxlon,minlat,maxlat,llrng,procformat_nproc)
+                  minlon,maxlon,minlat,maxlat,llrng)
 
 use netcdf_m
       
@@ -49,8 +44,6 @@ real du,tanl,rnml,stl1,stl2
 common/mapproj/du,tanl,rnml,stl1,stl2
 
 character(len=10) rundate
-      
-integer, intent(in) :: procformat_nproc
 
 integer, save :: idnc0, idnc1, idncm1
 integer kdate, ktime, iarch
@@ -63,7 +56,6 @@ integer, parameter :: nihead=54
 integer nahead(nihead)
 integer, dimension(1) :: dimids
 real, intent(in) :: minlon, maxlon, minlat, maxlat, llrng
-logical ptest
 
 integer, parameter :: nrhead = 14
 real ahead(nrhead)
@@ -76,9 +68,8 @@ character(len=1032) cdffile
 
 !common/cdfind/ixp,iyp,idlev,idnt
 
-integer, dimension(5) :: dim
+integer, dimension(4) :: dim
 integer xdim,ydim,zdim,tdim
-integer pdim,gpdim
 integer oldmode
 character(len=20) :: timorg
 character(len=33) :: grdtim
@@ -90,8 +81,6 @@ data rundate/"ncepavnanl"/
 
 jl=6*il
 ifull=il*jl
-il_l=il ! default
-jl_l=jl ! default
 
 nahead = 0
 ahead = 0.
@@ -110,37 +99,6 @@ iarch=nt
 idnc=idnc1
 
 write(6,'("outcdf itype,idnc,iarch,cdffile=",3i5," ",a80)') itype,idnc,iarch,cdffile_in
-
-if ( procformat_nproc>0 ) then
-  ! assume face decomposition
-  vnode_nproc = procformat_nproc
-  ptest = .true.
-  do while ( ptest )
-    if ( mod(vnode_nproc,6)==0 .or. mod(6,vnode_nproc)==0 ) then
-      nxp = max( 1, nint(sqrt(real(vnode_nproc)/6.)) ) ! number of proc in x-direction
-      nyp = vnode_nproc/nxp                            ! number of proc in y-direction
-      do while ( (mod(il,max(nxp,1))/=0 .or. mod(vnode_nproc/6,max(nxp,1))/=0 .or. &
-                  mod(jl,max(nyp,1))/=0) .and. nxp>0 )
-        nxp = nxp - 1
-        nyp = vnode_nproc/max(nxp,1)
-      end do
-      if ( nxp>0 ) then
-        ptest = .false.
-      else
-        vnode_nproc = vnode_nproc - 1  
-      end if    
-    else 
-      vnode_nproc = vnode_nproc - 1  
-    end if
-  end do
-  write(6,*) "Procformat nproc,nxp,nyp ",vnode_nproc,nxp,nyp
-  dlen = 5
-else
-  vnode_nproc = 0
-  nxp = 1
-  nyp = 1
-  dlen = 4
-end if
       
 !#######################################################################
 ! netcdf output
@@ -155,11 +113,7 @@ if ( iarch.eq.1 ) then
         
   ! expect to create new file
   cdffile = ""
-  if ( vnode_nproc>0 ) then
-    write(cdffile,"(a,'.',i6.6)") trim(cdffile_in), 0  
-  else  
-    cdffile = trim(cdffile_in)  
-  end if    
+  cdffile = trim(cdffile_in)  
   write(6,*)'nccre of ',cdffile
         
 #ifdef usenc3
@@ -175,49 +129,22 @@ if ( iarch.eq.1 ) then
   ! Turn off the data filling
   ier = nf_set_fill(idnc,nf_nofill,oldmode)
   ! Create dimensions, lon, lat
-  if ( vnode_nproc>0 ) then
-    il_l = il/nxp  
-    ier = nf_def_dim(idnc,'longitude', il_l,         xdim)
-    jl_l = jl/nyp
-    ier = nf_def_dim(idnc,'latitude',  jl_l,         ydim)       
-  else
-    ier = nf_def_dim(idnc,'longitude', il,           xdim)
-    ier = nf_def_dim(idnc,'latitude',  jl,           ydim)
-  end if   
+  ier = nf_def_dim(idnc,'longitude', il,           xdim)
+  ier = nf_def_dim(idnc,'latitude',  jl,           ydim)
   ier = nf_def_dim(idnc,'lev',       kl,           zdim)
-  if ( vnode_nproc>0 ) then
-    ier = nf_def_dim(idnc,'processor',vnode_nproc,pdim)
-    ier = nf_def_dim(idnc,'gprocessor',vnode_nproc,gpdim)
-  else
-    pdim = 0
-    gpdim = 0
-  end if
   ier = nf_def_dim(idnc,'time',      nf_unlimited, tdim)
   write(6,*) "xdim=",xdim," ydim=",ydim," zdim=",zdim," tdim=",tdim
           
   ! define coords.
           
-  if ( vnode_nproc>0 ) then
-    dim(1) = xdim
-    dim(2) = pdim
-    ier = nf_def_var(idnc,'longitude',nf_float,2,dim(1:2),ixp)
-    ier = nf_put_att_text(idnc,ixp,'point_spacing',4,'even')
-    ier = nf_put_att_text(idnc,ixp,'units',12,'degrees_east')
-    dim(1) = ydim
-    dim(2) = pdim
-    ier = nf_def_var(idnc,'latitude',nf_float,2,dim(1:2),iyp)
-    ier = nf_put_att_text(idnc,iyp,'point_spacing',4,'even')
-    ier = nf_put_att_text(idnc,iyp,'units',13,'degrees_north')   
-  else
-    dimids = xdim
-    ier = nf_def_var(idnc,'longitude',nf_float,1,dimids,ixp)
-    ier = nf_put_att_text(idnc,ixp,'point_spacing',4,'even')
-    ier = nf_put_att_text(idnc,ixp,'units',12,'degrees_east')
-    dimids = ydim
-    ier = nf_def_var(idnc,'latitude',nf_float,1,dimids,iyp)
-    ier = nf_put_att_text(idnc,iyp,'point_spacing',4,'even')
-    ier = nf_put_att_text(idnc,iyp,'units',13,'degrees_north')
-  end if  
+  dimids = xdim
+  ier = nf_def_var(idnc,'longitude',nf_float,1,dimids,ixp)
+  ier = nf_put_att_text(idnc,ixp,'point_spacing',4,'even')
+  ier = nf_put_att_text(idnc,ixp,'units',12,'degrees_east')
+  dimids = ydim
+  ier = nf_def_var(idnc,'latitude',nf_float,1,dimids,iyp)
+  ier = nf_put_att_text(idnc,iyp,'point_spacing',4,'even')
+  ier = nf_put_att_text(idnc,iyp,'units',13,'degrees_north')
   write(6,*)'ixp,iyp=',ixp,iyp
 
   dimids = zdim
@@ -228,17 +155,6 @@ if ( iarch.eq.1 ) then
   ier = nf_put_att_text(idnc,idlev,'units',11,'sigma_level')
   ier = nf_put_att_text(idnc,idlev,'long_name',11,'sigma_level')
   write(6,*)'idlev=',idlev
-
-  if ( vnode_nproc>0 ) then
-    dim(1) = pdim
-    ier = nf_def_var(idnc,'processor',nf_int,1,dim(1),idproc)
-    ier = nf_put_att_text(idnc,idproc,'long_name',16,'processor number')
-    dim(1) = gpdim
-    ier = nf_def_var(idnc,'gprocnode',nf_int,1,dim(1),idgpnode)
-    ier = nf_put_att_text(idnc,idgpnode,'long_name',25,'global processor node map')
-    ier = nf_def_var(idnc,'gprocoffset',nf_int,1,dim(1),idgpoff)
-    ier = nf_put_att_text(idnc,idgpnode,'long_name',27,'global processor offset map')
-  end if
 
   write(6,*)'tdim,idnc=',tdim,idnc
   dimids = tdim
@@ -263,19 +179,10 @@ if ( iarch.eq.1 ) then
   write(6,*)'grdtim=',grdtim
   ier = nf_put_att_text(idnc,idnt,'units',33,grdtim)
 
-  if ( vnode_nproc>0 ) then
-    dim(1) = xdim
-    dim(2) = ydim
-    dim(3) = zdim
-    dim(4) = pdim
-    dim(5) = tdim
-  else
-    dim(1) = xdim
-    dim(2) = ydim
-    dim(3) = zdim
-    dim(4) = tdim
-    dim(5) = 0
-  end if
+  dim(1) = xdim
+  dim(2) = ydim
+  dim(3) = zdim
+  dim(4) = tdim
   write(6,*) "dim=",dim
 
   ! create the attributes of the header record of the file
@@ -397,97 +304,37 @@ integer il,jl,kl,ifull
 integer ioff, joff, noff, np, myface, mtmp
 
 character(len=50) :: lname, expdesc
-integer dim(5)
-integer idim2(4)
-integer id2len
+integer dim(4)
+integer idim2(3)
 integer, dimension(1) :: ivals
 integer, dimension(1) :: start, ncount
 integer, dimension(4) :: ostart, ocount
-integer, dimension(:), allocatable :: procnode, procoffset, vnode_dat
 integer nrun
-real, dimension(:), allocatable :: xpnt,ypnt
+real, dimension(il) :: xpnt
+real, dimension(6*il) :: ypnt
 real, dimension(kl), intent(in) :: sig
 real, intent(in) :: minlon, maxlon, minlat, maxlat, llrng
 
 !common/cdfind/ixp,iyp,idlev,idnt
-real, dimension(:), allocatable :: tst,tsb
 !       *** qscrn_ave not presently written     
-real, dimension(:), allocatable :: aa,bb,cc
-real, dimension(:,:), allocatable :: cfrac
+real, dimension(6*il*il) :: aa
 real, dimension(1) :: rvals
       
 integer iq, varid
 integer i, j, n
-real x_wgt, y_wgt
-real, dimension(:), allocatable :: cc_wgt, origdata2d
-real, dimension(:,:), allocatable :: origdata3d
 
 jl=6*il
 ifull=il*jl
-      
-if ( vnode_nproc>=6 ) then
-  npan_l = 1
-  allocate( ipoff(vnode_nproc), jpoff(vnode_nproc), npoff(vnode_nproc) )
-else if ( vnode_nproc>0 ) then
-  npan_l = 6/vnode_nproc
-  allocate( ipoff(vnode_nproc), jpoff(vnode_nproc), npoff(vnode_nproc) )
-else
-  npan_l = 1
-end if
-
-id2len = dlen - 1
-il_l = il/nxp
-jl_l = jl/nyp
-ipan = il/nxp
-jpan = jl/nyp
-if ( vnode_nproc>=6 ) then
-  do np = 0,vnode_nproc-1
-    myface = np*6/(nxp*nyp)
-    mtmp = np - myface*nxp*nyp/6
-    npoff(np+1) = 1 - myface
-    jpoff(np+1) = (mtmp/nxp)*jpan
-    ipoff(np+1) = modulo( mtmp, nxp )*ipan
-  end do  
-  write(6,*) "ipan,jpan,npan_l=",ipan,jpan,npan_l
-  write(6,*) "ipoff=",ipoff
-  write(6,*) "jpoff=",jpoff
-  write(6,*) "npoff=",npoff
-else if ( vnode_nproc>0 ) then
-  do np = 0,vnode_nproc-1
-    npoff(np+1) = 1 - np*npan_l
-    ipoff(np+1) = 0
-    jpoff(np+1) = 0
-  end do    
-  write(6,*) "ipan,jpan,npan_l=",ipan,jpan,npan_l
-  write(6,*) "ipoff=",ipoff
-  write(6,*) "jpoff=",jpoff
-  write(6,*) "npoff=",npoff
-end if
-      
-allocate( xpnt(il),ypnt(6*il) )
-allocate( tst(6*il*il),tsb(6*il*il) )
-allocate( aa(6*il*il),bb(6*il*il),cc(6*il*il) )
-allocate( cfrac(6*il*il,kl) )
-allocate( cc_wgt(6*il*il),origdata2d(6*il*il) )
-allocate( origdata3d(6*il*il,kl) )
 
 write(6,*)'openhist iarch,idnc,itype=',iarch,idnc,itype
 
 !if this is the first archive, set up some global attributes
 if(iarch.eq.1) then
-  write(6,*)'dim=',dim(1:dlen)
-  if ( vnode_nproc>0 ) then
-    idim2(1)=dim(1)    ! x
-    idim2(2)=dim(2)    ! y
-    idim2(3)=dim(4)    ! proc
-    idim2(4)=dim(dlen) ! time
-  else    
-    idim2(1)=dim(1)    ! x
-    idim2(2)=dim(2)    ! y
-    idim2(3)=dim(dlen) ! time
-  end if  
+  write(6,*)'dim=',dim(1:4)
+  idim2(1)=dim(1)    ! x
+  idim2(2)=dim(2)    ! y
+  idim2(3)=dim(4)    ! time
   write(6,*)'idim2=',idim2
-  write(6,*)'id2len=',id2len
 
 ! Create global attributes
 ! Model run number
@@ -500,12 +347,6 @@ if(iarch.eq.1) then
   expdesc = 'CCAM model run'
   ier = nf_put_att_text(idnc,nf_global,'expdesc',50,expdesc)
   write(6,*)"expdesc=",expdesc," ier=",ier
-
-  if ( vnode_nproc>0 ) then
-    ier = nf_put_att_int(idnc,nf_global,'nproc',nf_int,1,vnode_nproc)  
-    ier = nf_put_att_int(idnc,nf_global,'procmode',nf_int,1,vnode_nproc)
-    ier = nf_put_att_text(idnc,nf_global,'decomp',4,'face')
-  end if
         
 ! Sigma levels
 ! write(6,*)'sig=',sig
@@ -541,128 +382,99 @@ if(iarch.eq.1) then
   write(6,*)'define attributes of variables'
 
   lname ='Scaled Log Surface pressure'
-  call attrib(idnc,idim2,id2len,'psf',lname,'none',-1.3,0.2)
+  call attrib(idnc,idim2,3,'psf',lname,'none',-1.3,0.2)
 
   lname ='Mean sea level pressure'
-  call attrib(idnc,idim2,id2len,'pmsl',lname,'hPa',800.,1200.)
+  call attrib(idnc,idim2,3,'pmsl',lname,'hPa',800.,1200.)
   lname = 'Surface geopotential'
-  call attrib(idnc,idim2,id2len-1,'zht',lname,'m2/s2',-2.e3,128.e3) ! MJT lsmask
+  call attrib(idnc,idim2,2,'zht',lname,'m2/s2',-2.e3,128.e3) ! MJT lsmask
   lname = 'Soil type'                                               ! MJT lsmask
-  call attrib(idnc,idim2,id2len-1,'soilt',lname,'none',0.,65.e3)    ! MJT lsmask
+  call attrib(idnc,idim2,2,'soilt',lname,'none',0.,65.e3)    ! MJT lsmask
 
 ! For time invariant surface fields
   lname = 'clon'
-  call attrib(idnc,idim2,id2len-1,'clon',lname,'none',-360.,360.)
+  call attrib(idnc,idim2,2,'clon',lname,'none',-360.,360.)
   lname = 'clat'
-  call attrib(idnc,idim2,id2len-1,'clat',lname,'none',-90.,90.)
+  call attrib(idnc,idim2,2,'clat',lname,'none',-90.,90.)
 
 ! For time varying surface fields
   lname = 'Surface temperature'
-  call attrib(idnc,idim2,id2len,'tsu',lname,'K',0.,350.)
+  call attrib(idnc,idim2,3,'tsu',lname,'K',0.,350.)
 
   if ( all(soiltemp<0.) ) then
     lname = 'Soil temperature top'
-    call attrib(idnc,idim2,id2len,'tb3',lname,'K',100.,400.)
+    call attrib(idnc,idim2,3,'tb3',lname,'K',100.,400.)
     lname = 'Soil temperature bottom'
-    call attrib(idnc,idim2,id2len,'tb2',lname,'K',100.,400.)
+    call attrib(idnc,idim2,3,'tb2',lname,'K',100.,400.)
   else
     lname = 'Soil temperature lev 1'
-    call attrib(idnc,idim2,id2len,'tgg1',lname,'K',100.,400.)
+    call attrib(idnc,idim2,3,'tgg1',lname,'K',100.,400.)
     lname = 'Soil temperature lev 2'
-    call attrib(idnc,idim2,id2len,'tgg2',lname,'K',100.,400.)
+    call attrib(idnc,idim2,3,'tgg2',lname,'K',100.,400.)
     lname = 'Soil temperature lev 3'
-    call attrib(idnc,idim2,id2len,'tgg3',lname,'K',100.,400.)
+    call attrib(idnc,idim2,3,'tgg3',lname,'K',100.,400.)
     lname = 'Soil temperature lev 4'
-    call attrib(idnc,idim2,id2len,'tgg4',lname,'K',100.,400.)
+    call attrib(idnc,idim2,3,'tgg4',lname,'K',100.,400.)
     lname = 'Soil temperature lev 5'
-    call attrib(idnc,idim2,id2len,'tgg5',lname,'K',100.,400.)
+    call attrib(idnc,idim2,3,'tgg5',lname,'K',100.,400.)
     lname = 'Soil temperature lev 6'
-    call attrib(idnc,idim2,id2len,'tgg6',lname,'K',100.,400.)
+    call attrib(idnc,idim2,3,'tgg6',lname,'K',100.,400.)
   end if
       
   if ( all(soilmoist<0.) ) then
     lname = 'Soil moisture top'
-    call attrib(idnc,idim2,id2len,'wfg',lname,'none',0.,.4)
+    call attrib(idnc,idim2,3,'wfg',lname,'none',0.,.4)
     lname = 'Soil moisture bottom'
-    call attrib(idnc,idim2,id2len,'wfb',lname,'none',0.,.4)
+    call attrib(idnc,idim2,3,'wfb',lname,'none',0.,.4)
   else
     lname = 'Soil moisture 1'
-    call attrib(idnc,idim2,id2len,'wb1',lname,'m3/m3',0.,2.)
+    call attrib(idnc,idim2,3,'wb1',lname,'m3/m3',0.,2.)
     lname = 'Soil moisture 2'
-    call attrib(idnc,idim2,id2len,'wb2',lname,'m3/m3',0.,2.)
+    call attrib(idnc,idim2,3,'wb2',lname,'m3/m3',0.,2.)
      lname = 'Soil moisture 3'
-    call attrib(idnc,idim2,id2len,'wb3',lname,'m3/m3',0.,2.)
+    call attrib(idnc,idim2,3,'wb3',lname,'m3/m3',0.,2.)
     lname = 'Soil moisture 4'
-    call attrib(idnc,idim2,id2len,'wb4',lname,'m3/m3',0.,2.)
+    call attrib(idnc,idim2,3,'wb4',lname,'m3/m3',0.,2.)
     lname = 'Soil moisture 5'
-    call attrib(idnc,idim2,id2len,'wb5',lname,'m3/m3',0.,2.)
+    call attrib(idnc,idim2,3,'wb5',lname,'m3/m3',0.,2.)
     lname = 'Soil moisture 6'
-    call attrib(idnc,idim2,id2len,'wb6',lname,'m3/m3',0.,2.)
+    call attrib(idnc,idim2,3,'wb6',lname,'m3/m3',0.,2.)
   end if
 
   if (any(fracice>=0.)) then
     lname = 'Sea ice fraction'
-    call attrib(idnc,idim2,id2len,'fracice',lname,'none',0.,6.5)
+    call attrib(idnc,idim2,3,'fracice',lname,'none',0.,6.5)
   end if
         
   if (any(snod>1.e-8)) then
     lname = 'Snow depth (liquid water)'
-    call attrib(idnc,idim2,id2len,'snd',lname,'none',0.,6500.)
+    call attrib(idnc,idim2,3,'snd',lname,'none',0.,6500.)
   end if
 
   write(6,*)'3d variables'
-  call attrib(idnc,dim,dlen,'temp','Air temperature','K',100.,350.)
-  call attrib(idnc,dim,dlen,'u','x-component wind','m/s',-150.,150.)
-  call attrib(idnc,dim,dlen,'v','y-component wind','m/s',-150.,150.)
+  call attrib(idnc,dim,4,'temp','Air temperature','K',100.,350.)
+  call attrib(idnc,dim,4,'u','x-component wind','m/s',-150.,150.)
+  call attrib(idnc,dim,4,'v','y-component wind','m/s',-150.,150.)
   lname= 'Water mixing ratio'
-  call attrib(idnc,dim,dlen,'mixr',lname,'kg/kg',0.,.05)
+  call attrib(idnc,dim,4,'mixr',lname,'kg/kg',0.,.05)
 
   write(6,*)'finished defining attributes'
 ! Leave define mode
   ier = nf_enddef(idnc)
   write(6,*)'leave define mode: ier=',ier
 
-  if ( vnode_nproc>0 ) then
-    il_l = il/nxp
-    jl_l = jl/nyp
-    do np = 0,vnode_nproc-1
-      ioff = ipoff(np+1)
-      joff = jpoff(np+1)
-      noff = npoff(np+1)
-      do i = 1,ipan
-        xpnt(i) = float(i + ioff)
-      end do
-      ostart(1) = 1
-      ostart(2) = np + 1
-      ocount(1) = il_l
-      ocount(2) = 1
-      ier = nf_put_vara_real(idnc,ixp,ostart(1:2),ocount(1:2),xpnt(1:il_l))
-      do n = 1,npan_l
-        do j = 1,jpan
-          i = j + (n-noff)*jpan 
-          ypnt(i) = float(j + joff + (n-noff)*il)
-        end do  
-      end do
-      ostart(1) = 1
-      ostart(2) = np + 1
-      ocount(1) = jl_l
-      ocount(2) = 1
-      ier = nf_put_vara_real(idnc,iyp,ostart(1:2),ocount(1:2),ypnt(1:jl_l))
-    end do  
-  else
-    do i=1,il
-      xpnt(i) = float(i)
-    end do
-    start = 1
-    ncount = il
-    ier = nf_put_vara_real(idnc,ixp,start,ncount,xpnt)
-    do j=1,jl
-      ypnt(j) = float(j)
-    end do
-    start = 1
-    ncount = jl
-    ier = nf_put_vara_real(idnc,iyp,start,ncount,ypnt)
-  end if      
+  do i=1,il
+    xpnt(i) = float(i)
+  end do
+  start = 1
+  ncount = il
+  ier = nf_put_vara_real(idnc,ixp,start,ncount,xpnt)
+  do j=1,jl
+    ypnt(j) = float(j)
+  end do
+  start = 1
+  ncount = jl
+  ier = nf_put_vara_real(idnc,iyp,start,ncount,ypnt)
 
   start = 1
   ncount = kl
@@ -673,30 +485,6 @@ if(iarch.eq.1) then
   start = 1
   ncount = kl
   ier = nf_put_vara_real(idnc,idv,start,ncount,sig)
-
-  if ( vnode_nproc>0 ) then
-    ! store local processor id in output file  
-    allocate( vnode_dat(vnode_nproc) )
-    do np = 0,vnode_nproc-1
-      vnode_dat(np+1) = np
-    end do  
-    ier = nf_put_vara_int(idnc,idproc,(/1/),(/vnode_nproc/),vnode_dat)
-    deallocate( vnode_dat )
-    ! store file id for a given processor number in output file number 000000
-    allocate( procnode(vnode_nproc) )
-    do np = 0,vnode_nproc-1
-      procnode(np+1) = 0
-    end do  
-    ier = nf_put_vara_int(idnc,idgpnode,(/1/),(/vnode_nproc/),procnode)
-    deallocate( procnode )
-    ! store offset within a file for a given processor number in output file number 000000
-    allocate( procoffset(vnode_nproc) )
-    do np = 0,vnode_nproc-1
-      procoffset(np+1) = np
-    end do  
-    ier = nf_put_vara_int(idnc,idgpoff,(/1/),(/vnode_nproc/),procoffset)
-    deallocate( procoffset )
-  end if
 
 endif ! iarch.eq.1
      
@@ -828,16 +616,6 @@ call histwrt4(ts,'temp',idnc,iarch,il,kl)
 call histwrt4(us,'u',idnc,iarch,il,kl)
 call histwrt4(vs,'v',idnc,iarch,il,kl)
 call histwrt4(rs,'mixr',idnc,iarch,il,kl)
-
-deallocate( xpnt,ypnt )
-deallocate( tst,tsb )
-deallocate( aa,bb,cc )
-deallocate( cfrac )
-deallocate( cc_wgt,origdata2d )
-deallocate( origdata3d )
-if ( vnode_nproc>0 ) then
-  deallocate( ipoff, jpoff, npoff )  
-end if
       
 return ! subroutine openhist(idnc,iarch,itype,dim,sig
 end subroutine openhist
@@ -850,7 +628,6 @@ integer(kind=2) minv, maxv, missval   ! was integer*2
 parameter(minv = -32500, maxv = 32500, missval = -32501)
 integer ndim
 integer cdfid, idv, dim(ndim)
-integer, dimension(ndim) :: chunks
 character(len=*) name, lname, units
 real xmin, xmax
 real, dimension(1) :: rvals
@@ -862,28 +639,6 @@ if ( ier.ne.0 ) then
   write(6,*) nf_strerror(ier)
   call finishbanner
   stop
-end if
-
-if ( vnode_nproc>0 ) then
-  select case(ndim)
-    case(5)
-      chunks = (/ dim(1), dim(2), 1, vnode_nproc, 1 /)
-    case(4)
-      chunks = (/ dim(1), dim(2), vnode_nproc, 1 /)  
-    case(3)
-      chunks = (/ dim(1), dim(2), vnode_nproc /)
-    case default
-      write(6,*) "ERROR: Invlid ndim in attrib ",ndim
-      call finishbanner
-      stop
-  end select   
-  ier = nf_def_var_chunking(cdfid,idv,nf_chunked,chunks)
-  if ( ier.ne.0 ) then
-    write(6,*)ier,' Error in variable chunking ', name
-    write(6,*) nf_strerror(ier)
-    call finishbanner
-    stop
-  end if
 end if
 
 ier = nf_put_att_text(cdfid,idv,'long_name',len_trim(lname),lname)
@@ -920,10 +675,9 @@ integer iarch
 !include 'newmpar.h'
 !include 'parm.h'
 
-integer mid, start(4), count(4)
+integer mid, start(3), count(3)
 integer imn, imx, jmn, jmx
 integer i, j, ndims
-integer np, ioff, joff, noff, n
 !integer(kind=2), dimension(:,:), allocatable :: ipack ! was integer*2 
 character(len=*), intent(in) :: sname
 !character*8 sname
@@ -936,7 +690,6 @@ integer ier
 
 real, dimension(il,6*il), intent(in) :: var
 integer(kind=2), dimension(il,6*il) :: ipack
-integer(kind=2), dimension(il_l,jl_l,vnode_nproc) :: pf_ipack
 
 jl=6*il
 ifull=il*jl
@@ -976,48 +729,18 @@ end do
 
 ier = nf_inq_varndims(idnc,mid,ndims)
       
-if ( vnode_nproc>0 ) then
-  ! reorder data for procfomat
-  start(1) = 1
-  start(2) = 1
-  start(3) = 1
-  start(4) = iarch
-  count(1) = il_l
-  count(2) = jl_l
-  count(3) = vnode_nproc
-  count(4) = 1
-  do np = 0,vnode_nproc-1
-    ioff = ipoff(np+1)
-    joff = jpoff(np+1)
-    noff = npoff(np+1)
-    do n = 1,npan_l
-      do j = 1,jpan
-        do i = 1,ipan
-          pf_ipack(i,j,np+1) = ipack(i+ioff,j+joff+(n-noff)*jpan)
-        end do  
-      end do
-    end do  
-  end do
-  ier = nf_put_vara_int2(idnc, mid, start(1:ndims+1), count(1:ndims+1), pf_ipack)
-  if(ier.ne.0) then
-    write(6,*) "in histwrt3 ier not zero",ier,sname
-    call finishbanner
-    stop
-  end if  
-else
-  start(1) = 1
-  start(2) = 1
-  start(3) = iarch
-  count(1) = il
-  count(2) = jl
-  count(3) = 1  
-  ier = nf_put_vara_int2(idnc, mid, start(1:ndims), count(1:ndims), ipack)
-  if(ier.ne.0) then
-    write(6,*) "in histwrt3 ier not zero",ier,sname
-    call finishbanner
-    stop
-  end if  
-end if
+start(1) = 1
+start(2) = 1
+start(3) = iarch
+count(1) = il
+count(2) = jl
+count(3) = 1  
+ier = nf_put_vara_int2(idnc, mid, start(1:ndims), count(1:ndims), ipack)
+if(ier.ne.0) then
+  write(6,*) "in histwrt3 ier not zero",ier,sname
+  call finishbanner
+  stop
+end if  
 
 write(6,'("histwrt3:",a7," nt=",i4," n=",f12.4," ij=",2i4," x=",f12.4," ij=",2i4)') sname,iarch,varn,imn,jmn,varx,imx,jmx
 
@@ -1036,17 +759,15 @@ integer il,jl,kl,ifull
 !include 'newmpar.h'
 !include 'parm.h'
 
-integer mid, start(5), count(5)
+integer mid, start(4), count(4)
 character(len=*), intent(in) :: sname
 !character*8 sname
 integer*2 minv, maxv, missval ! was integer*2 
 parameter(minv = -32500, maxv = 32500, missval = -32501)
 real addoff, scale_f
-integer np, ioff, joff, noff, n
 
 real, dimension(il,6*il,kl), intent(in) :: var
 integer(kind=2), dimension(il,6*il,kl) :: ipack
-integer(kind=2), dimension(il_l,jl_l,kl,vnode_nproc) :: pf_ipack
 
 jl=6*il
 ifull=il*jl
@@ -1095,43 +816,15 @@ do k=1,kl
   end do
 end do
 
-if ( vnode_nproc>0 ) then
-  start(1) = 1
-  start(2) = 1
-  start(3) = 1
-  start(4) = 1
-  start(5) = iarch
-  count(1) = il_l
-  count(2) = jl_l
-  count(3) = kl
-  count(4) = vnode_nproc
-  count(5) = 1
-  do np = 0,vnode_nproc-1
-    ioff = ipoff(np+1)
-    joff = jpoff(np+1)
-    noff = npoff(np+1)
-    do k = 1,kl
-      do n = 1,npan_l
-        do j = 1,jpan
-          do i = 1,ipan
-            pf_ipack(i,j,k,np+1) = ipack(i+ioff,j+joff+(n-noff)*jpan,k)
-          end do
-        end do  
-      end do
-    end do  
-  end do
-  ier = nf_put_vara_int2(idnc, mid, start, count, pf_ipack)
-else    
-  start(1) = 1
-  start(2) = 1
-  start(3) = 1
-  start(4) = iarch
-  count(1) = il
-  count(2) = jl
-  count(3) = kl
-  count(4) = 1
-  ier = nf_put_vara_int2(idnc, mid, start(1:4), count(1:4), ipack)
-end if  
+start(1) = 1
+start(2) = 1
+start(3) = 1
+start(4) = iarch
+count(1) = il
+count(2) = jl
+count(3) = kl
+count(4) = 1
+ier = nf_put_vara_int2(idnc, mid, start(1:4), count(1:4), ipack)
 
 write(6,'("histwrt4:",a7," nt=",i4," n=",f12.4," ijk=",3i4," x=",f12.4," ijk=",3i4)') &
     sname,iarch,varn,imn,jmn,kmn,varx,imx,jmx,kmx
