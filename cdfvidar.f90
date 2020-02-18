@@ -144,7 +144,8 @@
       character*3 cmonth
       character*80 zsavn,lsavn
       character*10 header,moistvar
-      character*10 soilunits, geopotunits, presunits
+      character*10 soilunits, geopotunits
+      character*30 presunits
       character*80 presname
 
       namelist/gnml/inf,vfil,ds,du,tanl,rnml,stl1,stl2,inzs,zsfil   &
@@ -497,6 +498,7 @@
       endif
       if ( ier .ne. 0 ) then
          ier = nf_inq_varid(ncid,'lev',ivpres) 
+	 print *,"ier=",ier,"ivpres=",ivpres
          ier = nf_inq_dimid(ncid,'lev',idpres)
          in_type="p"
       endif
@@ -505,6 +507,13 @@
          ier = nf_inq_dimid(ncid,'lvl',idpres)
          in_type="s"
       endif
+      if ( ier /= 0 ) then
+        write(6,*) "ERROR locating vertical level"
+	write(6,*) nf_strerror(ier)
+	stop
+      end if
+      write(6,*) "Searching for vertical level. ier=",ier
+      
       ier = nf_get_att_text(ncid,ivpres,'long_name',presname)
       if ( presname(1:32) == "hybrid sigma pressure coordinate" ) then
         in_type="h"  
@@ -1238,10 +1247,12 @@
 
         write(6,*)"=========================> now interp. land data"
         call sintp16(datan(1:ix*iy),ix,iy,sfct,glon,glat,sdiag,il)                 ! land
+        sfct = min( max( sfct, 100. ), 425. )
 
         if(olsm_gbl .and. nopnts.gt.0)then
           write(6,*)"=========================> now interp. ocean data"
            call sintp16(datan(1+ix*iy:2*ix*iy),ix,iy,sfcto_m,glon,glat,sdiag,il)   ! ocean
+           sfcto_m = min( max( sfcto_m, 100. ), 425. )
         endif!(olsm_gbl)then
 
         call prt_pan(sfct   ,il,jl,2,'tss')
