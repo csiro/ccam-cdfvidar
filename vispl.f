@@ -66,10 +66,13 @@ c**********************************************************************c
 c
 c**********************************************************************c
 c
-      common / work / x1(maxplev), x2(maxplev), x3(maxplev)
-     .              , a (maxplev), c (maxplev), d (maxplev)
-     .              , h (maxplev), gd(maxplev), gp(maxplev)
-     .              , pre(lmax), gs(lmax)
+!      common / work / x1(maxplev), x2(maxplev), x3(maxplev)
+!     .              , a (maxplev), c (maxplev), d (maxplev)
+!     .              , h (maxplev), gd(maxplev), gp(maxplev)
+!     .              , pre(lmax), gs(lmax)
+      real, dimension(maxplev) :: x1, x2, x3
+      real, dimension(maxplev) :: a, c, d, h, gd, gp
+      real, dimension(lmax) :: pre, gs
 c
       dimension gridp(len3,maxplev), grids(len3,lm), press(len3)
      .        , prelvs(maxplev), sgml(lm)

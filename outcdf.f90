@@ -1,6 +1,6 @@
 ! Conformal Cubic Atmospheric Model
     
-! Copyright 2015-2019 Commonwealth Scientific Industrial Research Organisation (CSIRO)
+! Copyright 2015-2020 Commonwealth Scientific Industrial Research Organisation (CSIRO)
     
 ! This file is part of the Conformal Cubic Atmospheric Model (CCAM)
 !
@@ -23,13 +23,19 @@ module outcdf_m
     
 private
 public outcdf
+public readvar, readsst, readsoil
+public netcdferror, readpress
 
 integer ixp, iyp, idlev, idnt
+
+interface readvar
+  module procedure readvar3d, readvar2d, readvarinv
+end interface
 
 contains
 
 subroutine outcdf(ihr,idy,imon,iyr,iout,nt,time,mtimer,sig,cdffile_in,ddss,il,kl, &
-                  minlon,maxlon,minlat,maxlat,llrng)
+                  minlon,maxlon,minlat,maxlat,llrng,calendar,rlong0,rlat0,schmidt)
 
 use netcdf_m
       
@@ -39,14 +45,13 @@ integer il,jl,kl,ifull
 integer ihr,idy,imon,iyr,iout
 integer nt
 real ddss
-real du,tanl,rnml,stl1,stl2
 
-common/mapproj/du,tanl,rnml,stl1,stl2
-
+character(len=*), intent(in) :: calendar
 character(len=10) rundate
 
 integer, save :: idnc0, idnc1, idncm1
-integer kdate, ktime, iarch
+integer, save :: kdate, ktime
+integer iarch
 integer idnc, ier, imode
 integer ktau, icy, icm, icd
 integer ich, icmi, ics, mtimer, idv
@@ -56,17 +61,18 @@ integer, parameter :: nihead=54
 integer nahead(nihead)
 integer, dimension(1) :: dimids
 real, intent(in) :: minlon, maxlon, minlat, maxlat, llrng
+real, intent(in) :: rlong0, rlat0, schmidt
+real(kind=8), intent(inout) :: time
+real(kind=8), save :: first_time
 
 integer, parameter :: nrhead = 14
 real ahead(nrhead)
 
 real, dimension(kl) :: sig
-real time,dt,ds
+real dt,ds
 
 character(len=1024) cdffile_in
 character(len=1032) cdffile
-
-!common/cdfind/ixp,iyp,idlev,idnt
 
 integer, dimension(4) :: dim
 integer xdim,ydim,zdim,tdim
@@ -79,6 +85,8 @@ data month/'jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','de
 data idnc1/0/, idnc0/0/, idncm1/0/
 data rundate/"ncepavnanl"/
 
+logical, save :: first = .true.
+
 jl=6*il
 ifull=il*jl
 
@@ -90,9 +98,20 @@ write(6,*)"outcdf ihr,idy,imon,iyr,iout=",ihr,idy,imon,iyr,iout
 write(6,*)"time=",time
 
 dt=0
-kdate=iyr*10000+imon*100+idy
-ktime=ihr*100
+
+if ( first ) then
+  kdate=iyr*10000+imon*100+idy
+  ktime=ihr*100
+  write(6,*)"kdate,ktime=",kdate,ktime
+  first_time = time
+  call datefix(kdate,ktime,time,calendar)
+  first = .false.
+else  
+  time = time - first_time  
+end if  
+write(6,*)"time=",time
 write(6,*)"kdate,ktime=",kdate,ktime
+
 
 ! itype=1 outfile
 iarch=nt
@@ -158,7 +177,7 @@ if ( iarch.eq.1 ) then
 
   write(6,*)'tdim,idnc=',tdim,idnc
   dimids = tdim
-  ier = nf_def_var(idnc,'time',nf_int,1,dimids,idnt)
+  ier = nf_def_var(idnc,'time',nf_double,1,dimids,idnt)
   write(6,*)'idnt=',idnt
   ier = nf_put_att_text(idnc,idnt,'point_spacing',4,'even')
 
@@ -174,11 +193,14 @@ if ( iarch.eq.1 ) then
   write(timorg,'(i2.2,"-",a3,"-",i4.4,3(":",i2.2))') icd,month(icm),icy,ich,icmi,ics
   write(6,*)'timorg=',timorg
   ier = nf_put_att_text(idnc,idnt,'time_origin',20,timorg)
-
   write(grdtim,'("minutes since ",i4.4,"-",i2.2,"-",i2.2," ",2(i2.2,":"),i2.2)') icy,icm,icd,ich,icmi,ics
   write(6,*)'grdtim=',grdtim
   ier = nf_put_att_text(idnc,idnt,'units',33,grdtim)
 
+  if ( calendar/="" ) then
+    ier = nf_put_att_text(idnc,idnt,'calendar',len_trim(calendar),calendar)
+  end if  
+  
   dim(1) = xdim
   dim(2) = ydim
   dim(3) = zdim
@@ -246,9 +268,9 @@ if ( iarch.eq.1 ) then
   ahead(2)=0.  !difknbd
   ahead(3)=0.  ! was rhkuo for kuo scheme
   ahead(4)=0.  !du
-  ahead(5)=du ! rlong0     ! needed by cc2hist
-  ahead(6)=tanl ! rlat0      ! needed by cc2hist
-  ahead(7)=rnml ! schmidt    ! needed by cc2hist
+  ahead(5)=rlong0     ! needed by cc2hist
+  ahead(6)=rlat0      ! needed by cc2hist
+  ahead(7)=schmidt    ! needed by cc2hist
   ahead(8)=0.  !stl2
   ahead(9)=0.  !relaxt
   ahead(10)=0.  !hourbd
@@ -314,6 +336,7 @@ real, dimension(il) :: xpnt
 real, dimension(6*il) :: ypnt
 real, dimension(kl), intent(in) :: sig
 real, intent(in) :: minlon, maxlon, minlat, maxlat, llrng
+real(kind=8), intent(in) :: time
 
 !common/cdfind/ixp,iyp,idlev,idnt
 !       *** qscrn_ave not presently written     
@@ -352,29 +375,29 @@ if(iarch.eq.1) then
 ! write(6,*)'sig=',sig
   ier = nf_put_att_real(idnc,nf_global,'sigma',nf_float,kl,sig)
 
-  lname = 'year-month-day at start of run'
-  ier = nf_def_var(idnc,'kdate',nf_int,1,dim(4:4),idkdate)
-  ier = nf_put_att_text(idnc,idkdate,'long_name',len_trim(lname),lname)
+  !lname = 'year-month-day at start of run'
+  !ier = nf_def_var(idnc,'kdate',nf_int,1,dim(4:4),idkdate)
+  !ier = nf_put_att_text(idnc,idkdate,'long_name',len_trim(lname),lname)
 
-  lname = 'hour-minute at start of run'
-  ier = nf_def_var(idnc,'ktime',nf_int,1,dim(4:4),idktime)
-  ier = nf_put_att_text(idnc,idktime,'long_name',len_trim(lname),lname)
+  !lname = 'hour-minute at start of run'
+  !ier = nf_def_var(idnc,'ktime',nf_int,1,dim(4:4),idktime)
+  !ier = nf_put_att_text(idnc,idktime,'long_name',len_trim(lname),lname)
 
-  lname = 'timer (hrs)'
-  ier = nf_def_var(idnc,'timer',nf_float,1,dim(4:4),idnter)
-  ier = nf_put_att_text(idnc,idnter,'long_name',len_trim(lname),lname)
+  !lname = 'timer (hrs)'
+  !ier = nf_def_var(idnc,'timer',nf_float,1,dim(4:4),idnter)
+  !ier = nf_put_att_text(idnc,idnter,'long_name',len_trim(lname),lname)
 
-  lname = 'mtimer (mins)'
-  ier = nf_def_var(idnc,'mtimer',nf_int,1,dim(4:4),idmtimer)
-  ier = nf_put_att_text(idnc,idmtimer,'long_name',len_trim(lname),lname)
+  !lname = 'mtimer (mins)'
+  !ier = nf_def_var(idnc,'mtimer',nf_int,1,dim(4:4),idmtimer)
+  !ier = nf_put_att_text(idnc,idmtimer,'long_name',len_trim(lname),lname)
 
-  lname = 'timeg (UTC)'
-  ier = nf_def_var(idnc,'timeg',nf_float,1,dim(4:4),idnteg)
-  ier = nf_put_att_text(idnc,idnteg,'long_name',len_trim(lname),lname)
+  !lname = 'timeg (UTC)'
+  !ier = nf_def_var(idnc,'timeg',nf_float,1,dim(4:4),idnteg)
+  !ier = nf_put_att_text(idnc,idnteg,'long_name',len_trim(lname),lname)
 
-  lname = 'number of time steps from start'
-  ier = nf_def_var(idnc,'ktau',nf_int,1,dim(4:4),idktau)
-  ier = nf_put_att_text(idnc,idktau,'long_name',len_trim(lname),lname)
+  !lname = 'number of time steps from start'
+  !ier = nf_def_var(idnc,'ktau',nf_int,1,dim(4:4),idktau)
+  !ier = nf_put_att_text(idnc,idktau,'long_name',len_trim(lname),lname)
 
   ier = nf_def_var(idnc,'sigma',nf_float,1,dim(3:3),idv)
   ier = nf_put_att_text(idnc,idv,'positive',4,'down')
@@ -491,29 +514,29 @@ endif ! iarch.eq.1
 !------------------------------------------------------------------      
 ktau=0
 !timer=0
-timer=time/60. ! MJT quick fix
+timer=real(time/60._8) ! MJT quick fix
 !timeg=0
-timeg=mod(time/60.,24.) ! MJT quick fix
+timeg=mod(real(time/60._8),24.) ! MJT quick fix
 write(6,*)'outcdf processing kdate,ktime,ktau,time,mtimer: ',kdate,ktime,ktau,time,mtimer
 
 !set time to number of minutes since start
 ier = nf_inq_varid(idnc,'time',idv)
 start = iarch
-ier = nf_put_var1_int(idnc,idv,start,int(time))
-write(6,*)"int(time)=",int(time)
+ier = nf_put_var1_double(idnc,idv,start,time)
+write(6,*)"int(time)=",int(time,8)
 
-ier = nf_inq_varid(idnc,'kdate',idv)
-ier = nf_put_var1_int(idnc,idv,start,kdate)
-ier = nf_inq_varid(idnc,'ktime',idv)
-ier = nf_put_var1_int(idnc,idv,start,ktime)
-ier = nf_inq_varid(idnc,'timer',idv)
-ier = nf_put_var1_real(idnc,idv,start,timer)   
-ier = nf_inq_varid(idnc,'mtimer',idv)
-ier = nf_put_var1_int(idnc,idv,start,nint(time)) ! MJT quick fix
-ier = nf_inq_varid(idnc,'timeg',idv)
-ier = nf_put_var1_real(idnc,idv,start,timeg)
-ier = nf_inq_varid(idnc,'ktau',idv)
-ier = nf_put_var1_int(idnc,idv,start,ktau)      
+!ier = nf_inq_varid(idnc,'kdate',idv)
+!ier = nf_put_var1_int(idnc,idv,start,kdate)
+!ier = nf_inq_varid(idnc,'ktime',idv)
+!ier = nf_put_var1_int(idnc,idv,start,ktime)
+!ier = nf_inq_varid(idnc,'timer',idv)
+!ier = nf_put_var1_real(idnc,idv,start,timer)   
+!ier = nf_inq_varid(idnc,'mtimer',idv)
+!ier = nf_put_var1_int(idnc,idv,start,nint(time)) ! MJT quick fix
+!ier = nf_inq_varid(idnc,'timeg',idv)
+!ier = nf_put_var1_real(idnc,idv,start,timeg)
+!ier = nf_inq_varid(idnc,'ktau',idv)
+!ier = nf_put_var1_int(idnc,idv,start,ktau)      
 
 write(6,*)'kdate,ktime,ktau=',kdate,ktime,ktau
 write(6,*)'timer,timeg=',timer,timeg
@@ -834,35 +857,1136 @@ write(6,'("histwrt4:",a7," nt=",i4," n=",f12.4," ijk=",3i4," x=",f12.4," ijk=",3
 return
 end subroutine histwrt4
      
-subroutine mtimerget(mtimer,kdate1,ktime1,kdate2,ktime2) ! jlm
-!     returns mtimer in minutes, corr. to (kdate2,ktime2) -  (kdate1,ktime1)    
-dimension ndoy(12)   ! days from beginning of year (1st Jan is 0)
-data ndoy/ 0,31,59,90,120,151,181,212,243,273,304,334/
-common/leap_yr/leap  ! 1 to allow leap years
- 
-if(leap.ne.0) then
-  write(6,*) 'leap years not catered for in mtimerget'
-  call finishbanner
-  stop
+! Updated version for reading file data
+
+subroutine readvar3d(ncid,varname,iyr,imn,idy,ihr,imi,iarchi,sdiag,ptype,in_plev,dataout,ier,units)
+
+use netcdf_m
+
+implicit none
+
+integer, intent(in) :: iyr, imn, idy, ihr, imi, iarchi
+integer, intent(in) :: ncid
+integer, intent(out) :: ier
+integer idv, lonid, latid
+integer ix, iy, il, khout, khin
+integer idpres, ivpres, ivtim, nplev, idvar
+integer in_iyr, in_imn, in_idy, in_ihr, in_imi
+integer itype
+integer, dimension(4) :: start, ncount
+integer, dimension(:), allocatable :: ivar
+real, dimension(:,:,:), intent(out) :: dataout
+real, dimension(:), intent(in) :: in_plev
+real, dimension(:), allocatable :: glon, glat
+real, dimension(:), allocatable :: datan
+real, dimension(size(in_plev)) :: plev, plev_b
+real fill_float
+real addoff, sf
+double precision, dimension(:), allocatable :: dvar
+logical orev, osig_in
+logical, intent(in) :: sdiag
+character(len=*), intent(in) :: varname
+character(len=*), intent(in) :: ptype
+character(len=*), intent(inout), optional :: units
+character(len=1) in_type
+character(len=60) timorg
+
+ier = nf_inq_varid(ncid,varname,idvar)  
+if ( ier/=nf_noerr ) then
+  return 
 end if
-!     Set up number of minutes from beginning of year
-!     For GCM runs assume year is <1980 (e.g. ~321-460 for 140 year run)
-jyear1=kdate1/10000
-jmonth=(kdate1-jyear1*10000)/100
-jday=kdate1-jyear1*10000-jmonth*100
-jhour=ktime1/100
-jmin=ktime1-jhour*100
-mstart1=1440*(ndoy(jmonth)+jday-1) + 60*jhour + jmin ! mins from start of y
 
-jyear2=kdate2/10000
-jmonth=(kdate2-jyear2*10000)/100
-jday=kdate2-jyear2*10000-jmonth*100
-jhour=ktime2/100
-jmin=ktime2-jhour*100
-mstart2=1440*(ndoy(jmonth)+jday-1) + 60*jhour + jmin ! mins from start of y
+if ( present(units) ) then
+  ier = nf_get_att_text(ncid,idvar,'units',units)  
+end if
 
-mtimer=mstart2-mstart1+(jyear2-jyear1)*365*24*60
+! check date
+ier = nf_inq_varid(ncid,'time',ivtim)
+call netcdferror(ier)
+ier = nf_get_att_text(ncid,ivtim,'units',timorg)
+call netcdferror(ier)
+call processdatestring(timorg,in_iyr,in_imn,in_idy,in_ihr,in_imi)
+if ( in_iyr/=iyr .or. in_imn/=imn .or. in_idy/=idy .or. in_ihr/=ihr .or. &
+     in_imi/=imi ) then
+  write(6,*) "ERROR: Inconsistent time units with ",trim(varname)
+  call finishbanner
+  stop -1
+end if
+
+! read lat/lon
+ier = nf_inq_dimid(ncid,'lon',lonid)
+if ( ier==nf_noerr ) then
+  ier = nf_inq_varid(ncid,'lon',idv)
+else
+  ier = nf_inq_dimid(ncid,'longitude',lonid)
+  call netcdferror(ier)
+  ier = nf_inq_varid(ncid,'longitude',idv)
+end if
+ier = nf_inq_dimlen(ncid,lonid,ix)
+allocate( glon(ix) )
+ier = nf_get_var_real(ncid,idv,glon)
+
+ier = nf_inq_dimid(ncid,'lat',latid)
+if ( ier==nf_noerr ) then
+  ier = nf_inq_varid(ncid,'lat',idv)    
+else
+  ier = nf_inq_dimid(ncid,'latitude',latid)
+  call netcdferror(ier)
+  ier = nf_inq_varid(ncid,'latitude',idv)    
+end if
+ier = nf_inq_dimlen(ncid,latid,iy)
+allocate( glat(iy) )
+ier = nf_get_var_real(ncid,idv,glat)
+
+! read lev
+call readpress(ncid,in_type,plev,plev_b,nplev,osig_in,orev)
+if ( nplev/=size(dataout,3) ) then
+  write(6,*) "ERROR: Inconsistent number of vertical levels with ",trim(varname)
+  call finishbanner
+  stop -1
+end if
+if ( in_type/=ptype ) then
+  write(6,*) "ERROR: Inconsistent type of vertical levels with ",trim(varname)
+  call finishbanner
+  stop -1
+end if
+if ( any( abs(plev(1:nplev)-in_plev)>1.e-4 ) ) then
+  write(6,*) "ERROR: Inconsistent values for vertical levels with ",trim(varname)
+  write(6,*) "plev ",plev
+  write(6,*) "in_plev ",in_plev
+  call finishbanner
+  stop -1
+end if
+
+! read data
+allocate( datan(ix*iy*nplev) )
+start(1) = 1
+start(2) = 1
+start(3) = 1
+start(4) = iarchi
+ncount(1) = ix
+ncount(2) = iy
+ncount(3) = nplev
+ncount(4) = 1
+ier = nf_get_att_real(ncid,idvar,'add_offset',addoff)
+if ( ier/=nf_noerr ) addoff = 0.
+ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
+if ( ier/=nf_noerr ) sf = 1.
+ier = nf_inq_vartype(ncid,idvar,itype)
+call netcdferror(ier)
+select case(itype)
+  case ( nf_short )
+    allocate( ivar(ix*iy*nplev) )
+    ier = nf_get_vara_int(ncid,idvar,start,ncount,ivar)
+    call netcdferror(ier)
+    datan(1:ix*iy*nplev) = sf*real(ivar(1:ix*iy*nplev)) + addoff
+    deallocate( ivar )
+  case ( nf_float )
+    ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
+    call netcdferror(ier)
+    datan(1:ix*iy*nplev) = sf*real(datan(1:ix*iy*nplev)) + addoff      
+  case ( nf_double )
+    allocate( dvar(ix*iy*nplev) )
+    ier = nf_get_vara_double(ncid,idvar,start,ncount,dvar)
+    call netcdferror(ier)
+    datan(1:ix*iy*nplev) = sf*real(dvar(1:ix*iy*nplev)) + addoff
+    deallocate( dvar )      
+  case default
+    write(6,*) "Variable is unkown"
+    call finishbanner
+    stop -1
+end select
+
+ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
+if ( ier/=nf_noerr ) then
+  ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)    
+end if
+if ( ier==nf_noerr ) then
+  where ( datan==fill_float )
+    datan = 1.e10
+  end where
+  !call getvalidlev(validlevhost,datan,ix,iy,nplev)
+  call filldat(datan,ix,iy,nplev)
+end if
+ier =  nf_noerr ! reset error even if fillvalue is not located
+  
+! interpolate data to cc grid
+il = size(dataout,1)
+call amap(datan(1:ix*iy),ix,iy,varname,0.,0.)
+call amap(datan(1+ix*iy*(nplev-1):ix*iy*nplev),ix,iy,varname,0.,0.)
+if ( orev ) then
+  do khin = 1,nplev    
+    khout = khin  
+    call sintp16(datan(1+ix*iy*(khin-1):ix*iy*khin),ix,iy,dataout(:,:,khout),glon,glat,sdiag,il)  
+  end do
+else
+  do khin = 1,nplev    
+    khout = nplev + 1 - khin  
+    call sintp16(datan(1+ix*iy*(khin-1):ix*iy*khin),ix,iy,dataout(:,:,khout),glon,glat,sdiag,il)  
+  end do
+end if
+
+deallocate( glon, glat )
+deallocate( datan )
+
 return
-end subroutine mtimerget
+end subroutine readvar3d
+
+subroutine readvar2d(ncid,varname,iyr,imn,idy,ihr,imi,iarchi,sdiag,dataout,ier,units)
+
+use netcdf_m
+
+implicit none
+
+integer, intent(in) :: iyr, imn, idy, ihr, imi, iarchi, ncid
+integer, intent(out) :: ier
+integer, dimension(:), allocatable :: ivar
+integer, dimension(3) :: start, ncount
+integer ix, iy, lonid, latid
+integer idv, idvar, itype, il, ivtim
+integer in_iyr, in_imn, in_idy, in_ihr, in_imi
+real, dimension(:,:), intent(out) :: dataout
+real, dimension(:), allocatable, save :: glon, glat
+real, dimension(:), allocatable :: datan
+real sf, addoff
+double precision, dimension(:), allocatable :: dvar
+logical, intent(in) :: sdiag
+character(len=*), intent(in) :: varname
+character(len=*), intent(inout), optional :: units
+character(len=60) timorg
+
+ier = nf_inq_varid(ncid,varname,idvar)  
+if ( ier/=nf_noerr ) then
+  return 
+end if
+
+if ( present(units) ) then
+  ier = nf_get_att_text(ncid,idvar,'units',units) 
+end if
+
+! check date
+ier = nf_inq_varid(ncid,'time',ivtim)
+call netcdferror(ier)
+ier = nf_get_att_text(ncid,ivtim,'units',timorg)
+call netcdferror(ier)
+call processdatestring(timorg,in_iyr,in_imn,in_idy,in_ihr,in_imi)
+if ( in_iyr/=iyr .or. in_imn/=imn .or. in_idy/=idy .or. in_ihr/=ihr .or. &
+     in_imi/=imi ) then
+  write(6,*) "ERROR: Inconsistent time units with ",trim(varname)
+  call finishbanner
+  stop -1
+end if
+
+! read lat/lon
+ier = nf_inq_dimid(ncid,'lon',lonid)
+if ( ier==nf_noerr ) then
+  ier = nf_inq_varid(ncid,'lon',idv)
+else
+  ier = nf_inq_dimid(ncid,'longitude',lonid)
+  call netcdferror(ier)
+  ier = nf_inq_varid(ncid,'longitude',idv)
+end if
+ier = nf_inq_dimlen(ncid,lonid,ix)
+allocate( glon(ix) )
+ier = nf_get_var_real(ncid,idv,glon)
+
+ier = nf_inq_dimid(ncid,'lat',latid)
+if ( ier==nf_noerr ) then
+  ier = nf_inq_varid(ncid,'lat',idv)    
+else
+  ier = nf_inq_dimid(ncid,'latitude',latid)
+  call netcdferror(ier)
+  ier = nf_inq_varid(ncid,'latitude',idv)    
+end if
+ier = nf_inq_dimlen(ncid,latid,iy)
+allocate( glat(iy) )
+ier = nf_get_var_real(ncid,idv,glat)
+
+! read data
+allocate( datan(ix*iy) )
+start(1) = 1
+start(2) = 1
+start(3) = iarchi
+ncount(1) = ix
+ncount(2) = iy
+ncount(3) = 1
+ier = nf_get_att_real(ncid,idvar,'add_offset',addoff)
+if ( ier/=nf_noerr ) addoff = 0.
+ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
+if ( ier/=nf_noerr ) sf = 1.
+ier = nf_inq_vartype(ncid,idvar,itype)
+call netcdferror(ier)
+select case(itype)
+  case ( nf_short )
+    allocate( ivar(ix*iy) )
+    ier = nf_get_vara_int(ncid,idvar,start,ncount,ivar)
+    call netcdferror(ier)
+    datan(1:ix*iy) = sf*real(ivar(1:ix*iy)) + addoff
+    deallocate( ivar )
+  case ( nf_float )
+    ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
+    call netcdferror(ier)
+    datan(1:ix*iy) = sf*real(datan(1:ix*iy)) + addoff      
+  case ( nf_double )
+    allocate( dvar(ix*iy) )
+    ier = nf_get_vara_double(ncid,idvar,start,ncount,dvar)
+    call netcdferror(ier)
+    datan(1:ix*iy) = sf*real(dvar(1:ix*iy)) + addoff
+    deallocate( dvar )      
+  case default
+    write(6,*) "Variable is unkown"
+    call finishbanner
+    stop -1
+end select
+  
+! interpolation
+il = size(dataout,1)
+call amap( datan(1:ix*iy), ix, iy, varname, 0., 0. )
+call sintp16(datan(1:ix*iy),ix,iy,dataout,glon,glat,sdiag,il)
+
+deallocate( glon, glat )
+deallocate( datan )
+
+return
+end subroutine readvar2d
+
+subroutine readvarinv(ncid,varname,sdiag,dataout,ier,units,island)
+
+use netcdf_m
+
+implicit none
+
+integer, intent(in) :: ncid
+integer, intent(out) :: ier
+integer, dimension(:), allocatable :: ivar
+integer, dimension(3) :: start, ncount
+integer ix, iy, lonid, latid
+integer idv, idvar, itype, il, ivtim
+real, dimension(:,:), intent(out) :: dataout
+real, dimension(:), allocatable, save :: glon, glat
+real, dimension(:), allocatable :: datan
+real sf, addoff
+double precision, dimension(:), allocatable :: dvar
+logical, intent(in) :: sdiag
+logical, intent(in), optional :: island
+logical is_land
+character(len=*), intent(in) :: varname
+character(len=*), intent(inout), optional :: units
+
+is_land = .false.
+if ( present(island) ) then
+  is_land = island
+end if
+
+ier = nf_inq_varid(ncid,varname,idvar)  
+if ( ier/=nf_noerr ) then
+  return 
+end if
+
+if ( present(units) ) then
+  ier = nf_get_att_text(ncid,idvar,'units',units) 
+end if
+
+! read lat/lon
+ier = nf_inq_dimid(ncid,'lon',lonid)
+if ( ier==nf_noerr ) then
+  ier = nf_inq_varid(ncid,'lon',idv)
+else
+  ier = nf_inq_dimid(ncid,'longitude',lonid)
+  call netcdferror(ier)
+  ier = nf_inq_varid(ncid,'longitude',idv)
+end if
+ier = nf_inq_dimlen(ncid,lonid,ix)
+allocate( glon(ix) )
+ier = nf_get_var_real(ncid,idv,glon)
+
+ier = nf_inq_dimid(ncid,'lat',latid)
+if ( ier==nf_noerr ) then
+  ier = nf_inq_varid(ncid,'lat',idv)    
+else
+  ier = nf_inq_dimid(ncid,'latitude',latid)
+  call netcdferror(ier)
+  ier = nf_inq_varid(ncid,'latitude',idv)    
+end if
+ier = nf_inq_dimlen(ncid,latid,iy)
+allocate( glat(iy) )
+ier = nf_get_var_real(ncid,idv,glat)
+
+! read data
+allocate( datan(ix*iy) )
+start(1) = 1
+start(2) = 1
+start(3) = 1
+ncount(1) = ix
+ncount(2) = iy
+ncount(3) = 1
+ier = nf_get_att_real(ncid,idvar,'add_offset',addoff)
+if ( ier/=nf_noerr ) addoff = 0.
+ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
+if ( ier/=nf_noerr ) sf = 1.
+ier = nf_inq_vartype(ncid,idvar,itype)
+call netcdferror(ier)
+select case(itype)
+  case ( nf_short )
+    allocate( ivar(ix*iy) )
+    ier = nf_get_vara_int(ncid,idvar,start,ncount,ivar)
+    call netcdferror(ier)
+    datan(1:ix*iy) = sf*real(ivar(1:ix*iy)) + addoff
+    deallocate( ivar )
+  case ( nf_float )
+    ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
+    call netcdferror(ier)
+    datan(1:ix*iy) = sf*real(datan(1:ix*iy)) + addoff      
+  case ( nf_double )
+    allocate( dvar(ix*iy) )
+    ier = nf_get_vara_double(ncid,idvar,start,ncount,dvar)
+    call netcdferror(ier)
+    datan(1:ix*iy) = sf*real(dvar(1:ix*iy)) + addoff
+    deallocate( dvar )      
+  case default
+    write(6,*) "Variable is unkown"
+    call finishbanner
+    stop -1
+end select
+  
+! interpolation
+il = size(dataout,1)
+if ( is_land ) then
+   where ( abs(datan)>=1.e10 ) ! quick fix for land_mask
+      datan = 0.
+   end where
+end if   
+call amap( datan(1:ix*iy), ix, iy, varname, 0., 0. )
+call sintp16(datan(1:ix*iy),ix,iy,dataout,glon,glat,sdiag,il)
+
+deallocate( glon, glat )
+deallocate( datan )
+
+return
+end subroutine readvarinv
+
+subroutine readsoil(ncid,varname,iyr,imn,idy,ihr,imi,iarchi,sdiag,soildepth_ccam,dataout,ier,units)
+
+use netcdf_m
+
+implicit none
+
+integer, intent(in) :: iyr, imn, idy, ihr, imi, iarchi
+integer, intent(in) :: ncid
+integer, intent(out) :: ier
+integer lonid, latid, idvar, idv
+integer ix, iy, il, khout, khin
+integer idsoillvl, ivsoillvl, ivtim, new_nsoillvl
+integer k, ksearch, ktest
+integer in_iyr, in_imn, in_idy, in_ihr, in_imi
+integer itype
+integer, save :: nsoillvl
+integer, dimension(4) :: start, ncount
+integer, dimension(:), allocatable :: ivar
+real, dimension(:), intent(in) :: soildepth_ccam
+real, dimension(:,:,:), intent(out) :: dataout
+real, dimension(:), allocatable :: glon, glat
+real, dimension(:), allocatable :: datan, datatemp
+real, dimension(:), allocatable, save :: soildepth_in
+real fill_float, xfrac
+real addoff, sf
+double precision, dimension(:), allocatable :: dvar
+logical, intent(in) :: sdiag
+character(len=*), intent(in) :: varname
+character(len=*), intent(inout), optional :: units
+character(len=60) timorg
+
+ier = nf_inq_varid(ncid,varname,idvar)  
+if ( ier/=nf_noerr ) then
+  return 
+end if
+
+if ( present(units) ) then
+  ier = nf_get_att_text(ncid,idvar,'units',units)  
+end if
+
+! check date
+ier = nf_inq_varid(ncid,'time',ivtim)
+call netcdferror(ier)
+ier = nf_get_att_text(ncid,ivtim,'units',timorg)
+call netcdferror(ier)
+call processdatestring(timorg,in_iyr,in_imn,in_idy,in_ihr,in_imi)
+if ( in_iyr/=iyr .or. in_imn/=imn .or. in_idy/=idy .or. in_ihr/=ihr .or. &
+     in_imi/=imi ) then
+  write(6,*) "ERROR: Inconsistent time units with ",trim(varname)
+  call finishbanner
+  stop -1
+end if
+
+! read lat/lon
+ier = nf_inq_dimid(ncid,'lon',lonid)
+if ( ier==nf_noerr ) then
+  ier = nf_inq_varid(ncid,'lon',idv)
+else
+  ier = nf_inq_dimid(ncid,'longitude',lonid)
+  call netcdferror(ier)
+  ier = nf_inq_varid(ncid,'longitude',idv)
+end if
+ier = nf_inq_dimlen(ncid,lonid,ix)
+allocate( glon(ix) )
+ier = nf_get_var_real(ncid,idv,glon)
+
+ier = nf_inq_dimid(ncid,'lat',latid)
+if ( ier==nf_noerr ) then
+  ier = nf_inq_varid(ncid,'lat',idv)    
+else
+  ier = nf_inq_dimid(ncid,'latitude',latid)
+  call netcdferror(ier)
+  ier = nf_inq_varid(ncid,'latitude',idv)    
+end if
+ier = nf_inq_dimlen(ncid,latid,iy)
+allocate( glat(iy) )
+ier = nf_get_var_real(ncid,idv,glat)
+
+! read lev
+ier = nf_inq_dimid(ncid,'soil_lvl',idsoillvl)
+if ( ier/=nf_noerr ) then
+  write(6,*) "ERROR: Cannot real dimension soil_lvl when reading ",trim(varname)
+  call finishbanner
+  stop -1 
+end if
+ier = nf_inq_dimlen(ncid,idsoillvl,new_nsoillvl)
+if ( .not.allocated(soildepth_in) ) then
+  nsoillvl = new_nsoillvl
+  ier = nf_inq_varid(ncid,'soil_lvl',ivsoillvl)
+  if ( ier==nf_noerr ) then
+    ier = nf_inq_dimid(ncid,'soil_lvl',idsoillvl)
+    ier = nf_inq_dimlen(ncid,idsoillvl,nsoillvl)
+    allocate( soildepth_in(nsoillvl) )
+    ier = nf_get_var_real(ncid,ivsoillvl,soildepth_in)
+  end if   
+else
+  if ( new_nsoillvl/=nsoillvl ) then
+    write(6,*) "ERROR: Change in number of soil levels"
+    call finishbanner
+    stop -1
+  end if
+end if
+
+! read data
+allocate( datan(ix*iy*nsoillvl) )
+start(1) = 1
+start(2) = 1
+start(3) = 1
+start(4) = iarchi
+ncount(1) = ix
+ncount(2) = iy
+ncount(3) = nsoillvl
+ncount(4) = 1
+ier = nf_get_att_real(ncid,idvar,'add_offset',addoff)
+if ( ier/=nf_noerr ) addoff = 0.
+ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
+if ( ier/=nf_noerr ) sf = 1.
+ier = nf_inq_vartype(ncid,idvar,itype)
+call netcdferror(ier)
+select case(itype)
+  case ( nf_short )
+    allocate( ivar(ix*iy*nsoillvl) )
+    ier = nf_get_vara_int(ncid,idvar,start,ncount,ivar)
+    call netcdferror(ier)
+    datan(1:ix*iy*nsoillvl) = sf*real(ivar(1:ix*iy*nsoillvl)) + addoff
+    deallocate( ivar )
+  case ( nf_float )
+    ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
+    call netcdferror(ier)
+    datan(1:ix*iy*nsoillvl) = sf*real(datan(1:ix*iy*nsoillvl)) + addoff      
+  case ( nf_double )
+    allocate( dvar(ix*iy*nsoillvl) )
+    ier = nf_get_vara_double(ncid,idvar,start,ncount,dvar)
+    call netcdferror(ier)
+    datan(1:ix*iy*nsoillvl) = sf*real(dvar(1:ix*iy*nsoillvl)) + addoff
+    deallocate( dvar )      
+  case default
+    write(6,*) "Variable is unkown"
+    call finishbanner
+    stop -1
+end select
+
+ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
+if ( ier/=nf_noerr ) then
+  ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)    
+end if
+if ( ier==nf_noerr ) then
+  where ( datan==fill_float )
+    datan = 1.e10
+  end where
+  call filldat(datan,ix,iy,nsoillvl)
+end if
+
+! interpolate to CCAM soil levels
+il = size(dataout,1)
+allocate( datatemp(ix*iy) )
+ksearch = 2
+do k = 1,6
+  write(6,*)"************************************************k=",k  
+  do ktest = ksearch,nsoillvl
+    if ( soildepth_in(ktest)>soildepth_ccam(k) ) exit
+  end do
+  ksearch = max( min( ktest, nsoillvl ), 2 )
+  if ( soildepth_ccam(k)<soildepth_in(ksearch-1) ) then
+    ! extrapolate
+    datatemp(:) = datan(1:ix*iy) ! 1st level
+  else if ( soildepth_ccam(k)>soildepth_in(ksearch) ) then
+    ! extrapolate
+    datatemp(:) = datan((nsoillvl-1)*ix*iy+1:nsoillvl*ix*iy) ! last level
+  else
+    ! interpolate
+    xfrac = ( soildepth_ccam(k) - soildepth_in(ksearch-1) ) / ( soildepth_in(ksearch) - soildepth_in(ksearch-1) )
+    datatemp(:) = (1.-xfrac)*datan((ksearch-2)*ix*iy+1:(ksearch-1)*ix*iy) &
+                +      xfrac*datan((ksearch-1)*ix*iy+1:ksearch*ix*iy)
+  end if
+  call sintp16(datatemp(:),ix,iy,dataout(:,:,k),glon,glat,sdiag,il)
+end do
+deallocate( datatemp )
+
+deallocate( glon, glat )
+deallocate( datan )
+
+return
+end subroutine readsoil
+
+subroutine readsst(ncid,lsm_ncid,varname,iyr,imn,idy,ihr,imi,iarchi,sdiag,lsm_m,sfct,sstmode,ier,units)
+
+use netcdf_m
+
+implicit none
+
+integer, intent(in) :: iyr, imn, idy, ihr, imi, iarchi, sstmode, ncid, lsm_ncid
+integer, intent(out) :: ier
+integer, dimension(:), allocatable :: ivar
+integer, dimension(3) :: start, ncount
+integer ix, iy, lonid, latid
+integer idv, idvar, itype, il, ivtim
+integer in_iyr, in_imn, in_idy, in_ihr, in_imi
+integer nlpnts, nopnts
+integer i, j, iq
+real, dimension(:), intent(in) :: lsm_m
+real, dimension(:,:), intent(out) :: sfct
+real, dimension(size(sfct,1),size(sfct,2)) :: sfcto_m
+real, dimension(:), allocatable, save :: glon, glat, glon_lsm, glat_lsm
+real, dimension(:), allocatable :: datan, datan_tmp, datan_ocn
+real, dimension(:), allocatable, save :: lsm_gbl
+real sf, addoff, spval
+double precision, dimension(:), allocatable :: dvar
+logical, save :: olsm_gbl
+logical, intent(in) :: sdiag
+character(len=*), intent(in) :: varname
+character(len=*), intent(inout), optional :: units
+character(len=60) timorg
+
+
+ier = nf_inq_varid(ncid,varname,idvar)
+if ( ier/=nf_noerr ) then
+  return 
+end if
+
+if ( present(units) ) then
+  ier = nf_get_att_text(ncid,idvar,'units',units)  
+end if
+
+! check date
+ier = nf_inq_varid(ncid,'time',ivtim)
+call netcdferror(ier)
+ier = nf_get_att_text(ncid,ivtim,'units',timorg)
+call netcdferror(ier)
+call processdatestring(timorg,in_iyr,in_imn,in_idy,in_ihr,in_imi)
+if ( in_iyr/=iyr .or. in_imn/=imn .or. in_idy/=idy .or. in_ihr/=ihr .or. &
+     in_imi/=imi ) then
+  write(6,*) "ERROR: Inconsistent time units with ",trim(varname)
+  call finishbanner
+  stop -1
+end if
+
+! read lat/lon
+ier = nf_inq_dimid(ncid,'lon',lonid)
+if ( ier==nf_noerr ) then
+  ier = nf_inq_varid(ncid,'lon',idv)
+else
+  ier = nf_inq_dimid(ncid,'longitude',lonid)
+  call netcdferror(ier)
+  ier = nf_inq_varid(ncid,'longitude',idv)
+end if
+ier = nf_inq_dimlen(ncid,lonid,ix)
+allocate( glon(ix) )
+ier = nf_get_var_real(ncid,idv,glon)
+
+ier = nf_inq_dimid(ncid,'lat',latid)
+if ( ier==nf_noerr ) then
+  ier = nf_inq_varid(ncid,'lat',idv)    
+else
+  ier = nf_inq_dimid(ncid,'latitude',latid)
+  call netcdferror(ier)
+  ier = nf_inq_varid(ncid,'latitude',idv)    
+end if
+ier = nf_inq_dimlen(ncid,latid,iy)
+allocate( glat(iy) )
+ier = nf_get_var_real(ncid,idv,glat)
+
+! read data
+write(6,*)"input data has sfc data, now read in"
+allocate( datan(ix*iy), datan_ocn(ix*iy), datan_tmp(ix*iy) )
+start(1) = 1
+start(2) = 1
+start(3) = iarchi
+ncount(1) = ix
+ncount(2) = iy
+ncount(3) = 1
+ier = nf_get_att_real(ncid,idvar,'add_offset',addoff)
+if ( ier/=nf_noerr ) addoff = 0.
+ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
+if ( ier/=nf_noerr ) sf = 1.
+ier = nf_inq_vartype(ncid,idvar,itype)
+call netcdferror(ier)
+select case(itype)
+  case ( nf_short )
+    allocate( ivar(ix*iy) )
+    ier = nf_get_vara_int(ncid,idvar,start,ncount,ivar)
+    call netcdferror(ier)
+    datan(1:ix*iy) = sf*real(ivar(1:ix*iy)) + addoff
+    deallocate( ivar )
+  case ( nf_float )
+    ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
+    call netcdferror(ier)
+    datan(1:ix*iy) = sf*real(datan(1:ix*iy)) + addoff      
+  case ( nf_double )
+    allocate( dvar(ix*iy) )
+    ier = nf_get_vara_double(ncid,idvar,start,ncount,dvar)
+    call netcdferror(ier)
+    datan(1:ix*iy) = sf*real(dvar(1:ix*iy)) + addoff
+    deallocate( dvar )      
+  case default
+    write(6,*) "Variable is unkown"
+    call finishbanner
+    stop -1
+end select
+
+spval = -1.e10
+if ( sstmode==0 ) then
+  write(6,*)"spval=",spval
+  if (any(datan(1:ix*iy)<100..or.datan(1:ix*iy)>400.)) then
+    write(6,*) "Missing data found in sfc temp"
+    where (datan(1:ix*iy)<100..or.datan(1:ix*iy)>400.)
+      datan(1:ix*iy)=spval
+    end where
+    call fill(datan(1:ix*iy),ix,iy,.1*spval,datan_tmp)
+  end if
+end if  
+
+! read land-sea mask
+if ( .not.allocated(lsm_gbl) ) then
+  ier = nf_inq_varid(lsm_ncid,"land",idvar) 
+  if ( ier/=nf_noerr ) then
+    ier = nf_inq_varid(lsm_ncid,"lsm",idvar)  
+  end if
+  if ( ier/=nf_noerr ) then
+    ier = nf_inq_varid(lsm_ncid,"sftlf",idvar)  
+  end if
+  if ( ier/=nf_noerr ) then
+    ier = nf_inq_varid(lsm_ncid,"sfc_lsm",idvar)  
+  end if
+  if ( ier/=nf_noerr ) then
+    ier = nf_inq_varid(lsm_ncid,"land_mask",idvar)  
+  end if
+  if ( ier/=nf_noerr ) then
+    ier = nf_inq_varid(lsm_ncid,"lnd_mask",idvar)  
+  end if
+  if ( ier==nf_noerr ) then
+    olsm_gbl = .true.
+    ! read lat/lon
+    ier = nf_inq_dimid(lsm_ncid,'lon',lonid)
+    if ( ier==nf_noerr ) then
+      ier = nf_inq_varid(lsm_ncid,'lon',idv)
+    else
+      ier = nf_inq_dimid(lsm_ncid,'longitude',lonid)
+      call netcdferror(ier)
+      ier = nf_inq_varid(lsm_ncid,'longitude',idv)
+    end if
+    ier = nf_inq_dimlen(lsm_ncid,lonid,ix)
+    allocate( glon_lsm(ix) )
+    ier = nf_get_var_real(lsm_ncid,idv,glon_lsm)
+
+    ier = nf_inq_dimid(lsm_ncid,'lat',latid)
+    if ( ier==nf_noerr ) then
+      ier = nf_inq_varid(lsm_ncid,'lat',idv)    
+    else
+      ier = nf_inq_dimid(lsm_ncid,'latitude',latid)
+      call netcdferror(ier)
+      ier = nf_inq_varid(lsm_ncid,'latitude',idv)    
+    end if
+    ier = nf_inq_dimlen(lsm_ncid,latid,iy)
+    allocate( glat_lsm(iy) )
+    ier = nf_get_var_real(lsm_ncid,idv,glat_lsm)
+
+    if ( size(glon)/=size(glon_lsm) ) then
+      write(6,*) "ERROR: Inconsistent longitude when reading SST and land mask"
+      call finishbanner
+      stop -1
+    end if
+    if ( size(glat)/=size(glat_lsm) ) then
+      write(6,*) "ERROR: Inconsistent latitude when reading SST and land mask"
+      call finishbanner
+      stop -1
+    end if
+    if ( any( abs( glon-glon_lsm )>1.e-4 ) ) then
+      write(6,*) "ERROR: Inconsistent longitude when reading SST and land mask"
+      call finishbanner
+      stop -1
+    end if
+    if ( any( abs( glat-glat_lsm )>1.e-4 ) ) then
+      write(6,*) "ERROR: Inconsistent longitude when reading SST and land mask"
+      call finishbanner
+      stop -1
+    end if
+    deallocate( glon_lsm, glat_lsm )
+
+    allocate( lsm_gbl(ix*iy) )
+    start(1) = 1
+    start(2) = 1
+    ncount(1) = ix
+    ncount(2) = iy
+    ier = nf_get_att_real(lsm_ncid,idvar,'add_offset',addoff)
+    if ( ier/=nf_noerr ) addoff = 0.
+    ier = nf_get_att_real(lsm_ncid,idvar,'scale_factor',sf)
+    if ( ier/=nf_noerr ) sf = 1.
+    ier = nf_inq_vartype(lsm_ncid,idvar,itype)
+    call netcdferror(ier)
+    select case(itype)
+      case ( nf_short )
+        allocate( ivar(ix*iy) )
+        ier = nf_get_vara_int(lsm_ncid,idvar,start,ncount,ivar)
+        call netcdferror(ier)
+        lsm_gbl(1:ix*iy) = sf*real(ivar(1:ix*iy)) + addoff
+        deallocate( ivar )
+      case ( nf_float )
+        ier = nf_get_vara_real(lsm_ncid,idvar,start,ncount,datan_tmp)
+        call netcdferror(ier)
+        lsm_gbl(1:ix*iy) = sf*real(datan_tmp(1:ix*iy)) + addoff      
+      case ( nf_double )
+        allocate( dvar(ix*iy) )
+        ier = nf_get_vara_double(lsm_ncid,idvar,start,ncount,dvar)
+        call netcdferror(ier)
+        lsm_gbl(1:ix*iy) = sf*real(dvar(1:ix*iy)) + addoff
+        deallocate( dvar )      
+      case default
+        write(6,*) "Variable is unkown"
+        call finishbanner
+        stop -1
+    end select
+    ! MJT quick fix 
+    where (abs(lsm_gbl(1:ix*iy))>=1.e10)
+      lsm_gbl(1:ix*iy)=0.
+    end where
+  else  
+    write(6,*) "WARN: Cannot locate land-sea mask"  
+    olsm_gbl = .false.
+    allocate( lsm_gbl(ix*iy) )
+    lsm_gbl = 1.  
+  end if
+end if
+  
+write(6,*)"###################### do we have olsm_gbl=",olsm_gbl
+write(6,*)"prepare to interp. for sea and land separately"
+write(6,*)"putting only land values into datan"
+write(6,*)"putting only ocean values into datan_ocn"
+
+nlpnts = 0
+nopnts = 0
+datan_ocn = datan
+if ( olsm_gbl ) then
+  do j = 1,iy
+    do i = 1,ix
+      iq = i+(j-1)*ix
+      if ( lsm_gbl(iq) < 0.5 ) then
+         datan(iq) = spval          ! land, fill in ocean pts
+         nlpnts = nlpnts + 1
+      else !!!  ( lsm_gbl(iq) .lt. .5 ) then
+         datan_ocn(iq) = spval      ! ocean, fill in land pts
+         nopnts = nopnts + 1
+      endif ! ( lsm_gbl(iq) .gt. .5 ) then
+    enddo ! ix
+  enddo ! iy
+endif!(olsm_gbl)then
+
+write(6,*)"two global arrays with spval=", spval
+write(6,*)"fill in missing values nlpnts,nopnts=",nlpnts,nopnts
+
+write(6,*)"=======> for land array, fill in ocean values"
+call fill(datan(1:ix*iy),ix,iy,.1*spval,datan_tmp)
+
+if ( olsm_gbl .and. nopnts>0 ) then
+   write(6,*)"=======> for ocean array, fill in land values"
+   call fill(datan_ocn,ix,iy,.1*spval,datan_tmp)
+endif!(olsm_gbl)then
+
+! interpolation
+il = size(sfct,1)
+write(6,*)"=========================> now interp. land data"
+call sintp16(datan(1:ix*iy),ix,iy,sfct,glon,glat,sdiag,il) ! land
+!sfct = min( max( sfct, 100. ), 425. )
+
+if(olsm_gbl .and. nopnts.gt.0)then
+   write(6,*)"=========================> now interp. ocean data"
+   call sintp16(datan_ocn,ix,iy,sfcto_m,glon,glat,sdiag,il)   ! ocean
+   !sfcto_m = min( max( sfcto_m, 100. ), 425. )
+endif!(olsm_gbl)then
+
+! recombine
+if (olsm_gbl) then
+  write(6,*)"now recombine two (land/ocean) fields"    
+  do j=1,6*il
+    do i=1,il
+      iq=i+(j-1)*il
+      if ( lsm_m(iq)<0.5 ) sfct(i,j)=sfcto_m(i,j)  ! set to ocean interp pnt
+    enddo ! i
+  enddo ! j
+end if    
+
+deallocate( glon, glat )
+deallocate( datan, datan_ocn, datan_tmp )
+
+return
+end subroutine readsst
+
+subroutine netcdferror(ier)
+
+use netcdf_m
+
+implicit none
+
+integer, intent(in) :: ier
+
+if ( ier==nf_noerr ) return
+
+write(6,*) "ERROR: ",nf_strerror(ier)
+call finishbanner
+stop -1
+
+end subroutine netcdferror
+
+subroutine datefix(kdate_r,ktime_r,time,calendar)
+
+implicit none
+
+integer, intent(inout) :: kdate_r,ktime_r
+real(kind=8), intent(inout) :: time
+integer(kind=8), dimension(12) :: mdays = (/31_8,28_8,31_8,30_8,31_8,30_8,31_8,31_8,30_8,31_8,30_8,31_8/)
+integer leap_l
+integer(kind=8) mtimer_r
+integer(kind=8) iyr,imo,iday,ihr,imins
+integer(kind=8) mtimerh,mtimerm
+integer(kind=8) mdays_save
+integer(kind=8), parameter :: minsday = 1440
+character(len=*), intent(in) :: calendar
+
+leap_l = 1
+if ( calendar(1:7)=="365_day" ) then
+  leap_l = 0
+end if
+
+mtimer_r = int(time,8)
+
+iyr=int(kdate_r,8)/10000_8
+imo=(int(kdate_r,8)-10000_8*iyr)/100_8
+iday=int(kdate_r,8)-10000_8*iyr-100_8*imo
+ihr=int(ktime_r,8)/100_8
+imins=int(ktime_r,8)-100_8*ihr
+write(6,*) 'entering datefix'
+write(6,*) 'iyr,imo,iday:       ',iyr,imo,iday
+write(6,*) 'ihr,imins,mtimer_r: ',ihr,imins,mtimer_r
+
+mdays(2)=28_8
+if ( leap_l==1 ) then
+  if ( mod(iyr,4_8)==0   ) mdays(2)=29_8
+  if ( mod(iyr,100_8)==0 ) mdays(2)=28_8
+  if ( mod(iyr,400_8)==0 ) mdays(2)=29_8
+end if
+do while ( mtimer_r>minsday*mdays(imo) )
+  mtimer_r=mtimer_r-minsday*mdays(imo)
+  imo=imo+1_8
+  if ( imo>12_8 ) then
+    imo=1_8
+    iyr=iyr+1_8
+    if ( leap_l==1 ) then
+      mdays(2)=28_8      
+      if ( mod(iyr,4_8)==0   ) mdays(2)=29_8
+      if ( mod(iyr,100_8)==0 ) mdays(2)=28_8
+      if ( mod(iyr,400_8)==0 ) mdays(2)=29_8
+    end if
+  end if
+end do
+write(6,*)'b datefix iyr,imo,iday,ihr,imins,mtimer_r: ', &
+                     iyr,imo,iday,ihr,imins,mtimer_r
+  
+iday=iday+mtimer_r/minsday
+mtimer_r=mod(mtimer_r,minsday)
+write(6,*)'c datefix iyr,imo,iday,ihr,imins,mtimer_r: ', &
+                     iyr,imo,iday,ihr,imins,mtimer_r
+  
+! at this point mtimer_r has been reduced to fraction of a day
+mtimerh=mtimer_r/60_8
+mtimerm=mtimer_r-mtimerh*60_8  ! minutes left over
+ihr=ihr+mtimerh
+imins=imins+mtimerm
+
+ihr=ihr+imins/60_8
+imins=mod(imins,60_8)
+write(6,*)'d datefix iyr,imo,iday,ihr,imins,mtimer_r: ', &
+                     iyr,imo,iday,ihr,imins,mtimer_r
+  
+iday=iday+ihr/24_8
+ihr=mod(ihr,24_8)
+write(6,*)'e datefix iyr,imo,iday,ihr,imins,mtimer_r: ', &
+                     iyr,imo,iday,ihr,imins,mtimer_r
+  
+mdays_save=mdays(imo)
+imo=imo+(iday-1_8)/mdays(imo)
+iday=mod(iday-1_8,mdays_save)+1_8
+
+iyr=iyr+(imo-1_8)/12_8
+imo=mod(imo-1_8,12_8)+1_8
+
+kdate_r=int(iday+100_8*(imo+100_8*iyr),8)
+ktime_r=int(ihr*100_8+imins,8)
+write(6,*)'end datefix iyr,imo,iday,ihr,imins,mtimer_r: ', &
+                       iyr,imo,iday,ihr,imins,mtimer_r
+  
+write(6,*)'leaving datefix kdate_r,ktime_r: ',kdate_r,ktime_r
+
+time=real(mtimer_r,8)
+
+return
+end subroutine datefix
+
+subroutine readpress(ncid,in_type,plev,plev_b,nplev,osig_in,orev)
+
+use netcdf_m
+
+implicit none
+
+integer, intent(in) :: ncid
+integer, intent(out) :: nplev
+integer ivpres, idpres, ier, ivpres_a, ivpres_b, ivpres_0
+integer k, maxplev
+real, dimension(:), intent(out) :: plev, plev_b
+real, dimension(size(plev)) :: datan
+real xplev, plev0
+logical, intent(out) :: osig_in, orev
+character(len=*), intent(out) :: in_type
+character(len=80) presname
+character(len=10) presunits
+
+ier = nf_inq_varid(ncid,'pres',ivpres)
+ier = nf_inq_dimid(ncid,'pres',idpres)
+in_type="p"
+if ( ier/=nf_noerr ) then
+  ier = nf_inq_varid(ncid,'plev',ivpres)
+  ier = nf_inq_dimid(ncid,'plev',idpres)
+  in_type="p"
+end if
+if ( ier/=nf_noerr ) then
+  ier = nf_inq_varid(ncid,'lev',ivpres)
+  ier = nf_inq_dimid(ncid,'lev',idpres)
+  in_type="p"
+end if
+if ( ier/=nf_noerr ) then
+  ier = nf_inq_varid(ncid,'lvl',ivpres)
+  ier = nf_inq_dimid(ncid,'lvl',idpres)
+  in_type="s"
+end if
+ier = nf_get_att_text(ncid,ivpres,'long_name',presname)
+call netcdferror(ier)
+if ( presname(1:32) == "hybrid sigma pressure coordinate" ) then
+  in_type="h"  
+end if
+ier = nf_inq_dimlen(ncid,idpres,nplev)
+call netcdferror(ier)
+ier = nf_get_att_text(ncid,ivpres,'units',presunits)
+call netcdferror(ier)
+maxplev = size(plev)
+if ( maxplev<nplev ) then
+  write(6,*) "ERROR: maxplev is less then nplev"
+  write(6,*) "This could indicate inconsistant vertical levels"
+  write(6,*) "nplev,maxplev =",nplev,maxplev
+  call finishbanner
+  stop -1
+end if
+ier = nf_get_var_real(ncid,ivpres,plev(1:nplev))
+call netcdferror(ier)
+xplev = maxval( plev(1:nplev) )
+osig_in = .false.
+plev_b = 0.
+if ( in_type == "h" ) then
+  write(6,*)"^^^^^^^^^hybrid sigma levels^^^^^^^^"
+  osig_in = .true.
+  ier = nf_inq_varid(ncid,'a',ivpres_a)
+  call netcdferror(ier)
+  ier = nf_get_var_real(ncid,ivpres_a,plev(1:nplev))
+  call netcdferror(ier)
+  ier = nf_inq_varid(ncid,'b',ivpres_b)
+  call netcdferror(ier)
+  ier = nf_get_var_real(ncid,ivpres_b,plev_b(1:nplev))
+  call netcdferror(ier)
+  ier = nf_inq_varid(ncid,'p0',ivpres_0)
+  call netcdferror(ier)
+  ier = nf_get_var_real(ncid,ivpres_0,plev0)
+  call netcdferror(ier)
+  plev0 = plev0/100. ! convert to hPa
+  do k = 1,nplev
+    plev_b(k) = plev_b(k)*plev0
+    plev(k) = plev(k)*1000.
+  end do    
+  presunits="hPa"
+else if ( .01<xplev .and. xplev<800.  ) then
+  write(6,*)"^^^^^^^^^actualy sigma levels^^^^^^^ fix plevs"
+  osig_in = .true.
+  do k = 1,nplev
+    plev(k) = plev(k)*1000.
+  end do
+  presunits="hPa"
+else if ( xplev <= 0.01 ) then
+  write(6,*)"^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ fix plevs"
+  write(6,*) 'xplev < 0.01 in cdfvidar'
+  call finishbanner
+  stop -1
+end if
+if ( osig_in ) then
+  orev = plev(nplev)+plev_b(nplev) > plev(1)+plev_b(1)
+else
+  orev = plev(nplev)>plev(1)
+end if
+if ( orev ) then
+  do k = 1,nplev
+    datan(k) = plev(k)
+  end do
+  do k = 1,nplev
+    plev(k) = datan(nplev+1-k)
+  end do
+  do k = 1,nplev
+    datan(k) = plev_b(k)
+  end do
+  do k = 1,nplev
+    plev_b(k) = datan(nplev+1-k)
+  end do
+end if
+if ( presunits(1:2)=="Pa" ) then
+  plev = plev/100.
+  plev_b = plev_b/100.
+  presunits="hPa"
+end if
+
+if ( presunits(1:3)/="hPa" ) then
+  write(6,*) "ERROR: Could not convert vertical levels to hPa"
+  write(6,*) "Vertical level units was read as ",trim(presunits)
+  call finishbanner
+  stop -1
+end if
+      
+return
+end subroutine readpress
 
 end module outcdf_m

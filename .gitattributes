@@ -18,14 +18,12 @@
 /jimco_m.f90 -text
 /latlong_m.f90 -text
 /latltoij_m.f90 -text
-/lconset.f -text
 /lmax.h -text
 /makefile -text
 /maxmin.f -text
 /mslp.f -text
 /netcdf_m.f90 -text
 /newmpar_m.f90 -text
-/nfft.f -text
 /nfft_m.f90 -text
 /nplevs.h -text
 /outcdf.f90 -text

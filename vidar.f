@@ -22,7 +22,8 @@
       subroutine vidar(nplevs,zp,tp,up,vp,hp,validlevcc
      &                ,iyr,imon,idy,ihr,nt,time,mtimer,pm,pm_b
      &                ,io_out,il,kl
-     &                ,minlon,maxlon,minlat,maxlat,llrng)
+     &                ,minlon,maxlon,minlat,maxlat,llrng
+     &                ,moist_var,calendar,rlong0,rlat0,schmidt)
      
       use comsig_m, dsg => dsgx, sgml => sgmlx, sg => sgx
       use sigdata_m
@@ -64,18 +65,14 @@ c**********************************************************************
       real, dimension(:,:), allocatable :: rp
       
       real, intent(in) :: minlon, maxlon, minlat, maxlat, llrng
-
-      common/datatype/moist_var,in_type ! set in cdfvidar
-      character*1 in_type
-      character*2 moist_var
-      character*10 header
+      real, intent(in) :: rlong0, rlat0, schmidt
+      real(kind=8), intent(inout) :: time
+      
+      character(len=10) header
+      character(len=*), intent(in) :: calendar
+      character(len=*), intent(in) :: moist_var
 
       real, dimension(:), allocatable :: alm,prein
-
-      common / labcom / lab(17)
-      character*4 lab
-
-      common / mapproj / du,tanl,rnml,stl1,stl2
 
       real, intent(inout) :: pm(maxplev), pm_b(maxplev)
       real, dimension(:), allocatable :: alpm
@@ -408,10 +405,11 @@ c convert sensible temp to virt. temp
         do i=1,npts
           tp(i,k)=tp(i,k)*(rp(i,k)+.622)/(.622*(1.+rp(i,k)))
         enddo ! i=1,npts
-        pr = .01*pm(k)  ! hPa
         if(osig_in) then
           pr  = .01*calc_p(psg_m(1),pm(k)) ! hPa
           pr = pr + 0.01*pm_b(k) ! hPa
+        else
+          pr = .01*pm(k)  ! hPa    
         end if  
         write(6,'(i3,4f12.4,1p,2e12.4)')
      &         k,pr,zp(1,k),tp(1,k),tp(npts,k),rp(1,k),rp(npts,k)
@@ -591,113 +589,120 @@ c sigma level loop ( top down here )
 
           sigp=(ps(i)-ptop)*sgml(k)+ptop
 
-c pressure level loop ( top down )
-          do lev=1,nplevsm ! (=nplevs-1)
-            pr1 = pm(1)
-            prx = pm(nplevs)
-            if ( osig_in ) then
-              pr1 =calc_p(psg_m(i),pm(1))
-              pr1 = pr1 + pm_b(1)
-              prx =calc_p(psg_m(i),pm(nplevs))
-              prx = prx + pm_b(nplevs)
-            endif ! ( osig_in ) then
+          pr1 = pm(1)
+          prx = pm(nplevs)
+          if ( osig_in ) then
+            pr1 =calc_p(psg_m(i),pm(1))
+            pr1 = pr1 + pm_b(1)
+            prx =calc_p(psg_m(i),pm(nplevs))
+            prx = prx + pm_b(nplevs)
+          endif ! ( osig_in ) then
 
-            if ( sigp.lt.pr1 ) then ! sigp above top press
+          if ( sigp<pr1 ) then ! sigp above top press
 c assumes constant values above top input pressure
-              hs(i,k)=hp(i,1) ! set to highest data value 
-              rs(i,k)=rp(i,1)
-              us(i,k)=up(i,1)
-              vs(i,k)=vp(i,1)
-              ts(i,k)=tp(i,1)
-              if ( i.eq.1 ) then
-                write(6,'("top index,pres=",i3,f12.3)')1,pr1
-                write(6,'("sig index,sigp=",i3,f12.3)')k,sigp
-              endif
-              go to 361 ! go to next sigma
-            endif ! ( sigp.lt.pr1 ) ! sigp above top press
-
-            if ( sigp.gt.prx ) then ! sigp below bot press
-              hs(i,k)=hp(i,nplevs) ! set to lowest data value 
-              rs(i,k)=rp(i,nplevs)
+            hs(i,k)=hp(i,1) ! set to highest data value 
+            rs(i,k)=rp(i,1)
+            us(i,k)=up(i,1)
+            vs(i,k)=vp(i,1)
+            ts(i,k)=tp(i,1)
+            if ( i.eq.1 ) then
+              write(6,'("top index,pres=",i3,f12.3)')1,pr1
+              write(6,'("sig index,sigp=",i3,f12.3)')k,sigp
+            endif
+	    
+	  else if ( sigp>prx ) then ! sigp below bot press
+            hs(i,k)=hp(i,nplevs) ! set to lowest data value 
+            rs(i,k)=rp(i,nplevs)
 c assumes 6.5 deg/km lapse below lowest input press.
-              ts(i,k)=tp(i,nplevs)-6.5e-3*(alog(prx/sigp))
-     .                  *(rrr*tp(i,nplevs))/grav
-             if ( zerowinds ) then
+c            ts(i,k)=tp(i,nplevs)-6.5e-3*(alog(prx/sigp))
+c     .                *(rrr*tp(i,nplevs))/grav
+            ts1=tp(i,nplevs)-6.5e-3*(alog(prx/sigp))
+     .                *(rrr*tp(i,nplevs))/grav
+c convert back to sensible temperature
+            ts(i,k)=ts1*0.622*(1.0+rs(i,k))/(0.622+rs(i,k))
+            if ( zerowinds ) then
 c assumes 0. wind at sfc.
-               fac=1.-(prx-sigp)/(prx-ps(i))
-               us(i,k)=up(i,nplevs)*fac
-               vs(i,k)=vp(i,nplevs)*fac
-             else
+              fac=1.-(prx-sigp)/(prx-ps(i))
+              us(i,k)=up(i,nplevs)*fac
+              vs(i,k)=vp(i,nplevs)*fac
+            else
 c uses lowest input level winds
-               us(i,k)=up(i,nplevs)
-               vs(i,k)=vp(i,nplevs)
-             endif ! ( zerowinds ) then
-              if ( i.eq.1 ) then
-                write(6,'("sig index,sigp=",i3,f12.3)')k,sigp
-                write(6,'("bot index,pbot=",i3,f12.3)')nplevs,prx
-              endif
-              go to 361 ! go to next sigma
-            endif ! ( sigp.gt.prx) ! sigp above top press
+              us(i,k)=up(i,nplevs)
+              vs(i,k)=vp(i,nplevs)
+            endif ! ( zerowinds ) then
+            if ( i.eq.1 ) then
+              write(6,'("sig index,sigp=",i3,f12.3)')k,sigp
+              write(6,'("bot index,pbot=",i3,f12.3)')nplevs,prx
+            endif
+          
+	  else
+  
+c pressure level loop ( top down )
+            do lev=1,nplevsm ! (=nplevs-1)
 
 c set top/bot input pressures
-            prest=pm(lev) ! top pressure
-            presb=pm(lev+1) ! bottom pressure
-            if ( osig_in ) then
-              prest = calc_p(psg_m(i),pm(lev))
-              prest = prest + pm_b(lev)
-              presb = calc_p(psg_m(i),pm(lev+1))
-              presb = presb + pm_b(lev+1)
-            endif ! ( osig_in ) then
-c test to see if sigp between input pressures
-            if ( sigp.lt.prest .or. sigp.gt.presb ) go to 360 ! go to next press
-            if ( i.eq.1 ) then
-              write(6,'("ptop index, pres=",i3,f12.3)') lev,prest
-              write(6,'("sigp index, sigp=",i3,f12.3)') k,sigp
-              write(6,'("pbot index, pbot=",i3,f12.3)') lev+1,presb
-            endif
-c set up linear interpolation
-            asigp=alog(sigp)
               if ( osig_in ) then
-                alp =alog(calc_p(ps(i),pm(lev))+pm_b(lev))
-                alpp=alog(calc_p(ps(i),pm(lev+1))+pm_b(lev+1))
+                prest = calc_p(psg_m(i),pm(lev))
+                prest = prest + pm_b(lev)
+                presb = calc_p(psg_m(i),pm(lev+1))
+                presb = presb + pm_b(lev+1)
               else
-                alp =alpm(lev)
-                alpp=alpm(lev+1)
+                prest=pm(lev) ! top pressure
+                presb=pm(lev+1) ! bottom pressure                
               endif ! ( osig_in ) then
-            !asp_abp=asigp-alpm(lev+1)
-            !atp_abp=alpm(lev+1)-alpm(lev)
-            asp_abp=asigp-alpp
-            atp_abp=alpp-alp
-            fap=asp_abp/atp_abp
+c test to see if sigp between input pressures
+              if ( (sigp>=prest .and. sigp<=presb) .or. 
+     &             lev==nplevsm ) then
+                if ( i.eq.1 ) then
+                  write(6,'("ptop index, pres=",i3,f12.3)') lev,prest
+                  write(6,'("sigp index, sigp=",i3,f12.3)') k,sigp
+                  write(6,'("pbot index, pbot=",i3,f12.3)') lev+1,presb
+                endif
+c set up linear interpolation
+                asigp=alog(sigp)
+                alp =alog(prest)
+                alpp=alog(presb)
+                !asp_abp=asigp-alpm(lev+1)
+                !atp_abp=alpm(lev+1)-alpm(lev)
+                asp_abp=asigp-alpp
+                atp_abp=alpp-alp
+                fap=asp_abp/atp_abp
 c always linear interpolate rh and mix.ratio
-            hs(i,k)=hp(i,lev+1)+(hp(i,lev+1)-hp(i,lev))*fap
-            rs(i,k)=rp(i,lev+1)+(rp(i,lev+1)-rp(i,lev))*fap
+                hs(i,k)=hp(i,lev+1)+(hp(i,lev+1)-hp(i,lev))*fap
+                rs(i,k)=rp(i,lev+1)+(rp(i,lev+1)-rp(i,lev))*fap
 
-            if(.not.splineu)then
-                us(i,k)=up(i,lev+1)+(up(i,lev+1)-up(i,lev))*fap
-            endif ! not splineu
+                if(.not.splineu)then
+                  us(i,k)=up(i,lev+1)+(up(i,lev+1)-up(i,lev))*fap
+                endif ! not splineu
 
-            if(.not.splinev)then
-                vs(i,k)=vp(i,lev+1)+(vp(i,lev+1)-vp(i,lev))*fap
-            endif ! not splinev
+                if(.not.splinev)then
+                  vs(i,k)=vp(i,lev+1)+(vp(i,lev+1)-vp(i,lev))*fap
+                endif ! not splinev
 
-            if ( .not. splinet ) then
-              ts1=tp(i,lev+1)+(tp(i,lev+1)-tp(i,lev))*fap
+                if ( .not. splinet ) then
+                  ts1=tp(i,lev+1)+(tp(i,lev+1)-tp(i,lev))*fap
 c convert back to sensible temperature
-              ts(i,k)=ts1*0.622*(1.0+rs(i,k))/(0.622+rs(i,k))
-	      !-------------------------------------------------------
-	      ! MJT suggestion
-	      if (ts(i,k).gt.350.) then
-               print *,"bad ts at ",i,k,ts(i,k)
-               ts(i,k)=tpold(i,lev+1)+(tpold(i,lev+1)-tpold(i,lev))*fap
-               print *,"new ts at ",i,k,ts(i,k)
-	      end if
-	      !-------------------------------------------------------
-            endif ! not splinet
+                  ts(i,k)=ts1*0.622*(1.0+rs(i,k))/(0.622+rs(i,k))
+	            !-------------------------------------------------------
+	            ! MJT suggestion
+	            if (ts(i,k).gt.350.) then
+                    print *,"bad ts at ",i,k,ts(i,k)
+                    ts(i,k)=tpold(i,lev+1)
+     &                 +(tpold(i,lev+1)-tpold(i,lev))*fap
+                    print *,"new ts at ",i,k,ts(i,k)
+	            end if
+	            !-------------------------------------------------------
+                endif ! not splinet
+        
+                exit
+		
+              end if		
 
 c end of pressure loop
- 360        continue
-          enddo ! lev=1,nplevsm ! (=nplevs-1)
+ 360          continue
+            enddo ! lev=1,nplevsm ! (=nplevs-1)
+
+          end if
 
 c end of sigma loop
  361      continue
@@ -897,6 +902,7 @@ c read replacement sfct if ints>0
 c write out file
         if ( io_out .eq. 3 ) then
            write(6,*)"io_out=3 no longer supported!!!!!!!!!!"
+           call finishbanner
            stop -1
         else
            call invert1(sgml,kl)
@@ -907,7 +913,8 @@ c write out file
 
            call outcdf(ihr,idy,imon,iyr,iout,nt,time,mtimer
      &                 ,sgml,vfil,ds,il,kl
-     &                 ,minlon,maxlon,minlat,maxlat,llrng)
+     &                 ,minlon,maxlon,minlat,maxlat,llrng
+     &                 ,calendar,rlong0,rlat0,schmidt)
 
            call invert1(sgml,kl)
 

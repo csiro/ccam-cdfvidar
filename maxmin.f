@@ -64,18 +64,18 @@ c    .              k,i,j,iumin(k),jumin(k),umin(k),u(i,j,k)
       enddo   ! k loop
       if(umax(kup).gt.30.)then  ! format for T, & usually u,v
         print 971,ktau,char,(umax(k),k=1,kup)
-971     format(i7,1x,a2,'max ',10f7.2/(14x,10f7.2)/(14x,10f7.2))
+971     format(i7,1x,a2,'max ',10f8.2/(14x,10f8.2)/(14x,10f8.2))
         print 977,ktau,(iumax(k),jumax(k),k=1,kup)
         print 972,ktau,char,(umin(k),k=1,kup)
-972     format(i7,1x,a2,'min ',10f7.2/(14x,10f7.2)/(14x,10f7.2))
+972     format(i7,1x,a2,'min ',10f8.2/(14x,10f8.2)/(14x,10f8.2))
         print 977,ktau,(iumin(k),jumin(k),k=1,kup)
-977     format(i7,'  posij',10(i3,i4)/(14x,10(i3,i4))/(14x,10(i3,i4)))
+977     format(i7,'  posij',10(i3,i5)/(14x,10(i3,i5))/(14x,10(i3,i5)))
       else  ! for qg & sd
         print 981,ktau,char,(umax(k),k=1,kup)
-981     format(i7,1x,a2,'max ',10f7.3/(14x,10f7.3)/(14x,10f7.3))
+981     format(i7,1x,a2,'max ',10f8.3/(14x,10f8.3)/(14x,10f8.3))
         print 977,ktau,(iumax(k),jumax(k),k=1,kup)
         print 982,ktau,char,(umin(k),k=1,kup)
-982     format(i7,1x,a2,'min ',10f7.3/(14x,10f7.3)/(14x,10f7.3))
+982     format(i7,1x,a2,'min ',10f8.3/(14x,10f8.3)/(14x,10f8.3))
         print 977,ktau,(iumin(k),jumin(k),k=1,kup)
       endif
       return
