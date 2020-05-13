@@ -699,13 +699,11 @@ c convert back to sensible temperature
               end if		
 
 c end of pressure loop
- 360          continue
             enddo ! lev=1,nplevsm ! (=nplevs-1)
 
           end if
 
 c end of sigma loop
- 361      continue
         enddo ! k=1,lm
 
 c end of x/y loop
@@ -760,6 +758,7 @@ c v component of the wind
 c extrapolate winds for press > pm (assuming usfc=0 if zerowinds=t)
 c note that pm(nplevs)=bottom data level pressure
 c and ps(lm) = bottom level sigma
+        if (splineu.or.splinev) then
          do k=1,lm
           do i=1,npts
            sigp=sgml(k)*ps(i)+ptop
@@ -780,6 +779,7 @@ c and ps(lm) = bottom level sigma
            endif ! p>pm
           end do ! i=1,npts
          end do ! k=1,lm
+        end if 
 
 c***********************************************************************
 c temperature adjustment for dry adiabat

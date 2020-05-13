@@ -859,7 +859,8 @@ end subroutine histwrt4
      
 ! Updated version for reading file data
 
-subroutine readvar3d(ncid,varname,iyr,imn,idy,ihr,imi,iarchi,sdiag,ptype,in_plev,dataout,ier,units)
+subroutine readvar3d(ncid,varname,iyr,imn,idy,ihr,imi,time,calendar,iarchi,sdiag, &
+                     ptype,in_plev,dataout,ier,units)
 
 use netcdf_m
 
@@ -873,6 +874,7 @@ integer ix, iy, il, khout, khin
 integer idpres, ivpres, ivtim, nplev, idvar
 integer in_iyr, in_imn, in_idy, in_ihr, in_imi
 integer itype
+integer kdate, ktime, in_kdate, in_ktime, i
 integer, dimension(4) :: start, ncount
 integer, dimension(:), allocatable :: ivar
 real, dimension(:,:,:), intent(out) :: dataout
@@ -880,16 +882,19 @@ real, dimension(:), intent(in) :: in_plev
 real, dimension(:), allocatable :: glon, glat
 real, dimension(:), allocatable :: datan
 real, dimension(size(in_plev)) :: plev, plev_b
-real fill_float
-real addoff, sf
-double precision, dimension(:), allocatable :: dvar
+real fill_float, addoff, sf
+real(kind=8), dimension(:), allocatable :: dvar
+real(kind=8), intent(in) :: time
+real(kind=8) in_time, newtime
 logical orev, osig_in
 logical, intent(in) :: sdiag
 character(len=*), intent(in) :: varname
 character(len=*), intent(in) :: ptype
+character(len=*), intent(in) :: calendar
 character(len=*), intent(inout), optional :: units
 character(len=1) in_type
-character(len=60) timorg
+character(len=60) timorg, cu
+character(len=20) in_calendar
 
 ier = nf_inq_varid(ncid,varname,idvar)  
 if ( ier/=nf_noerr ) then
@@ -905,9 +910,37 @@ ier = nf_inq_varid(ncid,'time',ivtim)
 call netcdferror(ier)
 ier = nf_get_att_text(ncid,ivtim,'units',timorg)
 call netcdferror(ier)
+ier = nf_get_var1_double(ncid,ivtim,iarchi,in_time)
+call netcdferror(ier)
+in_calendar=""
+ier = nf_get_att_text(ncid,ivtim,'calendar',in_calendar)
 call processdatestring(timorg,in_iyr,in_imn,in_idy,in_ihr,in_imi)
-if ( in_iyr/=iyr .or. in_imn/=imn .or. in_idy/=idy .or. in_ihr/=ihr .or. &
-     in_imi/=imi ) then
+in_kdate = in_iyr*10000 + in_imn*100 + in_idy
+in_ktime = in_ihr*100 + in_imi
+i=scan(timorg,' ')-1
+cu=''  ! clear string to ensure blank
+cu(1:i)=timorg(1:i)
+if ( cu(1:i) == "since" ) then
+  cu="hours"
+endif
+select case(cu) ! MJT quick fix
+  case('days')
+    in_time=in_time*1440._8 
+  case('hours')
+    in_time=in_time*60._8 
+  case('minutes')
+    ! no change	
+  case DEFAULT
+    write(6,*) "cannot convert unknown time unit ",trim(cu)
+    call finishbanner
+    stop -1
+end select
+call datefix(in_kdate,in_ktime,in_time,in_calendar)
+kdate = iyr*10000 + imn*100 + idy
+ktime = ihr*100 + imi
+newtime = time
+call datefix(kdate,ktime,newtime,calendar)
+if ( kdate/=in_kdate .or. in_ktime/=ktime ) then
   write(6,*) "ERROR: Inconsistent time units with ",trim(varname)
   call finishbanner
   stop -1
@@ -1014,6 +1047,7 @@ ier =  nf_noerr ! reset error even if fillvalue is not located
 il = size(dataout,1)
 call amap(datan(1:ix*iy),ix,iy,varname,0.,0.)
 call amap(datan(1+ix*iy*(nplev-1):ix*iy*nplev),ix,iy,varname,0.,0.)
+! vertical pressure levels are reversed just before cdfvidar
 if ( orev ) then
   do khin = 1,nplev    
     khout = khin  
@@ -1032,7 +1066,8 @@ deallocate( datan )
 return
 end subroutine readvar3d
 
-subroutine readvar2d(ncid,varname,iyr,imn,idy,ihr,imi,iarchi,sdiag,dataout,ier,units)
+subroutine readvar2d(ncid,varname,iyr,imn,idy,ihr,imi,time,calendar,iarchi,sdiag, &
+                     dataout,ier,units)
 
 use netcdf_m
 
@@ -1045,15 +1080,20 @@ integer, dimension(3) :: start, ncount
 integer ix, iy, lonid, latid
 integer idv, idvar, itype, il, ivtim
 integer in_iyr, in_imn, in_idy, in_ihr, in_imi
+integer kdate, ktime, in_kdate, in_ktime, i
 real, dimension(:,:), intent(out) :: dataout
 real, dimension(:), allocatable, save :: glon, glat
 real, dimension(:), allocatable :: datan
 real sf, addoff
-double precision, dimension(:), allocatable :: dvar
+real(kind=8), dimension(:), allocatable :: dvar
+real(kind=8), intent(in) :: time
+real(kind=8) in_time, newtime
 logical, intent(in) :: sdiag
 character(len=*), intent(in) :: varname
+character(len=*), intent(in) :: calendar
 character(len=*), intent(inout), optional :: units
-character(len=60) timorg
+character(len=60) timorg, cu
+character(len=20) in_calendar
 
 ier = nf_inq_varid(ncid,varname,idvar)  
 if ( ier/=nf_noerr ) then
@@ -1069,9 +1109,37 @@ ier = nf_inq_varid(ncid,'time',ivtim)
 call netcdferror(ier)
 ier = nf_get_att_text(ncid,ivtim,'units',timorg)
 call netcdferror(ier)
+ier = nf_get_var1_double(ncid,ivtim,iarchi,in_time)
+call netcdferror(ier)
+in_calendar=""
+ier = nf_get_att_text(ncid,ivtim,'calendar',in_calendar)
 call processdatestring(timorg,in_iyr,in_imn,in_idy,in_ihr,in_imi)
-if ( in_iyr/=iyr .or. in_imn/=imn .or. in_idy/=idy .or. in_ihr/=ihr .or. &
-     in_imi/=imi ) then
+in_kdate = in_iyr*10000 + in_imn*100 + in_idy
+in_ktime = in_ihr*100 + in_imi
+i=scan(timorg,' ')-1
+cu=''  ! clear string to ensure blank
+cu(1:i)=timorg(1:i)
+if ( cu(1:i) == "since" ) then
+  cu="hours"
+endif
+select case(cu) ! MJT quick fix
+  case('days')
+    in_time=in_time*1440._8 
+  case('hours')
+    in_time=in_time*60._8 
+  case('minutes')
+    ! no change	
+  case DEFAULT
+    write(6,*) "cannot convert unknown time unit ",trim(cu)
+    call finishbanner
+    stop -1
+end select
+call datefix(in_kdate,in_ktime,in_time,in_calendar)
+kdate = iyr*10000 + imn*100 + idy
+ktime = ihr*100 + imi
+newtime = time
+call datefix(kdate,ktime,newtime,calendar)
+if ( kdate/=in_kdate .or. in_ktime/=ktime ) then
   write(6,*) "ERROR: Inconsistent time units with ",trim(varname)
   call finishbanner
   stop -1
@@ -1166,7 +1234,7 @@ real, dimension(:,:), intent(out) :: dataout
 real, dimension(:), allocatable, save :: glon, glat
 real, dimension(:), allocatable :: datan
 real sf, addoff
-double precision, dimension(:), allocatable :: dvar
+real(kind=8), dimension(:), allocatable :: dvar
 logical, intent(in) :: sdiag
 logical, intent(in), optional :: island
 logical is_land
@@ -1265,7 +1333,8 @@ deallocate( datan )
 return
 end subroutine readvarinv
 
-subroutine readsoil(ncid,varname,iyr,imn,idy,ihr,imi,iarchi,sdiag,soildepth_ccam,dataout,ier,units)
+subroutine readsoil(ncid,varname,iyr,imn,idy,ihr,imi,time,calendar,iarchi,sdiag, &
+                    soildepth_ccam,dataout,ier,units)
 
 use netcdf_m
 
@@ -1280,6 +1349,7 @@ integer idsoillvl, ivsoillvl, ivtim, new_nsoillvl
 integer k, ksearch, ktest
 integer in_iyr, in_imn, in_idy, in_ihr, in_imi
 integer itype
+integer kdate, ktime, in_kdate, in_ktime, i
 integer, save :: nsoillvl
 integer, dimension(4) :: start, ncount
 integer, dimension(:), allocatable :: ivar
@@ -1290,11 +1360,15 @@ real, dimension(:), allocatable :: datan, datatemp
 real, dimension(:), allocatable, save :: soildepth_in
 real fill_float, xfrac
 real addoff, sf
-double precision, dimension(:), allocatable :: dvar
+real(kind=8), dimension(:), allocatable :: dvar
+real(kind=8), intent(in) :: time
+real(kind=8) in_time, newtime
 logical, intent(in) :: sdiag
 character(len=*), intent(in) :: varname
+character(len=*), intent(in) :: calendar
 character(len=*), intent(inout), optional :: units
-character(len=60) timorg
+character(len=60) timorg, cu
+character(len=20) in_calendar
 
 ier = nf_inq_varid(ncid,varname,idvar)  
 if ( ier/=nf_noerr ) then
@@ -1310,9 +1384,37 @@ ier = nf_inq_varid(ncid,'time',ivtim)
 call netcdferror(ier)
 ier = nf_get_att_text(ncid,ivtim,'units',timorg)
 call netcdferror(ier)
+ier = nf_get_var1_double(ncid,ivtim,iarchi,in_time)
+call netcdferror(ier)
+in_calendar=""
+ier = nf_get_att_text(ncid,ivtim,'calendar',in_calendar)
 call processdatestring(timorg,in_iyr,in_imn,in_idy,in_ihr,in_imi)
-if ( in_iyr/=iyr .or. in_imn/=imn .or. in_idy/=idy .or. in_ihr/=ihr .or. &
-     in_imi/=imi ) then
+in_kdate = in_iyr*10000 + in_imn*100 + in_idy
+in_ktime = in_ihr*100 + in_imi
+i=scan(timorg,' ')-1
+cu=''  ! clear string to ensure blank
+cu(1:i)=timorg(1:i)
+if ( cu(1:i) == "since" ) then
+  cu="hours"
+endif
+select case(cu) ! MJT quick fix
+  case('days')
+    in_time=in_time*1440._8 
+  case('hours')
+    in_time=in_time*60._8 
+  case('minutes')
+    ! no change	
+  case DEFAULT
+    write(6,*) "cannot convert unknown time unit ",trim(cu)
+    call finishbanner
+    stop -1
+end select
+call datefix(in_kdate,in_ktime,in_time,in_calendar)
+kdate = iyr*10000 + imn*100 + idy
+ktime = ihr*100 + imi
+newtime = time
+call datefix(kdate,ktime,newtime,calendar)
+if ( kdate/=in_kdate .or. in_ktime/=ktime ) then
   write(6,*) "ERROR: Inconsistent time units with ",trim(varname)
   call finishbanner
   stop -1
@@ -1450,7 +1552,8 @@ deallocate( datan )
 return
 end subroutine readsoil
 
-subroutine readsst(ncid,lsm_ncid,varname,iyr,imn,idy,ihr,imi,iarchi,sdiag,lsm_m,sfct,sstmode,ier,units)
+subroutine readsst(ncid,lsm_ncid,varname,iyr,imn,idy,ihr,imi,time,calendar,iarchi,sdiag, &
+                   lsm_m,sfct,sstmode,ier,units)
 
 use netcdf_m
 
@@ -1465,6 +1568,7 @@ integer idv, idvar, itype, il, ivtim
 integer in_iyr, in_imn, in_idy, in_ihr, in_imi
 integer nlpnts, nopnts
 integer i, j, iq
+integer kdate, ktime, in_kdate, in_ktime
 real, dimension(:), intent(in) :: lsm_m
 real, dimension(:,:), intent(out) :: sfct
 real, dimension(size(sfct,1),size(sfct,2)) :: sfcto_m
@@ -1472,12 +1576,16 @@ real, dimension(:), allocatable, save :: glon, glat, glon_lsm, glat_lsm
 real, dimension(:), allocatable :: datan, datan_tmp, datan_ocn
 real, dimension(:), allocatable, save :: lsm_gbl
 real sf, addoff, spval
-double precision, dimension(:), allocatable :: dvar
+real(kind=8), dimension(:), allocatable :: dvar
+real(kind=8), intent(in) :: time
+real(kind=8) in_time, newtime
 logical, save :: olsm_gbl
 logical, intent(in) :: sdiag
 character(len=*), intent(in) :: varname
+character(len=*), intent(in) :: calendar
 character(len=*), intent(inout), optional :: units
-character(len=60) timorg
+character(len=60) timorg, cu
+character(len=20) in_calendar
 
 
 ier = nf_inq_varid(ncid,varname,idvar)
@@ -1494,9 +1602,37 @@ ier = nf_inq_varid(ncid,'time',ivtim)
 call netcdferror(ier)
 ier = nf_get_att_text(ncid,ivtim,'units',timorg)
 call netcdferror(ier)
+ier = nf_get_var1_double(ncid,ivtim,iarchi,in_time)
+call netcdferror(ier)
+in_calendar=""
+ier = nf_get_att_text(ncid,ivtim,'calendar',in_calendar)
 call processdatestring(timorg,in_iyr,in_imn,in_idy,in_ihr,in_imi)
-if ( in_iyr/=iyr .or. in_imn/=imn .or. in_idy/=idy .or. in_ihr/=ihr .or. &
-     in_imi/=imi ) then
+in_kdate = in_iyr*10000 + in_imn*100 + in_idy
+in_ktime = in_ihr*100 + in_imi
+i=scan(timorg,' ')-1
+cu=''  ! clear string to ensure blank
+cu(1:i)=timorg(1:i)
+if ( cu(1:i) == "since" ) then
+  cu="hours"
+endif
+select case(cu) ! MJT quick fix
+  case('days')
+    in_time=in_time*1440._8 
+  case('hours')
+    in_time=in_time*60._8 
+  case('minutes')
+    ! no change	
+  case DEFAULT
+    write(6,*) "cannot convert unknown time unit ",trim(cu)
+    call finishbanner
+    stop -1
+end select
+call datefix(in_kdate,in_ktime,in_time,in_calendar)
+kdate = iyr*10000 + imn*100 + idy
+ktime = ihr*100 + imi
+newtime = time
+call datefix(kdate,ktime,newtime,calendar)
+if ( kdate/=in_kdate .or. in_ktime/=ktime ) then
   write(6,*) "ERROR: Inconsistent time units with ",trim(varname)
   call finishbanner
   stop -1
@@ -1959,7 +2095,7 @@ if ( osig_in ) then
 else
   orev = plev(nplev)>plev(1)
 end if
-if ( orev ) then
+if ( .not.orev ) then
   do k = 1,nplev
     datan(k) = plev(k)
   end do

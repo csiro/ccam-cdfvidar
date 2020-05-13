@@ -533,14 +533,14 @@
       write(6,*)"==================================================hgt"
       
       geopotunits="gpm"
-      call readvar(z_ncid,"hgt",iyr,imn,idy,ihr,imi,iarch,sdiag,in_type,plev(1:nplev),hgt(:,:,1:nplev),ier,       &
+      call readvar(z_ncid,"hgt",iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,in_type,plev(1:nplev),hgt(:,:,1:nplev),ier,       &
                    units=geopotunits)
       if ( ier/=nf_noerr ) then
-        call readvar(z_ncid,"z",iyr,imn,idy,ihr,imi,iarch,sdiag,in_type,plev(1:nplev),hgt(:,:,1:nplev),ier,       &
+        call readvar(z_ncid,"z",iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,in_type,plev(1:nplev),hgt(:,:,1:nplev),ier,       &
                      units=geopotunits)        
       end if
       if ( ier/=nf_noerr ) then
-        call readvar(z_ncid,"geop_ht",iyr,imn,idy,ihr,imi,iarch,sdiag,in_type,plev(1:nplev),hgt(:,:,1:nplev),ier, &
+        call readvar(z_ncid,"geop_ht",iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,in_type,plev(1:nplev),hgt(:,:,1:nplev),ier, &
                      units=geopotunits)
       end if
       if ( ier==nf_noerr ) then
@@ -552,12 +552,12 @@
 
       write(6,*)"==================================================u"
 
-      call readvar(u_ncid,"u",iyr,imn,idy,ihr,imi,iarch,sdiag,in_type,plev(1:nplev),u(:,:,1:nplev),ier)
+      call readvar(u_ncid,"u",iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,in_type,plev(1:nplev),u(:,:,1:nplev),ier)
       if ( ier/=nf_noerr ) then
-        call readvar(u_ncid,"ua",iyr,imn,idy,ihr,imi,iarch,sdiag,in_type,plev(1:nplev),u(:,:,1:nplev),ier)        
+        call readvar(u_ncid,"ua",iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,in_type,plev(1:nplev),u(:,:,1:nplev),ier)        
       end if
       if ( ier/=nf_noerr ) then
-        call readvar(u_ncid,"zonal_wnd",iyr,imn,idy,ihr,imi,iarch,sdiag,in_type,plev(1:nplev),u(:,:,1:nplev),ier)        
+        call readvar(u_ncid,"zonal_wnd",iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,in_type,plev(1:nplev),u(:,:,1:nplev),ier)        
       end if
       if ( ier/=nf_noerr ) then
         write(6,*) "ERROR: Cannot read u"
@@ -567,12 +567,12 @@
 
       write(6,*)"==================================================v"
 
-      call readvar(v_ncid,"v",iyr,imn,idy,ihr,imi,iarch,sdiag,in_type,plev(1:nplev),v(:,:,1:nplev),ier)
+      call readvar(v_ncid,"v",iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,in_type,plev(1:nplev),v(:,:,1:nplev),ier)
       if ( ier/=nf_noerr ) then
-        call readvar(v_ncid,"va",iyr,imn,idy,ihr,imi,iarch,sdiag,in_type,plev(1:nplev),v(:,:,1:nplev),ier)        
+        call readvar(v_ncid,"va",iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,in_type,plev(1:nplev),v(:,:,1:nplev),ier)        
       end if
       if ( ier/=nf_noerr ) then
-        call readvar(v_ncid,"merid_wnd",iyr,imn,idy,ihr,imi,iarch,sdiag,in_type,plev(1:nplev),v(:,:,1:nplev),ier)        
+        call readvar(v_ncid,"merid_wnd",iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,in_type,plev(1:nplev),v(:,:,1:nplev),ier)        
       end if
       if ( ier/=nf_noerr ) then
         write(6,*) "ERROR: Cannot read v"
@@ -582,12 +582,12 @@
 
       write(6,*)"==================================================temp"
 
-      call readvar(t_ncid,"temp",iyr,imn,idy,ihr,imi,iarch,sdiag,in_type,plev(1:nplev),temp(:,:,1:nplev),ier)
+      call readvar(t_ncid,"temp",iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,in_type,plev(1:nplev),temp(:,:,1:nplev),ier)
       if ( ier/=nf_noerr ) then
-        call readvar(t_ncid,"ta",iyr,imn,idy,ihr,imi,iarch,sdiag,in_type,plev(1:nplev),temp(:,:,1:nplev),ier)        
+        call readvar(t_ncid,"ta",iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,in_type,plev(1:nplev),temp(:,:,1:nplev),ier)        
       end if
       if ( ier/=nf_noerr ) then
-        call readvar(t_ncid,"air_temp",iyr,imn,idy,ihr,imi,iarch,sdiag,in_type,plev(1:nplev),temp(:,:,1:nplev),ier)        
+        call readvar(t_ncid,"air_temp",iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,in_type,plev(1:nplev),temp(:,:,1:nplev),ier)        
       end if
       if ( ier/=nf_noerr ) then
         write(6,*) "ERROR: Cannot read temp"
@@ -597,18 +597,18 @@
       
       write(6,*)"================================================rh/q"
 
-      call readvar(rh_ncid,"rh",iyr,imn,idy,ihr,imi,iarch,sdiag,in_type,plev(1:nplev),rh(:,:,1:nplev),ier)
+      call readvar(rh_ncid,"rh",iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,in_type,plev(1:nplev),rh(:,:,1:nplev),ier)
       moist_var="rh"
       if ( ier/=nf_noerr ) then
-         call readvar(rh_ncid,"relhum",iyr,imn,idy,ihr,imi,iarch,sdiag,in_type,plev(1:nplev),rh(:,:,1:nplev),ier)
+         call readvar(rh_ncid,"relhum",iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,in_type,plev(1:nplev),rh(:,:,1:nplev),ier)
          moist_var="rh"
       end if
       if ( ier/=nf_noerr ) then
-         call readvar(rh_ncid,"mix_rto",iyr,imn,idy,ihr,imi,iarch,sdiag,in_type,plev(1:nplev),rh(:,:,1:nplev),ier)
+         call readvar(rh_ncid,"mix_rto",iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,in_type,plev(1:nplev),rh(:,:,1:nplev),ier)
          moist_var="mr"
       endif
       if ( ier/=nf_noerr ) then
-         call readvar(rh_ncid,"hus",iyr,imn,idy,ihr,imi,iarch,sdiag,in_type,plev(1:nplev),rh(:,:,1:nplev),ier)
+         call readvar(rh_ncid,"hus",iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,in_type,plev(1:nplev),rh(:,:,1:nplev),ier)
          moist_var="mr"
          write(6,*) "Convert hus to mr"
          rh(:,:,1:nplev) = rh(:,:,1:nplev)/(1.-rh(:,:,1:nplev)) ! convert from specific humidity to mixing ratio
@@ -644,12 +644,12 @@
 
       write(6,*)"================================================mslp"
 
-      call readvar(psl_ncid,'mslp',iyr,imn,idy,ihr,imi,iarch,sdiag,twodim,ier)
+      call readvar(psl_ncid,'mslp',iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,twodim,ier)
       if ( ier/=nf_noerr ) then
-        call readvar(psl_ncid,'psl',iyr,imn,idy,ihr,imi,iarch,sdiag,twodim,ier)  
+        call readvar(psl_ncid,'psl',iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,twodim,ier)  
       end if
       if ( ier/=nf_noerr ) then
-        call readvar(psl_ncid,'pmsl',iyr,imn,idy,ihr,imi,iarch,sdiag,twodim,ier)  
+        call readvar(psl_ncid,'pmsl',iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,twodim,ier)  
       end if
       if ( ier==nf_noerr ) then
         pmsl = reshape( twodim, (/ ifull /) )
@@ -729,9 +729,9 @@
 
       write(6,*)"================================================ps"
 
-      call readvar(ps_ncid,'ps',iyr,imn,idy,ihr,imi,iarch,sdiag,twodim,ier)
+      call readvar(ps_ncid,'ps',iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,twodim,ier)
       if ( ier/=nf_noerr ) then
-        call readvar(ps_ncid,'sfc_pres',iyr,imn,idy,ihr,imi,iarch,sdiag,twodim,ier)  
+        call readvar(ps_ncid,'sfc_pres',iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,twodim,ier)  
       endif
       if ( ier==nf_noerr ) then
          psg_m = reshape( twodim, (/ ifull /) )
@@ -759,12 +759,12 @@
 
       write(6,*)"================================================tss"
 
-      call readsst(ts_ncid,lsm_ncid,'tss',iyr,imn,idy,ihr,imi,iarch,sdiag,lsm_m,twodim,0,ier)
+      call readsst(ts_ncid,lsm_ncid,'tss',iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,lsm_m,twodim,0,ier)
       if ( ier/=nf_noerr ) then
-        call readsst(ts_ncid,lsm_ncid,'tos',iyr,imn,idy,ihr,imi,iarch,sdiag,lsm_m,twodim,0,ier)  
+        call readsst(ts_ncid,lsm_ncid,'tos',iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,lsm_m,twodim,0,ier)  
       end if
       if ( ier/=nf_noerr ) then
-        call readsst(ts_ncid,lsm_ncid,'sfc_temp',iyr,imn,idy,ihr,imi,iarch,sdiag,lsm_m,twodim,0,ier)  
+        call readsst(ts_ncid,lsm_ncid,'sfc_temp',iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,lsm_m,twodim,0,ier)  
       end if  
       if ( ier==nf_noerr ) then
         sfct = reshape( twodim, (/ ifull /) )
@@ -776,12 +776,12 @@
       write(6,*)"============================================fracice"
 
       fracice=-1.
-      call readsst(sic_ncid,lsm_ncid,'fracice',iyr,imn,idy,ihr,imi,iarch,sdiag,lsm_m,twodim,1,ier)
+      call readsst(sic_ncid,lsm_ncid,'fracice',iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,lsm_m,twodim,1,ier)
       if ( ier/=nf_noerr ) then
-         call readsst(sic_ncid,lsm_ncid,'sic',iyr,imn,idy,ihr,imi,iarch,sdiag,lsm_m,twodim,1,ier) 
+         call readsst(sic_ncid,lsm_ncid,'sic',iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,lsm_m,twodim,1,ier) 
       endif
       if ( ier/=nf_noerr ) then
-         call readsst(sic_ncid,lsm_ncid,'seaice',iyr,imn,idy,ihr,imi,iarch,sdiag,lsm_m,twodim,1,ier) 
+         call readsst(sic_ncid,lsm_ncid,'seaice',iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,lsm_m,twodim,1,ier) 
       endif
       if ( ier==nf_noerr ) then
         fracice = reshape( twodim, (/ ifull /) )
@@ -802,9 +802,9 @@
       write(6,*)"================================================snod"
 
       snod = 0.
-      call readvar(snod_ncid,'snod',iyr,imn,idy,ihr,imi,iarch,sdiag,twodim,ier)
+      call readvar(snod_ncid,'snod',iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,twodim,ier)
       if ( ier/=nf_noerr ) then
-         call readvar(snod_ncid,'snow_amt_lnd',iyr,imn,idy,ihr,imi,iarch,sdiag,twodim,ier) 
+         call readvar(snod_ncid,'snow_amt_lnd',iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,twodim,ier) 
       endif
       if ( ier==nf_noerr ) then
          snod = reshape( twodim, (/ ifull /) )
@@ -831,7 +831,7 @@
       write(6,*)"============================================soil_temp"
 
       soiltemp(:,:)=-1.
-      call readsoil(soiltemp_ncid,"soil_temp",iyr,imn,idy,ihr,imi,iarch,sdiag,soildepth_ccam,soildim,ier)
+      call readsoil(soiltemp_ncid,"soil_temp",iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,soildepth_ccam,soildim,ier)
       if ( ier==nf_noerr ) then
         soiltemp = reshape( soildim, (/ ifull, 6 /) )  
       else
@@ -841,7 +841,7 @@
       write(6,*)"============================================soil_mois"
 
       soilmoist(:,:)=-1.
-      call readsoil(soilmois_ncid,"soil_mois",iyr,imn,idy,ihr,imi,iarch,sdiag,soildepth_ccam,soildim,ier) 
+      call readsoil(soilmois_ncid,"soil_mois",iyr,imn,idy,ihr,imi,time,calendar,iarch,sdiag,soildepth_ccam,soildim,ier) 
       if ( ier==nf_noerr ) then
         soilmoist = reshape( soildim, (/ ifull, 6 /) )
       else
@@ -951,17 +951,14 @@
         tohpa = 0.01
       end if
       do k=1,nplev
-          cplev(k)=tohpa*plev(nplev+1-k)
-          bplev(k)=tohpa*plev_b(nplev+1-k)
+          cplev(k)=tohpa*plev(k)
+          bplev(k)=tohpa*plev_b(k)
           write(6,'(5f10.2,f10.5)') cplev(k),hgt(i,j,k),temp(i,j,k),u(i,j,k),v(i,j,k),rh(i,j,k)
       enddo ! k=1,nplev
 
       iq=il/2+(jl/2-1)*il
       write(6,'("pmsl=",f12.2," sfct=",f12.2)') pmsl(iq),sfct(iq)
 
-      ! intepolate valid level
-      !call amap ( validlevhost, ix, iy, 'gbl levl', 0., 0. )
-     ! call sintp16(validlevhost,ix,iy,validlevcc,glon,glat,sdiag,il)
       write(6,*) "validlevcc max,min ",maxval(validlevcc),minval(validlevcc)
 
       write(6,*)"calling vidar now!! ntimes,iarch=",ntimes,iarch
