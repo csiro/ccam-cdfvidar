@@ -24,7 +24,7 @@ module outcdf_m
 private
 public outcdf
 public readvar, readsst, readsoil
-public netcdferror, readpress
+public netcdferror, readpress, datefix
 
 integer ixp, iyp, idlev, idnt
 
@@ -859,14 +859,14 @@ end subroutine histwrt4
      
 ! Updated version for reading file data
 
-subroutine readvar3d(ncid,varname,iyr,imn,idy,ihr,imi,time,calendar,iarchi,sdiag, &
+subroutine readvar3d(ncid,varname,kdate,ktime,iarchi,sdiag, &
                      ptype,in_plev,dataout,ier,units)
 
 use netcdf_m
 
 implicit none
 
-integer, intent(in) :: iyr, imn, idy, ihr, imi, iarchi
+integer, intent(in) :: kdate, ktime, iarchi
 integer, intent(in) :: ncid
 integer, intent(out) :: ier
 integer idv, lonid, latid
@@ -874,7 +874,7 @@ integer ix, iy, il, khout, khin
 integer idpres, ivpres, ivtim, nplev, idvar
 integer in_iyr, in_imn, in_idy, in_ihr, in_imi
 integer itype
-integer kdate, ktime, in_kdate, in_ktime, i
+integer in_kdate, in_ktime, i
 integer, dimension(4) :: start, ncount
 integer, dimension(:), allocatable :: ivar
 real, dimension(:,:,:), intent(out) :: dataout
@@ -884,13 +884,11 @@ real, dimension(:), allocatable :: datan
 real, dimension(size(in_plev)) :: plev, plev_b
 real fill_float, addoff, sf
 real(kind=8), dimension(:), allocatable :: dvar
-real(kind=8), intent(in) :: time
-real(kind=8) in_time, newtime
+real(kind=8) in_time
 logical orev, osig_in
 logical, intent(in) :: sdiag
 character(len=*), intent(in) :: varname
 character(len=*), intent(in) :: ptype
-character(len=*), intent(in) :: calendar
 character(len=*), intent(inout), optional :: units
 character(len=1) in_type
 character(len=60) timorg, cu
@@ -936,10 +934,6 @@ select case(cu) ! MJT quick fix
     stop -1
 end select
 call datefix(in_kdate,in_ktime,in_time,in_calendar)
-kdate = iyr*10000 + imn*100 + idy
-ktime = ihr*100 + imi
-newtime = time
-call datefix(kdate,ktime,newtime,calendar)
 if ( kdate/=in_kdate .or. in_ktime/=ktime ) then
   write(6,*) "ERROR: Inconsistent time units with ",trim(varname)
   call finishbanner
@@ -1066,31 +1060,29 @@ deallocate( datan )
 return
 end subroutine readvar3d
 
-subroutine readvar2d(ncid,varname,iyr,imn,idy,ihr,imi,time,calendar,iarchi,sdiag, &
+subroutine readvar2d(ncid,varname,kdate,ktime,iarchi,sdiag, &
                      dataout,ier,units)
 
 use netcdf_m
 
 implicit none
 
-integer, intent(in) :: iyr, imn, idy, ihr, imi, iarchi, ncid
+integer, intent(in) :: kdate, ktime, iarchi, ncid
 integer, intent(out) :: ier
 integer, dimension(:), allocatable :: ivar
 integer, dimension(3) :: start, ncount
 integer ix, iy, lonid, latid
 integer idv, idvar, itype, il, ivtim
 integer in_iyr, in_imn, in_idy, in_ihr, in_imi
-integer kdate, ktime, in_kdate, in_ktime, i
+integer in_kdate, in_ktime, i
 real, dimension(:,:), intent(out) :: dataout
 real, dimension(:), allocatable, save :: glon, glat
 real, dimension(:), allocatable :: datan
-real sf, addoff
+real sf, addoff, fill_float
 real(kind=8), dimension(:), allocatable :: dvar
-real(kind=8), intent(in) :: time
-real(kind=8) in_time, newtime
+real(kind=8) in_time
 logical, intent(in) :: sdiag
 character(len=*), intent(in) :: varname
-character(len=*), intent(in) :: calendar
 character(len=*), intent(inout), optional :: units
 character(len=60) timorg, cu
 character(len=20) in_calendar
@@ -1135,10 +1127,6 @@ select case(cu) ! MJT quick fix
     stop -1
 end select
 call datefix(in_kdate,in_ktime,in_time,in_calendar)
-kdate = iyr*10000 + imn*100 + idy
-ktime = ihr*100 + imi
-newtime = time
-call datefix(kdate,ktime,newtime,calendar)
 if ( kdate/=in_kdate .or. in_ktime/=ktime ) then
   write(6,*) "ERROR: Inconsistent time units with ",trim(varname)
   call finishbanner
@@ -1206,6 +1194,18 @@ select case(itype)
     call finishbanner
     stop -1
 end select
+  
+ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
+if ( ier/=nf_noerr ) then
+  ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)    
+end if
+if ( ier==nf_noerr ) then
+  where ( datan==fill_float )
+    datan = 1.e10
+  end where
+  call filldat(datan,ix,iy,1)
+end if
+ier =  nf_noerr ! reset error even if fillvalue is not located  
   
 ! interpolation
 il = size(dataout,1)
@@ -1333,14 +1333,14 @@ deallocate( datan )
 return
 end subroutine readvarinv
 
-subroutine readsoil(ncid,varname,iyr,imn,idy,ihr,imi,time,calendar,iarchi,sdiag, &
+subroutine readsoil(ncid,varname,kdate,ktime,iarchi,sdiag, &
                     soildepth_ccam,dataout,ier,units)
 
 use netcdf_m
 
 implicit none
 
-integer, intent(in) :: iyr, imn, idy, ihr, imi, iarchi
+integer, intent(in) :: kdate, ktime, iarchi
 integer, intent(in) :: ncid
 integer, intent(out) :: ier
 integer lonid, latid, idvar, idv
@@ -1349,7 +1349,7 @@ integer idsoillvl, ivsoillvl, ivtim, new_nsoillvl
 integer k, ksearch, ktest
 integer in_iyr, in_imn, in_idy, in_ihr, in_imi
 integer itype
-integer kdate, ktime, in_kdate, in_ktime, i
+integer in_kdate, in_ktime, i
 integer, save :: nsoillvl
 integer, dimension(4) :: start, ncount
 integer, dimension(:), allocatable :: ivar
@@ -1361,11 +1361,9 @@ real, dimension(:), allocatable, save :: soildepth_in
 real fill_float, xfrac
 real addoff, sf
 real(kind=8), dimension(:), allocatable :: dvar
-real(kind=8), intent(in) :: time
-real(kind=8) in_time, newtime
+real(kind=8) in_time
 logical, intent(in) :: sdiag
 character(len=*), intent(in) :: varname
-character(len=*), intent(in) :: calendar
 character(len=*), intent(inout), optional :: units
 character(len=60) timorg, cu
 character(len=20) in_calendar
@@ -1410,10 +1408,6 @@ select case(cu) ! MJT quick fix
     stop -1
 end select
 call datefix(in_kdate,in_ktime,in_time,in_calendar)
-kdate = iyr*10000 + imn*100 + idy
-ktime = ihr*100 + imi
-newtime = time
-call datefix(kdate,ktime,newtime,calendar)
 if ( kdate/=in_kdate .or. in_ktime/=ktime ) then
   write(6,*) "ERROR: Inconsistent time units with ",trim(varname)
   call finishbanner
@@ -1519,6 +1513,7 @@ if ( ier==nf_noerr ) then
   end where
   call filldat(datan,ix,iy,nsoillvl)
 end if
+ier = nf_noerr
 
 ! interpolate to CCAM soil levels
 il = size(dataout,1)
@@ -1552,14 +1547,14 @@ deallocate( datan )
 return
 end subroutine readsoil
 
-subroutine readsst(ncid,lsm_ncid,varname,iyr,imn,idy,ihr,imi,time,calendar,iarchi,sdiag, &
+subroutine readsst(ncid,lsm_ncid,varname,kdate,ktime,iarchi,sdiag, &
                    lsm_m,sfct,sstmode,ier,units)
 
 use netcdf_m
 
 implicit none
 
-integer, intent(in) :: iyr, imn, idy, ihr, imi, iarchi, sstmode, ncid, lsm_ncid
+integer, intent(in) :: kdate, ktime, iarchi, sstmode, ncid, lsm_ncid
 integer, intent(out) :: ier
 integer, dimension(:), allocatable :: ivar
 integer, dimension(3) :: start, ncount
@@ -1568,7 +1563,7 @@ integer idv, idvar, itype, il, ivtim
 integer in_iyr, in_imn, in_idy, in_ihr, in_imi
 integer nlpnts, nopnts
 integer i, j, iq
-integer kdate, ktime, in_kdate, in_ktime
+integer in_kdate, in_ktime
 real, dimension(:), intent(in) :: lsm_m
 real, dimension(:,:), intent(out) :: sfct
 real, dimension(size(sfct,1),size(sfct,2)) :: sfcto_m
@@ -1576,13 +1571,12 @@ real, dimension(:), allocatable, save :: glon, glat, glon_lsm, glat_lsm
 real, dimension(:), allocatable :: datan, datan_tmp, datan_ocn
 real, dimension(:), allocatable, save :: lsm_gbl
 real sf, addoff, spval
+real fill_float
 real(kind=8), dimension(:), allocatable :: dvar
-real(kind=8), intent(in) :: time
-real(kind=8) in_time, newtime
+real(kind=8) in_time
 logical, save :: olsm_gbl
 logical, intent(in) :: sdiag
 character(len=*), intent(in) :: varname
-character(len=*), intent(in) :: calendar
 character(len=*), intent(inout), optional :: units
 character(len=60) timorg, cu
 character(len=20) in_calendar
@@ -1628,10 +1622,6 @@ select case(cu) ! MJT quick fix
     stop -1
 end select
 call datefix(in_kdate,in_ktime,in_time,in_calendar)
-kdate = iyr*10000 + imn*100 + idy
-ktime = ihr*100 + imi
-newtime = time
-call datefix(kdate,ktime,newtime,calendar)
 if ( kdate/=in_kdate .or. in_ktime/=ktime ) then
   write(6,*) "ERROR: Inconsistent time units with ",trim(varname)
   call finishbanner
@@ -1712,6 +1702,18 @@ if ( sstmode==0 ) then
     call fill(datan(1:ix*iy),ix,iy,.1*spval,datan_tmp)
   end if
 end if  
+
+ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
+if ( ier/=nf_noerr ) then
+  ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)    
+end if
+if ( ier==nf_noerr ) then
+  where ( datan==fill_float )
+    datan = spval
+  end where
+  call fill(datan(1:ix*iy),ix,iy,.1*spval,datan_tmp)
+end if
+ier =  nf_noerr ! reset error even if fillvalue is not located
 
 ! read land-sea mask
 if ( .not.allocated(lsm_gbl) ) then
