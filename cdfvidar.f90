@@ -785,6 +785,9 @@
       if ( ier/=nf_noerr ) then
          call readsst(sic_ncid,lsm_ncid,'seaice',kdate,ktime,iarch,sdiag,lsm_m,twodim,1,ier) 
       endif
+      if ( ier/=nf_noerr ) then
+         call readsst(sic_ncid,lsm_ncid,'siconc',kdate,ktime,iarch,sdiag,lsm_m,twodim,1,ier)
+      endif
       if ( ier==nf_noerr ) then
         fracice = reshape( twodim, (/ ifull /) )
       end if 
