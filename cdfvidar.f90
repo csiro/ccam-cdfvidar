@@ -770,7 +770,10 @@
       end if
       if ( ier/=nf_noerr ) then
         call readsst(ts_ncid,lsm_ncid,'sst',kdate,ktime,iarch,sdiag,lsm_m,twodim,0,ier)  
-      end if   
+      end if  
+      if ( ier/=nf_noerr ) then
+        call readsst(ts_ncid,lsm_ncid,'skt',kdate,ktime,iarch,sdiag,lsm_m,twodim,0,ier)
+      end if 
       if ( ier==nf_noerr ) then
         sfct = reshape( twodim, (/ ifull /) )
         sfct = min( max( sfct, 100. ), 425. )
