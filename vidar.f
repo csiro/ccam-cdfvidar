@@ -582,6 +582,11 @@ c     consequently hs, rs are always interpolated linearly
 c***********************************************************************
 
 c xy loop
+!$omp  PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) SHARED(npts,lm,ps),
+!$omp& SHARED(ptop,sgml,pm,nplevs,osig_in,psg_m,pm_b,hs,hp,rs,rp,us),
+!$omp& SHARED(up,vs,vp,ts,tp,zerowinds,nplevsm,splineu),
+!$omp& SHARED(splinev,splinet,tpold) PRIVATE(k,sigp,pr1,prx,ts1,fac),
+!$omp& PRIVATE(lev,prest,presb,asigp,alp,alpp,asp_abp,atp_abp,fap)
       do i=1,npts
 
 c sigma level loop ( top down here )
@@ -708,6 +713,8 @@ c end of sigma loop
 
 c end of x/y loop
       enddo ! i=1,npts
+!$omp END PARALLEL DO
+
 c***********************************************************************
 c  vertical interpolation with spline as linear p
         write(6,'(3x,"vertical interp.: spline (with heights of"

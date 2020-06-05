@@ -1072,6 +1072,7 @@
         write(6,*) "Using filldat to remove missing values"
       end if
       
+!$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) SHARED(plev,ix,iy,datan) PRIVATE(k,is,ie,datatemp,i,j,iqk,ncount,datasum,iqn)
       do k = 1,plev
           
         is = ix*iy*(k-1) + 1
@@ -1136,6 +1137,7 @@
           
         end do
       end do
+!$OMP END PARALLEL DO
       
       return
       end subroutine filldat

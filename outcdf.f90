@@ -999,30 +999,30 @@ ier = nf_get_att_real(ncid,idvar,'add_offset',addoff)
 if ( ier/=nf_noerr ) addoff = 0.
 ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
 if ( ier/=nf_noerr ) sf = 1.
-ier = nf_inq_vartype(ncid,idvar,itype)
-call netcdferror(ier)
-select case(itype)
-  case ( nf_short )
-    allocate( ivar(ix*iy*nplev) )
-    ier = nf_get_vara_int(ncid,idvar,start,ncount,ivar)
-    call netcdferror(ier)
-    datan(1:ix*iy*nplev) = sf*real(ivar(1:ix*iy*nplev)) + addoff
-    deallocate( ivar )
-  case ( nf_float )
+!ier = nf_inq_vartype(ncid,idvar,itype)
+!call netcdferror(ier)
+!select case(itype)
+!  case ( nf_short )
+!    allocate( ivar(ix*iy*nplev) )
+!    ier = nf_get_vara_int(ncid,idvar,start,ncount,ivar)
+!    call netcdferror(ier)
+!    datan(1:ix*iy*nplev) = sf*real(ivar(1:ix*iy*nplev)) + addoff
+!    deallocate( ivar )
+!  case ( nf_float )
     ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
     call netcdferror(ier)
     datan(1:ix*iy*nplev) = sf*real(datan(1:ix*iy*nplev)) + addoff      
-  case ( nf_double )
-    allocate( dvar(ix*iy*nplev) )
-    ier = nf_get_vara_double(ncid,idvar,start,ncount,dvar)
-    call netcdferror(ier)
-    datan(1:ix*iy*nplev) = sf*real(dvar(1:ix*iy*nplev)) + addoff
-    deallocate( dvar )      
-  case default
-    write(6,*) "Variable is unkown"
-    call finishbanner
-    stop -1
-end select
+!  case ( nf_double )
+!    allocate( dvar(ix*iy*nplev) )
+!    ier = nf_get_vara_double(ncid,idvar,start,ncount,dvar)
+!    call netcdferror(ier)
+!    datan(1:ix*iy*nplev) = sf*real(dvar(1:ix*iy*nplev)) + addoff
+!    deallocate( dvar )      
+!  case default
+!    write(6,*) "Variable is unkown"
+!    call finishbanner
+!    stop -1
+!end select
 
 ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
 if ( ier/=nf_noerr ) then
@@ -1174,30 +1174,30 @@ ier = nf_get_att_real(ncid,idvar,'add_offset',addoff)
 if ( ier/=nf_noerr ) addoff = 0.
 ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
 if ( ier/=nf_noerr ) sf = 1.
-ier = nf_inq_vartype(ncid,idvar,itype)
-call netcdferror(ier)
-select case(itype)
-  case ( nf_short )
-    allocate( ivar(ix*iy) )
-    ier = nf_get_vara_int(ncid,idvar,start,ncount,ivar)
-    call netcdferror(ier)
-    datan(1:ix*iy) = sf*real(ivar(1:ix*iy)) + addoff
-    deallocate( ivar )
-  case ( nf_float )
+!ier = nf_inq_vartype(ncid,idvar,itype)
+!call netcdferror(ier)
+!select case(itype)
+!  case ( nf_short )
+!    allocate( ivar(ix*iy) )
+!    ier = nf_get_vara_int(ncid,idvar,start,ncount,ivar)
+!    call netcdferror(ier)
+!    datan(1:ix*iy) = sf*real(ivar(1:ix*iy)) + addoff
+!    deallocate( ivar )
+!  case ( nf_float )
     ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
     call netcdferror(ier)
     datan(1:ix*iy) = sf*real(datan(1:ix*iy)) + addoff      
-  case ( nf_double )
-    allocate( dvar(ix*iy) )
-    ier = nf_get_vara_double(ncid,idvar,start,ncount,dvar)
-    call netcdferror(ier)
-    datan(1:ix*iy) = sf*real(dvar(1:ix*iy)) + addoff
-    deallocate( dvar )      
-  case default
-    write(6,*) "Variable is unkown"
-    call finishbanner
-    stop -1
-end select
+!  case ( nf_double )
+!    allocate( dvar(ix*iy) )
+!    ier = nf_get_vara_double(ncid,idvar,start,ncount,dvar)
+!    call netcdferror(ier)
+!    datan(1:ix*iy) = sf*real(dvar(1:ix*iy)) + addoff
+!    deallocate( dvar )      
+!  case default
+!    write(6,*) "Variable is unkown"
+!    call finishbanner
+!    stop -1
+!end select
   
 ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
 if ( ier/=nf_noerr ) then
@@ -1296,30 +1296,30 @@ ier = nf_get_att_real(ncid,idvar,'add_offset',addoff)
 if ( ier/=nf_noerr ) addoff = 0.
 ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
 if ( ier/=nf_noerr ) sf = 1.
-ier = nf_inq_vartype(ncid,idvar,itype)
-call netcdferror(ier)
-select case(itype)
-  case ( nf_short )
-    allocate( ivar(ix*iy) )
-    ier = nf_get_vara_int(ncid,idvar,start,ncount,ivar)
-    call netcdferror(ier)
-    datan(1:ix*iy) = sf*real(ivar(1:ix*iy)) + addoff
-    deallocate( ivar )
-  case ( nf_float )
+!ier = nf_inq_vartype(ncid,idvar,itype)
+!call netcdferror(ier)
+!select case(itype)
+!  case ( nf_short )
+!    allocate( ivar(ix*iy) )
+!    ier = nf_get_vara_int(ncid,idvar,start,ncount,ivar)
+!    call netcdferror(ier)
+!    datan(1:ix*iy) = sf*real(ivar(1:ix*iy)) + addoff
+!    deallocate( ivar )
+!  case ( nf_float )
     ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
     call netcdferror(ier)
     datan(1:ix*iy) = sf*real(datan(1:ix*iy)) + addoff      
-  case ( nf_double )
-    allocate( dvar(ix*iy) )
-    ier = nf_get_vara_double(ncid,idvar,start,ncount,dvar)
-    call netcdferror(ier)
-    datan(1:ix*iy) = sf*real(dvar(1:ix*iy)) + addoff
-    deallocate( dvar )      
-  case default
-    write(6,*) "Variable is unkown"
-    call finishbanner
-    stop -1
-end select
+!  case ( nf_double )
+!    allocate( dvar(ix*iy) )
+!    ier = nf_get_vara_double(ncid,idvar,start,ncount,dvar)
+!    call netcdferror(ier)
+!    datan(1:ix*iy) = sf*real(dvar(1:ix*iy)) + addoff
+!    deallocate( dvar )      
+!  case default
+!    write(6,*) "Variable is unkown"
+!    call finishbanner
+!    stop -1
+!end select
   
 ! interpolation
 il = size(dataout,1)
@@ -1482,30 +1482,30 @@ ier = nf_get_att_real(ncid,idvar,'add_offset',addoff)
 if ( ier/=nf_noerr ) addoff = 0.
 ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
 if ( ier/=nf_noerr ) sf = 1.
-ier = nf_inq_vartype(ncid,idvar,itype)
-call netcdferror(ier)
-select case(itype)
-  case ( nf_short )
-    allocate( ivar(ix*iy*nsoillvl) )
-    ier = nf_get_vara_int(ncid,idvar,start,ncount,ivar)
-    call netcdferror(ier)
-    datan(1:ix*iy*nsoillvl) = sf*real(ivar(1:ix*iy*nsoillvl)) + addoff
-    deallocate( ivar )
-  case ( nf_float )
+!ier = nf_inq_vartype(ncid,idvar,itype)
+!call netcdferror(ier)
+!select case(itype)
+!  case ( nf_short )
+!    allocate( ivar(ix*iy*nsoillvl) )
+!    ier = nf_get_vara_int(ncid,idvar,start,ncount,ivar)
+!    call netcdferror(ier)
+!    datan(1:ix*iy*nsoillvl) = sf*real(ivar(1:ix*iy*nsoillvl)) + addoff
+!    deallocate( ivar )
+!  case ( nf_float )
     ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
     call netcdferror(ier)
     datan(1:ix*iy*nsoillvl) = sf*real(datan(1:ix*iy*nsoillvl)) + addoff      
-  case ( nf_double )
-    allocate( dvar(ix*iy*nsoillvl) )
-    ier = nf_get_vara_double(ncid,idvar,start,ncount,dvar)
-    call netcdferror(ier)
-    datan(1:ix*iy*nsoillvl) = sf*real(dvar(1:ix*iy*nsoillvl)) + addoff
-    deallocate( dvar )      
-  case default
-    write(6,*) "Variable is unkown"
-    call finishbanner
-    stop -1
-end select
+!  case ( nf_double )
+!    allocate( dvar(ix*iy*nsoillvl) )
+!    ier = nf_get_vara_double(ncid,idvar,start,ncount,dvar)
+!    call netcdferror(ier)
+!    datan(1:ix*iy*nsoillvl) = sf*real(dvar(1:ix*iy*nsoillvl)) + addoff
+!    deallocate( dvar )      
+!  case default
+!    write(6,*) "Variable is unkown"
+!    call finishbanner
+!    stop -1
+!end select
 
 ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
 if ( ier/=nf_noerr ) then
@@ -1670,30 +1670,30 @@ ier = nf_get_att_real(ncid,idvar,'add_offset',addoff)
 if ( ier/=nf_noerr ) addoff = 0.
 ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
 if ( ier/=nf_noerr ) sf = 1.
-ier = nf_inq_vartype(ncid,idvar,itype)
-call netcdferror(ier)
-select case(itype)
-  case ( nf_short )
-    allocate( ivar(ix*iy) )
-    ier = nf_get_vara_int(ncid,idvar,start,ncount,ivar)
-    call netcdferror(ier)
-    datan(1:ix*iy) = sf*real(ivar(1:ix*iy)) + addoff
-    deallocate( ivar )
-  case ( nf_float )
+!ier = nf_inq_vartype(ncid,idvar,itype)
+!call netcdferror(ier)
+!select case(itype)
+!  case ( nf_short )
+!    allocate( ivar(ix*iy) )
+!    ier = nf_get_vara_int(ncid,idvar,start,ncount,ivar)
+!    call netcdferror(ier)
+!    datan(1:ix*iy) = sf*real(ivar(1:ix*iy)) + addoff
+!    deallocate( ivar )
+!  case ( nf_float )
     ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
     call netcdferror(ier)
     datan(1:ix*iy) = sf*real(datan(1:ix*iy)) + addoff      
-  case ( nf_double )
-    allocate( dvar(ix*iy) )
-    ier = nf_get_vara_double(ncid,idvar,start,ncount,dvar)
-    call netcdferror(ier)
-    datan(1:ix*iy) = sf*real(dvar(1:ix*iy)) + addoff
-    deallocate( dvar )      
-  case default
-    write(6,*) "Variable is unkown"
-    call finishbanner
-    stop -1
-end select
+!  case ( nf_double )
+!    allocate( dvar(ix*iy) )
+!    ier = nf_get_vara_double(ncid,idvar,start,ncount,dvar)
+!    call netcdferror(ier)
+!    datan(1:ix*iy) = sf*real(dvar(1:ix*iy)) + addoff
+!    deallocate( dvar )      
+!  case default
+!    write(6,*) "Variable is unkown"
+!    call finishbanner
+!    stop -1
+!end select
 
 spval = -1.e10
 if ( sstmode==0 ) then
@@ -1795,30 +1795,30 @@ if ( .not.allocated(lsm_gbl) ) then
     if ( ier/=nf_noerr ) addoff = 0.
     ier = nf_get_att_real(lsm_ncid,idvar,'scale_factor',sf)
     if ( ier/=nf_noerr ) sf = 1.
-    ier = nf_inq_vartype(lsm_ncid,idvar,itype)
-    call netcdferror(ier)
-    select case(itype)
-      case ( nf_short )
-        allocate( ivar(ix*iy) )
-        ier = nf_get_vara_int(lsm_ncid,idvar,start,ncount,ivar)
-        call netcdferror(ier)
-        lsm_gbl(1:ix*iy) = sf*real(ivar(1:ix*iy)) + addoff
-        deallocate( ivar )
-      case ( nf_float )
+    !ier = nf_inq_vartype(lsm_ncid,idvar,itype)
+    !call netcdferror(ier)
+    !select case(itype)
+    !  case ( nf_short )
+    !    allocate( ivar(ix*iy) )
+    !    ier = nf_get_vara_int(lsm_ncid,idvar,start,ncount,ivar)
+    !    call netcdferror(ier)
+    !    lsm_gbl(1:ix*iy) = sf*real(ivar(1:ix*iy)) + addoff
+    !    deallocate( ivar )
+    !  case ( nf_float )
         ier = nf_get_vara_real(lsm_ncid,idvar,start,ncount,datan_tmp)
         call netcdferror(ier)
         lsm_gbl(1:ix*iy) = sf*real(datan_tmp(1:ix*iy)) + addoff      
-      case ( nf_double )
-        allocate( dvar(ix*iy) )
-        ier = nf_get_vara_double(lsm_ncid,idvar,start,ncount,dvar)
-        call netcdferror(ier)
-        lsm_gbl(1:ix*iy) = sf*real(dvar(1:ix*iy)) + addoff
-        deallocate( dvar )      
-      case default
-        write(6,*) "Variable is unkown"
-        call finishbanner
-        stop -1
-    end select
+    !  case ( nf_double )
+    !    allocate( dvar(ix*iy) )
+    !    ier = nf_get_vara_double(lsm_ncid,idvar,start,ncount,dvar)
+    !    call netcdferror(ier)
+    !    lsm_gbl(1:ix*iy) = sf*real(dvar(1:ix*iy)) + addoff
+    !    deallocate( dvar )      
+    !  case default
+    !    write(6,*) "Variable is unkown"
+    !    call finishbanner
+    !    stop -1
+    !end select
     ! MJT quick fix 
     where (abs(lsm_gbl(1:ix*iy))>=1.e10)
       lsm_gbl(1:ix*iy)=0.
