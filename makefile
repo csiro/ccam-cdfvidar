@@ -6,7 +6,7 @@ ifneq ($(NCCLIB),yes)
 LIBS += -lnetcdff
 endif
 INC = -I $(NETCDF_ROOT)/include
-FFLAGS =  -xHost -fp-model precise -traceback
+FFLAGS =  -qopenmp -xHost -fp-model precise -traceback
 PPFLAG90 = -fpp
 PPFLAG77 = -fpp
 DEBUGFLAG = -check all -debug all -traceback -fpe0

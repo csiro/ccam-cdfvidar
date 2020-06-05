@@ -38,43 +38,34 @@
 
       jl=6*il
       ifull=il*jl
+      opdiag=.false.
 
       !include 'latlong.h'  ! rlat,rlong
 
-      if(odiag)write(6,'(72("="))')
+!      if(odiag)write(6,'(72("="))')
+!
+!      if(odiag)write(6,*)"sintp16 g(1),ng1,ng2,il,jl="
+!      if(odiag)write(6,*) gdat(1),ng1,ng2,il,jl
+!      if(odiag)write(6,*)"glon(1,ng1/2,ng1)="
+!     &                   ,glon(i),glon(ng1/2),glon(ng1)
+!      if(odiag)write(6,*)"glat(1,ng2/2,ng2)="
+!     &                   ,glat(i),glat(ng2/2),glat(ng2)
+!
+!      if(odiag)write(6,*) "il,jl,ifull=",il,jl,ifull
+!      if(odiag)write(6,*) "rlong(1/ifull)=",rlong(1),rlong(ifull)
+!      if(odiag)write(6,*) "rlat(1/ifull)=",rlat(1),rlat(ifull)
 
-      if(odiag)write(6,*)"sintp16 g(1),ng1,ng2,il,jl="
-      if(odiag)write(6,*) gdat(1),ng1,ng2,il,jl
-      if(odiag)write(6,*)"glon(1,ng1/2,ng1)="
-     &                   ,glon(i),glon(ng1/2),glon(ng1)
-      if(odiag)write(6,*)"glat(1,ng2/2,ng2)="
-     &                   ,glat(i),glat(ng2/2),glat(ng2)
-
-      if(odiag)write(6,*) "il,jl,ifull=",il,jl,ifull
-      if(odiag)write(6,*) "rlong(1/ifull)=",rlong(1),rlong(ifull)
-      if(odiag)write(6,*) "rlat(1/ifull)=",rlat(1),rlat(ifull)
-
-      gdx=-1.e29
-      gdn=1.e29
-      do j=1,ng2
-       do i=1,ng1
-        iq=i+(j-1)*ng1
-        gdn=min(gdn,gdat(iq))
-        gdx=max(gdx,gdat(iq))
-       enddo ! i=1,ng1
-      enddo ! j=1,ng2
+      gdx=maxval(gdat)
+      gdn=minval(gdat)
 
       write(6,*)'sintp16 gbl grid:gdn,gdx,ifull=',gdn,gdx,ifull
 
-      dn=1.e29
-      dx=-1.e29
-
-      idiag=94
-      jdiag=280
-      idiag=-10
-      jdiag=-10
-
-      iqdiag=idiag+(jdiag-1)*il
+!      idiag=94
+!      jdiag=280
+!      idiag=-10
+!      jdiag=-10
+!
+!      iqdiag=idiag+(jdiag-1)*il
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
 ! loop over all model grid points
@@ -82,7 +73,7 @@
       do iq=1,ifull
         jmod=1+((iq-1)/il)
         imod=iq-(jmod-1)*il
-        if(iq.eq.iqdiag)write(6,*)"iq,im,jm=",iq,imod,jmod
+        !if(iq.eq.iqdiag)write(6,*)"iq,im,jm=",iq,imod,jmod
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
 
 ! compute x and y of model point in input grid space
@@ -115,7 +106,7 @@
           inc=1
           if(rlat(iq).ge.glat(jg).and.rlat(iq).lt.glat(jgp))then
            y=float(jg)+(rlat(iq)-glat(jg))/(glat(jgp)-glat(jg))
-           go to 88
+           exit
           endif!(rlat(iq).gt.glat(jg))then
 
          else ! (glat(1).gt.glat(ng2))then  ! glat decr./w j
@@ -123,40 +114,38 @@
           inc=-1
           if(rlat(iq).ge.glat(jgp).and.rlat(iq).lt.glat(jg))then
            y=float(jg)+(rlat(iq)-glat(jg))/(glat(jgp)-glat(jg))
-           go to 88
+           exit
           endif!(rlat(iq).gt.glat(jg))then
 
          endif!(glat(1).gt.glat(ng2)then
 
         enddo ! jg=1,ng2-1
 
- 88     continue
+!        if ( y.lt.-900. ) stop
 
-        if ( y.lt.-900. ) stop
-
-        if(i.eq.idiag.and.j.gt.jdiag) then
-        write(30,'("iq,i,j,xlon,rlat(iq),x,y=",3i5,4f10.2)')
-     &              iq,i,j,xlon,rlat(iq),x,y
-        endif
+!        if(i.eq.idiag.and.j.gt.jdiag) then
+!        write(30,'("iq,i,j,xlon,rlat(iq),x,y=",3i5,4f10.2)')
+!     &              iq,i,j,xlon,rlat(iq),x,y
+!        endif
 
 !***********************************************************************
 ! acutal interpolation to a point
 
-        opdiag=imod.eq.il/2.and.il.lt.jmod.and.jmod.lt.2*il
-        opdiag=(jmod.eq.1.5*il)
-        opdiag=imod.eq.idiag.and.jmod.eq.jdiag
-        opdiag=.false.
+        !opdiag=imod.eq.il/2.and.il.lt.jmod.and.jmod.lt.2*il
+        !opdiag=(jmod.eq.1.5*il)
+        !opdiag=imod.eq.idiag.and.jmod.eq.jdiag
+        !opdiag=.false.
 
         call intp16(gdat,ng1,ng2,x,y,rdat(iq),opdiag)
 
 !***********************************************************************
 
-        if (odiag.and.(imod.eq.idiag.and.jmod.eq.jdiag)) then
-          write(6,*)"iq,imod,jmod=",iq,imod,jmod
-          write(6,*)"xlon,rlong,rlat=",xlon,rlong(iq),rlat(iq)
-          write(6,*)"jg,glon(jg),jgp",jg,glon(jg),glon(jgp)
-          write(6,*)"inc,glat(jg),jgp",inc,glat(jg),glat(jgp)
-        endif
+        !if (odiag.and.(imod.eq.idiag.and.jmod.eq.jdiag)) then
+        !  write(6,*)"iq,imod,jmod=",iq,imod,jmod
+        !  write(6,*)"xlon,rlong,rlat=",xlon,rlong(iq),rlat(iq)
+        !  write(6,*)"jg,glon(jg),jgp",jg,glon(jg),glon(jgp)
+        !  write(6,*)"inc,glat(jg),jgp",inc,glat(jg),glat(jgp)
+        !endif
 
 ! bilinear interp
 !       m=int(x)
@@ -192,12 +181,15 @@
 
 ! prevent extremes greater than global data ???
         rdat(iq)=min(gdx,max(gdn,rdat(iq)))
-        dn=min(dn,rdat(iq))
-        dx=max(dx,rdat(iq))
+        !dn=min(dn,rdat(iq))
+        !dx=max(dx,rdat(iq))
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
       enddo ! iq
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+
+      dn=minval(rdat)
+      dx=maxval(rdat)
 
       print *,'sintp16 new grid:dn,dx=',dn,dx
       write(6,'(72("="))')
@@ -216,34 +208,35 @@
 !     jlm: this is a quadratic fitting pts 2 & 3 & cubic value of centre point
 !**********************************************************************
 
-      logical prnt,opdiag
+      logical opdiag
+      !logical prnt
       real globex(ng1,ng2)
 
-      data prnt/.true./
+      !data prnt/.true./
 
-      prnt=.false.
+      !prnt=.false.
 ! determine the interpolation distances.
 
 ! this is x direction values
       m=x
       if(m.lt.1)then
         m=ng1+m
-        prnt=.true.
+        !prnt=.true.
       endif
       mm1=m-1
       if(mm1.lt.1)then
         mm1=ng1+mm1
-        prnt=.true.
+        !prnt=.true.
       endif
       mp1=m+1
       if(mp1.gt.ng1)then
         mp1=mp1-ng1
-        prnt=.true.
+        !prnt=.true.
       endif
       mp2=m+2
       if(mp2.gt.ng1)then
         mp2=mp2-ng1
-        prnt=.true.
+        !prnt=.true.
       endif
 ! this code added 20 Nov 1998
 ! assumes data has wrap around in e-w direction
@@ -266,10 +259,10 @@
 !       write(6,*)'y,n,nm1,np2=',y,nm1,n,np1,np2
 !     endif
       if ( nm1.lt.1 .or. np2.gt.ng2 ) then
-       if (opdiag) then
-        print *,'n,m,nm1,np2,ng2=',n,m,nm1,np2,ng2
-        print *,'*********** n out of bounds in intp16 ***********'
-       endif ! opdiag
+       !if (opdiag) then
+       ! print *,'n,m,nm1,np2,ng2=',n,m,nm1,np2,ng2
+       ! print *,'*********** n out of bounds in intp16 ***********'
+       !endif ! opdiag
        if ( nm1.lt.1 ) nm1=1
        if ( np1.gt.ng2 ) np1=ng2
        if ( np2.gt.ng2 ) np2=ng2
@@ -278,10 +271,10 @@
       dy=y-real(int(y))
       dxx=.25*(dx-1.)
       dyy=.25*(dy-1.)
-      if(opdiag)then
-       write(6,*)x,m,dx,dxx
-       write(6,*)y,n,dy,dyy
-      endif
+      !if(opdiag)then
+      ! write(6,*)x,m,dx,dxx
+      ! write(6,*)y,n,dy,dyy
+      !endif
 
 ! determine the 16 x-y gridpoints, i.e. top11-top44, to be used
 !        for the interpolation.
@@ -312,18 +305,18 @@
 
       fine = ab + dy*(ac-ab + dyy*(aa-ab-ac+ad) )
 
-      if(opdiag)then
-         write(6,111) m,n,dx,dy,dxx,dyy
-111      format (1h ,5x,'(m,n)=',i3,',',i3,3x,'(dx,dy)=',f7.3,',',f7.3,
-     .           3x,'(dxx,dyy)=',f7.3,',',f7.3)
-         print *,'x,y: ',x,y
-         write(6,122) top14,top24,top34,top44,top13,top23,top33,top43,
-     .                top12,top22,top32,top42,top11,top21,top31,top41
-122      format (1h ,2x,'top11-top44=....',(/,15x,4f12.3) )
-         write(6,133) aa,ab,ac,ad,fine
-133      format (1h ,2x,'aa=',f10.3,3x,'ab=',f10.3,3x,'ac=',f10.3,3x,
-     .             'ad=',f10.3,7x,'fine=',f10.3,/)
-      endif
+!      if(opdiag)then
+!         write(6,111) m,n,dx,dy,dxx,dyy
+!111      format (1h ,5x,'(m,n)=',i3,',',i3,3x,'(dx,dy)=',f7.3,',',f7.3,
+!     .           3x,'(dxx,dyy)=',f7.3,',',f7.3)
+!         print *,'x,y: ',x,y
+!         write(6,122) top14,top24,top34,top44,top13,top23,top33,top43,
+!     .                top12,top22,top32,top42,top11,top21,top31,top41
+!122      format (1h ,2x,'top11-top44=....',(/,15x,4f12.3) )
+!         write(6,133) aa,ab,ac,ad,fine
+!133      format (1h ,2x,'aa=',f10.3,3x,'ab=',f10.3,3x,'ac=',f10.3,3x,
+!     .             'ad=',f10.3,7x,'fine=',f10.3,/)
+!      endif
 
       return
       end

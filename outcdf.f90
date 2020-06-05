@@ -1043,15 +1043,19 @@ call amap(datan(1:ix*iy),ix,iy,varname,0.,0.)
 call amap(datan(1+ix*iy*(nplev-1):ix*iy*nplev),ix,iy,varname,0.,0.)
 ! vertical pressure levels are reversed just before cdfvidar
 if ( orev ) then
+!$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) SHARED(nplev,datan,ix,iy,dataout,glon,glat,sdiag,il) PRIVATE(khin,khout)
   do khin = 1,nplev    
     khout = khin  
     call sintp16(datan(1+ix*iy*(khin-1):ix*iy*khin),ix,iy,dataout(:,:,khout),glon,glat,sdiag,il)  
   end do
+!$OMP END PARALLEL DO 
 else
+!$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) SHARED(nplev,datan,ix,iy,dataout,glon,glat,sdiag,il) PRIVATE(khin,khout)
   do khin = 1,nplev    
     khout = nplev + 1 - khin  
     call sintp16(datan(1+ix*iy*(khin-1):ix*iy*khin),ix,iy,dataout(:,:,khout),glon,glat,sdiag,il)  
   end do
+!$OMP END PARALLEL DO  
 end if
 
 deallocate( glon, glat )
