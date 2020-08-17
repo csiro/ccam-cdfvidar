@@ -727,7 +727,6 @@ ier = nf_get_att_real(idnc,mid,'add_offset',addoff)
 ier = nf_get_att_real(idnc,mid,'scale_factor',scale_f)
 
 xmin=addoff+scale_f*minv
-!xmax=xmin+scale_f*float(maxv-minv)
 xmax=xmin+scale_f*(real(maxv)-real(minv)) ! jlm fix for precision problems
 
 varn= 1.e29
@@ -806,7 +805,6 @@ ier = nf_get_att_real(idnc,mid,'add_offset',addoff)
 ier = nf_get_att_real(idnc,mid,'scale_factor',scale_f)
 
 xmin=addoff+scale_f*minv
-!xmax=xmin+scale_f*float(maxv-minv)
 xmax=xmin+scale_f*(real(maxv)-real(minv)) ! jlm fix for precision problems
 
 varn= 1.e29
@@ -2065,23 +2063,37 @@ plev_b = 0.
 if ( in_type == "h" ) then
   write(6,*)"^^^^^^^^^hybrid sigma levels^^^^^^^^"
   osig_in = .true.
-  ier = nf_inq_varid(ncid,'a',ivpres_a)
-  call netcdferror(ier)
-  ier = nf_get_var_real(ncid,ivpres_a,plev(1:nplev))
-  call netcdferror(ier)
-  ier = nf_inq_varid(ncid,'b',ivpres_b)
-  call netcdferror(ier)
-  ier = nf_get_var_real(ncid,ivpres_b,plev_b(1:nplev))
-  call netcdferror(ier)
-  ier = nf_inq_varid(ncid,'p0',ivpres_0)
-  call netcdferror(ier)
-  ier = nf_get_var_real(ncid,ivpres_0,plev0)
-  call netcdferror(ier)
-  plev0 = plev0/100. ! convert to hPa
-  do k = 1,nplev
-    plev_b(k) = plev_b(k)*plev0
-    plev(k) = plev(k)*1000.
-  end do    
+  ier = nf_inq_varid(ncid,'a',ivpres_a) 
+  if ( ier == nf_noerr ) then
+    ier = nf_get_var_real(ncid,ivpres_a,plev(1:nplev))
+    call netcdferror(ier)
+    ier = nf_inq_varid(ncid,'b',ivpres_b)  
+    call netcdferror(ier)
+    ier = nf_get_var_real(ncid,ivpres_b,plev_b(1:nplev))
+    call netcdferror(ier)
+    ier = nf_inq_varid(ncid,'p0',ivpres_0)
+    call netcdferror(ier)
+    ier = nf_get_var_real(ncid,ivpres_0,plev0)
+    call netcdferror(ier)
+    plev0 = plev0/100. ! convert to hPa
+    do k = 1,nplev
+      plev_b(k) = plev_b(k)*plev0
+      plev(k) = plev(k)*1000.
+    end do
+  else
+    ier = nf_inq_varid(ncid,'ap',ivpres_a)  
+    call netcdferror(ier)
+    ier = nf_get_var_real(ncid,ivpres_a,plev_b(1:nplev)) ! note ap is for plev_b
+    call netcdferror(ier)
+    ier = nf_inq_varid(ncid,'b',ivpres_b)
+    call netcdferror(ier)
+    ier = nf_get_var_real(ncid,ivpres_b,plev(1:nplev)) ! note b is for plev
+    call netcdferror(ier)
+    do k = 1,nplev
+      plev_b(k) = plev_b(k)/100. ! convert to hPa
+      plev(k) = plev(k)*1000.
+    end do    
+  end if    
   presunits="hPa"
 else if ( .01<xplev .and. xplev<800.  ) then
   write(6,*)"^^^^^^^^^actualy sigma levels^^^^^^^ fix plevs"

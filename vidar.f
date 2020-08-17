@@ -422,6 +422,10 @@ c start interpolating from pressure to sigma
 c***********************************************************************
       if ( have_gp ) then
 c***********************************************************************
+!$omp  PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) SHARED(npts),
+!$omp& SHARED(nplevsm,zs,zp,tp,osig_in,psg_m,pm,pm_b,idiag,grds),
+!$omp& SHARED(ps,alpm,nplevs), PRIVATE(i,kk,tem1,tem2,alp,alpp),
+!$omp& PRIVATE(icase,sem1,sem3,rem1,rem2,pr,pr1,pr2,prm)
        do i=1, npts          
 c loop through pressure levels ( bottom -> up )
 c loop through pressure levels ( top-down? )
@@ -545,9 +549,12 @@ c end of pressure loop
           endif
         enddo ! kk
  173    continue
-       enddo ! i        
+       enddo ! i      
+!$omp  END PARALLEL DO   
       else ! if ( ! have_gp ) then
-
+!$omp  PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) SHARED(npts),
+!$omp& SHARED(nplevs,validlevcc,tp,zs,ps,pmsl),
+!$omp& PRIVATE(i,k,avgtmp,tmsl)
        do i=1, npts
          k=nplevs+1-nint(validlevcc(i))
          avgtmp=tp(i,k)
@@ -566,6 +573,7 @@ c end of pressure loop
 c***********************************************************************
 c end of npts (xy) loop
        enddo ! i
+!$omp  END PARALLEL DO 
       endif ! if ( have_gp ) then       
       print *,'calc ps(1),(npts)=',ps(1),ps(npts)
       call amap ( ps, imt, jmt, 'calculated ps', 4., 1.e3 )
