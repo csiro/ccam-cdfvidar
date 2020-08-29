@@ -1813,7 +1813,7 @@ if ( .not.allocated(lsm_gbl) ) then
     !  case ( nf_float )
         ier = nf_get_vara_real(lsm_ncid,idvar,start,ncount,datan_tmp)
         call netcdferror(ier)
-        lsm_gbl(1:ix*iy) = sf*real(datan_tmp(1:ix*iy)) + addoff      
+        lsm_gbl(1:ix*iy) = sf*real(datan_tmp(1:ix*iy)) + addoff     
     !  case ( nf_double )
     !    allocate( dvar(ix*iy) )
     !    ier = nf_get_vara_double(lsm_ncid,idvar,start,ncount,dvar)
@@ -1828,6 +1828,9 @@ if ( .not.allocated(lsm_gbl) ) then
     ! MJT quick fix 
     where (abs(lsm_gbl(1:ix*iy))>=1.e10)
       lsm_gbl(1:ix*iy)=0.
+    end where
+    where (lsm_gbl(1:ix*iy)==-1.)
+      lsm_gbl(1:ix*iy)=1.
     end where
   else  
     write(6,*) "WARN: Cannot locate land-sea mask"  
