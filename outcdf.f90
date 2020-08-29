@@ -926,6 +926,8 @@ select case(cu) ! MJT quick fix
     in_time=in_time*60._8 
   case('minutes')
     ! no change	
+  case('seconds')
+    in_time=in_time/60._8
   case DEFAULT
     write(6,*) "cannot convert unknown time unit ",trim(cu)
     call finishbanner
@@ -1123,6 +1125,8 @@ select case(cu) ! MJT quick fix
     in_time=in_time*60._8 
   case('minutes')
     ! no change	
+  case('seconds')
+    in_time=in_time/60._8
   case DEFAULT
     write(6,*) "cannot convert unknown time unit ",trim(cu)
     call finishbanner
@@ -1404,6 +1408,8 @@ select case(cu) ! MJT quick fix
     in_time=in_time*60._8 
   case('minutes')
     ! no change	
+  case('seconds')
+    in_time=in_time/60._8
   case DEFAULT
     write(6,*) "cannot convert unknown time unit ",trim(cu)
     call finishbanner
@@ -1618,6 +1624,8 @@ select case(cu) ! MJT quick fix
     in_time=in_time*60._8 
   case('minutes')
     ! no change	
+  case('seconds')
+    in_time=in_time/60._8
   case DEFAULT
     write(6,*) "cannot convert unknown time unit ",trim(cu)
     call finishbanner
@@ -2017,7 +2025,7 @@ real, dimension(size(plev)) :: datan
 real xplev, plev0
 logical, intent(out) :: osig_in, orev
 character(len=*), intent(out) :: in_type
-character(len=80) presname
+character(len=80) presname, typename
 character(len=10) presunits
 
 ier = nf_inq_varid(ncid,'pres',ivpres)
@@ -2037,6 +2045,12 @@ if ( ier/=nf_noerr ) then
   ier = nf_inq_varid(ncid,'lvl',ivpres)
   ier = nf_inq_dimid(ncid,'lvl',idpres)
   in_type="s"
+end if
+ier = nf_get_att_text(ncid,ivpres,'type',typename)
+if ( ier==nf_noerr ) then
+  if ( typename(1:8)=="pressure" ) then
+    in_type="p"
+  end if
 end if
 ier = nf_get_att_text(ncid,ivpres,'long_name',presname)
 call netcdferror(ier)
@@ -2139,7 +2153,7 @@ if ( presunits(1:3)/="hPa" ) then
   call finishbanner
   stop -1
 end if
-      
+  
 return
 end subroutine readpress
 

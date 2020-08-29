@@ -514,7 +514,9 @@
         case('hours')
           time=time*60._8 
         case('minutes')
-          ! no change	
+          ! no change
+        case('seconds')
+          time=time/60._8 
         case DEFAULT
           write(6,*) "cannot convert unknown time unit ",trim(cu)
           call finishbanner
@@ -1148,6 +1150,7 @@ implicit none
 
 integer, intent(out) :: yyyy, mm, dd, hh, mt
 integer iposa, iposb, ierx
+integer shortdate
 character(len=*), intent(in) :: datestring
 
 !if ( datestring(1:7)/='minutes' ) then
@@ -1155,6 +1158,8 @@ character(len=*), intent(in) :: datestring
 !  write(6,*) "Found ",trim(datestring)
 !  stop -1
 !end if
+
+shortdate=0
 
 ! process year
 iposa = index(trim(datestring),'since')
@@ -1182,6 +1187,10 @@ end if
 ! process day
 iposa = iposb + 2 ! skip '-'
 iposb = index(trim(datestring(iposa:)),' ')
+if ( iposb==0 ) then
+  iposb=3
+  shortdate=1
+end if
 iposb = iposa + iposb - 2 ! remove ' '
 read(datestring(iposa:iposb),FMT=*,iostat=ierx) dd
 if ( ierx/=0 ) then
@@ -1190,26 +1199,36 @@ if ( ierx/=0 ) then
   stop -1
 end if
 
-! process hour
-iposa = iposb + 2 ! skip ' '
-iposb = index(trim(datestring(iposa:)),':')
-iposb = iposa + iposb - 2 ! remove ':'
-read(datestring(iposa:iposb),FMT=*,iostat=ierx) hh
-if ( ierx/=0 ) then
-  write(6,*) "ERROR reading time units.  Expecting hour but found ",datestring(iposa:iposb)
-  call finishbanner
-  stop -1
-end if
+if ( shortdate==0 ) then
 
-! process mins
-iposa = iposb + 2 ! skip ':'
-iposb = index(trim(datestring(iposa:)),':')
-iposb = iposa + iposb - 2 ! remove ':'
-read(datestring(iposa:iposb),FMT=*,iostat=ierx) mt
-if ( ierx/=0 ) then
-  write(6,*) "ERROR reading time units.  Expecting minutes but found ",datestring(iposa:iposb)
-  call finishbanner
-  stop -1
+  ! process hour
+  iposa = iposb + 2 ! skip ' '
+  iposb = index(trim(datestring(iposa:)),':')
+  iposb = iposa + iposb - 2 ! remove ':'
+  read(datestring(iposa:iposb),FMT=*,iostat=ierx) hh
+  if ( ierx/=0 ) then
+    write(6,*) "ERROR reading time units.  Expecting hour but found ",datestring(iposa:iposb)
+    call finishbanner
+    stop -1
+  end if
+
+  ! process mins
+  iposa = iposb + 2 ! skip ':'
+  iposb = index(trim(datestring(iposa:)),':')
+  iposb = iposa + iposb - 2 ! remove ':'
+  read(datestring(iposa:iposb),FMT=*,iostat=ierx) mt
+  if ( ierx/=0 ) then
+    write(6,*) "ERROR reading time units.  Expecting minutes but found ",datestring(iposa:iposb)
+    call finishbanner
+    stop -1
+  end if
+
+else
+
+  write(6,*) "WARN: Shortdate found"
+  hh = 0
+  mt = 0
+
 end if
 
 return
