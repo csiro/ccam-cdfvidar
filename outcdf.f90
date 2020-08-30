@@ -1983,6 +1983,7 @@ mtimerh=mtimer_r/60_8
 mtimerm=mtimer_r-mtimerh*60_8  ! minutes left over
 ihr=ihr+mtimerh
 imins=imins+mtimerm
+mtimer_r = mtimer_r - mtimerh*60 - mtimerm
 
 ihr=ihr+imins/60_8
 imins=mod(imins,60_8)
