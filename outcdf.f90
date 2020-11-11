@@ -1938,6 +1938,9 @@ leap_l = 1
 if ( calendar(1:7)=="365_day" ) then
   leap_l = 0
 end if
+if ( calendar(1:6)=="noleap" ) then
+  leap_l = 0
+end if
 
 mtimer_r = int(time,8)
 

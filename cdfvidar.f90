@@ -1193,6 +1193,10 @@ if ( iposb==0 ) then
 end if
 iposb = iposa + iposb - 2 ! remove ' '
 read(datestring(iposa:iposb),FMT=*,iostat=ierx) dd
+if ( ierx/=0 .and. shortdate==1 ) then
+  iposb=iposa
+  read(datestring(iposa:iposb),FMT=*,iostat=ierx) dd
+end if
 if ( ierx/=0 ) then
   write(6,*) "ERROR reading time units.  Expecting day but found ",datestring(iposa:iposb)
   call finishbanner
