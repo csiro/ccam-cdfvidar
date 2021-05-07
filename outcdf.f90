@@ -1,6 +1,6 @@
 ! Conformal Cubic Atmospheric Model
     
-! Copyright 2015-2020 Commonwealth Scientific Industrial Research Organisation (CSIRO)
+! Copyright 2015-2021 Commonwealth Scientific Industrial Research Organisation (CSIRO)
     
 ! This file is part of the Conformal Cubic Atmospheric Model (CCAM)
 !
@@ -415,10 +415,10 @@ if(iarch.eq.1) then
   call attrib(idnc,idim2,2,'soilt',lname,'none',0.,65.e3)    ! MJT lsmask
 
 ! For time invariant surface fields
-  lname = 'clon'
-  call attrib(idnc,idim2,2,'clon',lname,'none',-360.,360.)
-  lname = 'clat'
-  call attrib(idnc,idim2,2,'clat',lname,'none',-90.,90.)
+!  lname = 'clon'
+!  call attrib(idnc,idim2,2,'clon',lname,'none',-360.,360.)
+!  lname = 'clat'
+!  call attrib(idnc,idim2,2,'clat',lname,'none',-90.,90.)
 
 ! For time varying surface fields
   lname = 'Surface temperature'
@@ -543,10 +543,10 @@ write(6,*)'timer,timeg=',timer,timeg
 
 write(6,*)'now write out variables'
 
-if(ktau.eq.0.or.itype.eq.-1)then  ! also for restart file
-  call histwrt3(clon,'clon',idnc,iarch,il)
-  call histwrt3(clat,'clat',idnc,iarch,il)
-endif ! (ktau.eq.0) 
+!if(ktau.eq.0.or.itype.eq.-1)then  ! also for restart file
+!  call histwrt3(clon,'clon',idnc,iarch,il)
+!  call histwrt3(clat,'clat',idnc,iarch,il)
+!endif ! (ktau.eq.0) 
 
 do iq=1,ifull
   aa(iq)=log(ps(iq)/1.e5)

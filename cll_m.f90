@@ -22,9 +22,10 @@
 module cll_m
 
 private
-public clon,clat,cllalloc,clldealloc
+!public clon,clat
+public cllalloc,clldealloc
 
-real, dimension(:), allocatable, save :: clon,clat
+!real, dimension(:), allocatable, save :: clon,clat
 
 contains
 
@@ -38,7 +39,7 @@ integer jl,ifull
 jl=6*il
 ifull=il*jl
 
-allocate(clat(ifull),clon(ifull))
+!allocate(clat(ifull),clon(ifull))
 
 return
 end subroutine cllalloc
@@ -47,7 +48,7 @@ subroutine clldealloc
 
 implicit none
 
-deallocate(clat,clon)
+!deallocate(clat,clon)
 
 return
 end subroutine clldealloc
