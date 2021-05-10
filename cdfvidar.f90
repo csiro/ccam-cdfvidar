@@ -1,6 +1,6 @@
 ! Conformal Cubic Atmospheric Model
     
-! Copyright 2015-2020 Commonwealth Scientific Industrial Research Organisation (CSIRO)
+! Copyright 2015-2021 Commonwealth Scientific Industrial Research Organisation (CSIRO)
     
 ! This file is part of the Conformal Cubic Atmospheric Model (CCAM)
 !
@@ -336,6 +336,13 @@
         end if
         iernc=nf_get_att_real(lncid,nf_global,"lat0",rlat0)
         iernc=nf_get_att_real(lncid,nf_global,"schmidt",schmidt)
+        if ( schmidt<0. .or. schmidt>1. ) then
+          write(6,*) "ERROR schmidt is out-of-range in input zsfil file"
+          write(6,*) "schmidt should be between 0 and 1, but currently"
+          write(6,*) "schmidt = ",schmidt," in zsfil ",trim(zsfil)
+          call finishbanner
+          stop -1
+        end if
         ds=0.
         header=''
       else
