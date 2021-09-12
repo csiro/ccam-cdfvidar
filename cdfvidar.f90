@@ -452,6 +452,7 @@
       write(6,*)"ijd=",ijd," zs(m)=",zs(ijd)," lsm_m=",lsm_m(ijd)
 !####################### read vertical data ############################
 
+      write(6,*) "Reading vertical level data"
       call readpress(t_ncid,in_type,plev,plev_b,nplev,osig_in,orev)
       
       write(6,*)"input nplev=",nplev

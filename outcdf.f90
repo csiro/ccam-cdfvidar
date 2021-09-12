@@ -2058,7 +2058,7 @@ if ( ier/=nf_noerr ) then
   ier = nf_inq_dimid(ncid,'lvl',idpres)
   in_type="s"
 end if
-write(6,*) "-> Searching for attribute type"
+write(6,*) "-> Searching for attribute type (optional)"
 ier = nf_get_att_text(ncid,ivpres,'type',typename)
 if ( ier==nf_noerr ) then
   if ( typename(1:8)=="pressure" ) then
@@ -2071,7 +2071,7 @@ call netcdferror(ier)
 if ( presname(1:32) == "hybrid sigma pressure coordinate" ) then
   in_type="h"  
 end if
-write(6,*) "-> Reading dimension lenght"
+write(6,*) "-> Reading dimension length"
 ier = nf_inq_dimlen(ncid,idpres,nplev)
 call netcdferror(ier)
 write(6,*) "-> Searching for attribute units"
@@ -2170,6 +2170,8 @@ if ( presunits(1:3)/="hPa" ) then
   call finishbanner
   stop -1
 end if
+
+write(6,*) "-> Finished reading level data"
   
 return
 end subroutine readpress
