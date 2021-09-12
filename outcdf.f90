@@ -2035,37 +2035,46 @@ character(len=*), intent(out) :: in_type
 character(len=80) presname, typename
 character(len=10) presunits
 
+write(6,*) "Searching for pressure levels"
+write(6,*) "-> Testing pres"
 ier = nf_inq_varid(ncid,'pres',ivpres)
 ier = nf_inq_dimid(ncid,'pres',idpres)
 in_type="p"
 if ( ier/=nf_noerr ) then
+  write(6,*) "-> Testing plev"
   ier = nf_inq_varid(ncid,'plev',ivpres)
   ier = nf_inq_dimid(ncid,'plev',idpres)
   in_type="p"
 end if
 if ( ier/=nf_noerr ) then
+  write(6,*) "-> Testing lev"  
   ier = nf_inq_varid(ncid,'lev',ivpres)
   ier = nf_inq_dimid(ncid,'lev',idpres)
   in_type="p"
 end if
 if ( ier/=nf_noerr ) then
+  write(6,*) "-> Testing lvl"  
   ier = nf_inq_varid(ncid,'lvl',ivpres)
   ier = nf_inq_dimid(ncid,'lvl',idpres)
   in_type="s"
 end if
+write(6,*) "-> Searching for attribute type"
 ier = nf_get_att_text(ncid,ivpres,'type',typename)
 if ( ier==nf_noerr ) then
   if ( typename(1:8)=="pressure" ) then
     in_type="p"
   end if
 end if
+write(6,*) "-> Searching for attribute long_name"
 ier = nf_get_att_text(ncid,ivpres,'long_name',presname)
 call netcdferror(ier)
 if ( presname(1:32) == "hybrid sigma pressure coordinate" ) then
   in_type="h"  
 end if
+write(6,*) "-> Reading dimension lenght"
 ier = nf_inq_dimlen(ncid,idpres,nplev)
 call netcdferror(ier)
+write(6,*) "-> Searching for attribute units"
 ier = nf_get_att_text(ncid,ivpres,'units',presunits)
 call netcdferror(ier)
 maxplev = size(plev)
@@ -2076,6 +2085,7 @@ if ( maxplev<nplev ) then
   call finishbanner
   stop -1
 end if
+write(6,*) "-> Reading level data"
 ier = nf_get_var_real(ncid,ivpres,plev(1:nplev))
 call netcdferror(ier)
 xplev = maxval( plev(1:nplev) )
