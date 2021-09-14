@@ -2058,6 +2058,11 @@ if ( ier/=nf_noerr ) then
   ier = nf_inq_dimid(ncid,'lvl',idpres)
   in_type="s"
 end if
+if ( ier/=nf_noerr ) then
+  write(6,*) "ERROR: Cannot find vertical level data"
+  call finishbanner
+  stop -1
+end if
 write(6,*) "-> Searching for attribute type (optional)"
 ier = nf_get_att_text(ncid,ivpres,'type',typename)
 if ( ier==nf_noerr ) then
