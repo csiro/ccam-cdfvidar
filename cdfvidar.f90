@@ -542,25 +542,40 @@
       write(6,*)" model levels in vidar are top-down"
       write(6,*)" nplev=",nplev
 
-      write(6,*)"==================================================hgt"
+      if ( have_gp ) then
+        write(6,*)"==================================================hgt"
       
-      geopotunits="gpm"
-      call readvar(z_ncid,"hgt",kdate,ktime,iarch,sdiag,in_type,plev(1:nplev),hgt(:,:,1:nplev),ier,       &
-                   units=geopotunits)
-      if ( ier/=nf_noerr ) then
-        call readvar(z_ncid,"z",kdate,ktime,iarch,sdiag,in_type,plev(1:nplev),hgt(:,:,1:nplev),ier,       &
-                     units=geopotunits)        
-      end if
-      if ( ier/=nf_noerr ) then
-        call readvar(z_ncid,"geop_ht",kdate,ktime,iarch,sdiag,in_type,plev(1:nplev),hgt(:,:,1:nplev),ier, &
+        geopotunits="gpm"
+        call readvar(z_ncid,"hgt",kdate,ktime,iarch,sdiag,in_type,plev(1:nplev),hgt(:,:,1:nplev),ier,       &
                      units=geopotunits)
-      end if
-      if ( ier==nf_noerr ) then
-        if ( geopotunits=="m**2 s**-2" ) then
-          write(6,*) "Converting from m**2 s**-2 to gpm"
-          hgt(:,:,1:nplev) = hgt(:,:,1:nplev)/g
+        if ( ier/=nf_noerr ) then
+          call readvar(z_ncid,"z",kdate,ktime,iarch,sdiag,in_type,plev(1:nplev),hgt(:,:,1:nplev),ier,       &
+                       units=geopotunits)        
         end if
-      end if
+        if ( ier/=nf_noerr ) then
+          call readvar(z_ncid,"geop_ht",kdate,ktime,iarch,sdiag,in_type,plev(1:nplev),hgt(:,:,1:nplev),ier, &
+                       units=geopotunits)
+        end if
+        if ( ier==nf_noerr ) then
+          if ( geopotunits=="m**2 s**-2" ) then
+            write(6,*) "Converting from m**2 s**-2 to gpm"
+            hgt(:,:,1:nplev) = hgt(:,:,1:nplev)/g
+          end if
+        else  
+          write(6,*) "ERROR: Could not read geopotential height with have_gp=.true. in namelist"
+          call finishbanner
+          stop -1
+        end if
+        if ( maxval(hgt)<30000. ) then
+          write(6,*) "ERROR: Geopotential height is invalid"
+          write(6,*) "Max value should be greater than 30,000 m"
+          write(6,*) "But found to be ",maxval(hgt(:,:,1:nplev))
+          call finishbanner
+          stop -1
+        end if
+      else
+        hgt = 0.  
+      end if    
 
       write(6,*)"==================================================u"
 
