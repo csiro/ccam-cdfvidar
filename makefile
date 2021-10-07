@@ -5,8 +5,12 @@ LIBS = -L $(NETCDF_ROOT)/lib -lnetcdf
 ifneq ($(NCCLIB),yes)
 LIBS += -lnetcdff
 endif
+HOST = -xHost
+ifeq ($(CASCADELAKE),yes)
+HOST = -xCASCADELAKE
+endif
 INC = -I $(NETCDF_ROOT)/include
-FFLAGS =  -qopenmp -xHost -fp-model precise -traceback
+FFLAGS =  -qopenmp $(HOST) -fp-model precise -traceback
 PPFLAG90 = -fpp
 PPFLAG77 = -fpp
 DEBUGFLAG = -check all -debug all -traceback -fpe0

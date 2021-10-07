@@ -617,6 +617,9 @@
         call readvar(t_ncid,"air_temp",kdate,ktime,iarch,sdiag,in_type,plev(1:nplev),temp(:,:,1:nplev),ier)        
       end if
       if ( ier/=nf_noerr ) then
+        call readvar(t_ncid,"t",kdate,ktime,iarch,sdiag,in_type,plev(1:nplev),temp(:,:,1:nplev),ier)        
+      end if
+      if ( ier/=nf_noerr ) then
         write(6,*) "ERROR: Cannot read temp"
         call finishbanner
         stop -1
@@ -633,6 +636,12 @@
       if ( ier/=nf_noerr ) then
          call readvar(rh_ncid,"mix_rto",kdate,ktime,iarch,sdiag,in_type,plev(1:nplev),rh(:,:,1:nplev),ier)
          moist_var="mr"
+      endif
+      if ( ier/=nf_noerr ) then
+         call readvar(rh_ncid,"q",kdate,ktime,iarch,sdiag,in_type,plev(1:nplev),rh(:,:,1:nplev),ier)
+         moist_var="mr"
+         write(6,*) "Convert q to mr"
+         rh(:,:,1:nplev) = rh(:,:,1:nplev)/(1.-rh(:,:,1:nplev)) ! convert from specific humidity to mixing ratio
       endif
       if ( ier/=nf_noerr ) then
          call readvar(rh_ncid,"hus",kdate,ktime,iarch,sdiag,in_type,plev(1:nplev),rh(:,:,1:nplev),ier)
@@ -677,6 +686,9 @@
       end if
       if ( ier/=nf_noerr ) then
         call readvar(psl_ncid,'pmsl',kdate,ktime,iarch,sdiag,twodim,ier)  
+      end if
+      if ( ier/=nf_noerr ) then
+        call readvar(psl_ncid,'msl',kdate,ktime,iarch,sdiag,twodim,ier)  
       end if
       if ( ier==nf_noerr ) then
         pmsl = reshape( twodim, (/ ifull /) )
@@ -759,6 +771,9 @@
       call readvar(ps_ncid,'ps',kdate,ktime,iarch,sdiag,twodim,ier)
       if ( ier/=nf_noerr ) then
         call readvar(ps_ncid,'sfc_pres',kdate,ktime,iarch,sdiag,twodim,ier)  
+      endif
+      if ( ier/=nf_noerr ) then
+        call readvar(ps_ncid,'sp',kdate,ktime,iarch,sdiag,twodim,ier)  
       endif
       if ( ier==nf_noerr ) then
          psg_m = reshape( twodim, (/ ifull /) )

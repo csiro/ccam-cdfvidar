@@ -2059,6 +2059,12 @@ if ( ier/=nf_noerr ) then
   in_type="s"
 end if
 if ( ier/=nf_noerr ) then
+  write(6,*) "-> Testing level"  
+  ier = nf_inq_varid(ncid,'level',ivpres)
+  ier = nf_inq_dimid(ncid,'level',idpres)
+  in_type="p"
+end if
+if ( ier/=nf_noerr ) then
   write(6,*) "ERROR: Cannot find vertical level data"
   call finishbanner
   stop -1
@@ -2166,6 +2172,9 @@ end if
 if ( presunits(1:2)=="Pa" ) then
   plev = plev/100.
   plev_b = plev_b/100.
+  presunits="hPa"
+end if
+if ( presunits(1:9)=="millibars" ) then
   presunits="hPa"
 end if
 
