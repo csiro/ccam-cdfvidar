@@ -9,6 +9,9 @@ HOST = -xHost
 ifeq ($(CASCADELAKE),yes)
 HOST = -xCASCADELAKE
 endif
+ifeq ($(ZEN3),yes)
+HOST = -axCORE-AVX2
+endif
 INC = -I $(NETCDF_ROOT)/include
 FFLAGS =  -qopenmp $(HOST) -fp-model precise -traceback
 PPFLAG90 = -fpp
@@ -19,6 +22,9 @@ endif
 ifeq ($(GFORTRAN),yes)
 FC = gfortran
 FFLAGS = -O2 -mtune=native -march=native -I $(NETCDF_ROOT)/include
+ifeq ($(ZEN3),yes)
+FFLAGS = -O2 -fallow-argument-mismatch -mtune=native -march=native -I $(NETCDF_ROOT)/include
+endif
 PPFLAG90 = -x f95-cpp-input
 PPFLAG77 = -x f77-cpp-input
 DEBUGFLAG = -g -Wall -Wextra -fbounds-check -fbacktrace

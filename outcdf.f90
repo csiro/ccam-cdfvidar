@@ -760,6 +760,7 @@ count(3) = 1
 ier = nf_put_vara_int2(idnc, mid, start(1:ndims), count(1:ndims), ipack)
 if(ier.ne.0) then
   write(6,*) "in histwrt3 ier not zero",ier,sname
+  write(6,*) nf_strerror(ier)
   call finishbanner
   stop
 end if  
