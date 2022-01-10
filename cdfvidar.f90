@@ -1,6 +1,6 @@
 ! Conformal Cubic Atmospheric Model
     
-! Copyright 2015-2021 Commonwealth Scientific Industrial Research Organisation (CSIRO)
+! Copyright 2015-2022 Commonwealth Scientific Industrial Research Organisation (CSIRO)
     
 ! This file is part of the Conformal Cubic Atmospheric Model (CCAM)
 !
@@ -264,6 +264,7 @@
       ier = nf_open(sic_file,nf_nowrite,sic_ncid)
       ier = nf_open(snod_file,nf_nowrite,snod_ncid)
       ier = nf_open(soiltemp_file,nf_nowrite,soiltemp_ncid)
+      ier = nf_open(soilmois_file,nf_nowrite,soilmois_ncid)
       
       if (kl>lmax) then
         write(6,*) "ERROR: kl is greater than lmax"
@@ -452,7 +453,7 @@
       write(6,*)"ijd=",ijd," zs(m)=",zs(ijd)," lsm_m=",lsm_m(ijd)
 !####################### read vertical data ############################
 
-      write(6,*) "Reading vertical level data"
+      write(6,*) "Reading vertical level data using ",trim(t_file)
       call readpress(t_ncid,in_type,plev,plev_b,nplev,osig_in,orev)
       
       write(6,*)"input nplev=",nplev
@@ -886,6 +887,9 @@
 
       soiltemp(:,:)=-1.
       call readsoil(soiltemp_ncid,"soil_temp",kdate,ktime,iarch,sdiag,soildepth_ccam,soildim,ier)
+      if ( ier/=nf_noerr ) then
+        call readsoil(soiltemp_ncid,"tb3",kdate,ktime,iarch,sdiag,soildepth_ccam,soildim,ier)    
+      end if
       if ( ier==nf_noerr ) then
         soiltemp = reshape( soildim, (/ ifull, 6 /) )  
       else
@@ -896,6 +900,9 @@
 
       soilmoist(:,:)=-1.
       call readsoil(soilmois_ncid,"soil_mois",kdate,ktime,iarch,sdiag,soildepth_ccam,soildim,ier) 
+      if ( ier/=nf_noerr ) then
+        call readsoil(soilmois_ncid,"wfg",kdate,ktime,iarch,sdiag,soildepth_ccam,soildim,ier)   
+      end if
       if ( ier==nf_noerr ) then
         soilmoist = reshape( soildim, (/ ifull, 6 /) )
       else

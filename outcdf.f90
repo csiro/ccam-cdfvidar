@@ -1,6 +1,6 @@
 ! Conformal Cubic Atmospheric Model
     
-! Copyright 2015-2021 Commonwealth Scientific Industrial Research Organisation (CSIRO)
+! Copyright 2015-2022 Commonwealth Scientific Industrial Research Organisation (CSIRO)
     
 ! This file is part of the Conformal Cubic Atmospheric Model (CCAM)
 !
@@ -1448,110 +1448,245 @@ ier = nf_inq_dimlen(ncid,latid,iy)
 allocate( glat(iy) )
 ier = nf_get_var_real(ncid,idv,glat)
 
-! read lev
-ier = nf_inq_dimid(ncid,'soil_lvl',idsoillvl)
-if ( ier/=nf_noerr ) then
-  write(6,*) "ERROR: Cannot real dimension soil_lvl when reading ",trim(varname)
-  call finishbanner
-  stop -1 
-end if
-ier = nf_inq_dimlen(ncid,idsoillvl,new_nsoillvl)
-if ( .not.allocated(soildepth_in) ) then
-  nsoillvl = new_nsoillvl
-  ier = nf_inq_varid(ncid,'soil_lvl',ivsoillvl)
+if ( varname=="tb3" ) then
+  
+  allocate( datan(ix*iy) ) 
+  start(1) = 1
+  start(2) = 1
+  start(3) = 1
+  start(4) = iarchi
+  ncount(1) = ix
+  ncount(2) = iy
+  ncount(3) = 1
+  ncount(4) = 1
+  ier = nf_get_att_real(ncid,idvar,'add_offset',addoff)
+  if ( ier/=nf_noerr ) addoff = 0.
+  ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
+  if ( ier/=nf_noerr ) sf = 1.
+  ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
+  call netcdferror(ier)
+  datan(1:ix*iy) = sf*real(datan(1:ix*iy)) + addoff 
+  
+  print *,"datan1 ",minval(datan),maxval(datan)
+  
+  ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
+  if ( ier/=nf_noerr ) then
+    ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)    
+  end if
   if ( ier==nf_noerr ) then
-    ier = nf_inq_dimid(ncid,'soil_lvl',idsoillvl)
-    ier = nf_inq_dimlen(ncid,idsoillvl,nsoillvl)
-    allocate( soildepth_in(nsoillvl) )
-    ier = nf_get_var_real(ncid,ivsoillvl,soildepth_in)
-  end if   
-else
-  if ( new_nsoillvl/=nsoillvl ) then
-    write(6,*) "ERROR: Change in number of soil levels"
+    where ( datan==fill_float )
+      datan = 1.e10
+    end where
+  else
+    where ( datan==0. )
+      datan = 1.e10  
+    end where
+  end if    
+  call filldat(datan,ix,iy,1)
+  ier = nf_noerr 
+  
+  il = size(dataout,1)
+  do k = 1,3
+    call sintp16(datan,ix,iy,dataout(:,:,k),glon,glat,sdiag,il)      
+  end do  
+
+  ier = nf_inq_varid(ncid,"tb2",idvar)  
+  if ( ier/=0 ) then
+    write(6,*) "ERROR: tb2 must be present when reading tb3 soil data"
     call finishbanner
     stop -1
   end if
-end if
+  ier = nf_get_att_real(ncid,idvar,'add_offset',addoff)
+  if ( ier/=nf_noerr ) addoff = 0.
+  ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
+  if ( ier/=nf_noerr ) sf = 1.
+  ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
+  call netcdferror(ier)
+  datan(1:ix*iy) = sf*real(datan(1:ix*iy)) + addoff 
 
-! read data
-allocate( datan(ix*iy*nsoillvl) )
-start(1) = 1
-start(2) = 1
-start(3) = 1
-start(4) = iarchi
-ncount(1) = ix
-ncount(2) = iy
-ncount(3) = nsoillvl
-ncount(4) = 1
-ier = nf_get_att_real(ncid,idvar,'add_offset',addoff)
-if ( ier/=nf_noerr ) addoff = 0.
-ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
-if ( ier/=nf_noerr ) sf = 1.
-!ier = nf_inq_vartype(ncid,idvar,itype)
-!call netcdferror(ier)
-!select case(itype)
-!  case ( nf_short )
-!    allocate( ivar(ix*iy*nsoillvl) )
-!    ier = nf_get_vara_int(ncid,idvar,start,ncount,ivar)
-!    call netcdferror(ier)
-!    datan(1:ix*iy*nsoillvl) = sf*real(ivar(1:ix*iy*nsoillvl)) + addoff
-!    deallocate( ivar )
-!  case ( nf_float )
-    ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
-    call netcdferror(ier)
-    datan(1:ix*iy*nsoillvl) = sf*real(datan(1:ix*iy*nsoillvl)) + addoff      
-!  case ( nf_double )
-!    allocate( dvar(ix*iy*nsoillvl) )
-!    ier = nf_get_vara_double(ncid,idvar,start,ncount,dvar)
-!    call netcdferror(ier)
-!    datan(1:ix*iy*nsoillvl) = sf*real(dvar(1:ix*iy*nsoillvl)) + addoff
-!    deallocate( dvar )      
-!  case default
-!    write(6,*) "Variable is unkown"
-!    call finishbanner
-!    stop -1
-!end select
-
-ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
-if ( ier/=nf_noerr ) then
-  ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)    
-end if
-if ( ier==nf_noerr ) then
-  where ( datan==fill_float )
-    datan = 1.e10
-  end where
-  call filldat(datan,ix,iy,nsoillvl)
-end if
-ier = nf_noerr
-
-! interpolate to CCAM soil levels
-il = size(dataout,1)
-allocate( datatemp(ix*iy) )
-ksearch = 2
-do k = 1,6
-  write(6,*)"************************************************k=",k  
-  do ktest = ksearch,nsoillvl
-    if ( soildepth_in(ktest)>soildepth_ccam(k) ) exit
-  end do
-  ksearch = max( min( ktest, nsoillvl ), 2 )
-  if ( soildepth_ccam(k)<soildepth_in(ksearch-1) ) then
-    ! extrapolate
-    datatemp(:) = datan(1:ix*iy) ! 1st level
-  else if ( soildepth_ccam(k)>soildepth_in(ksearch) ) then
-    ! extrapolate
-    datatemp(:) = datan((nsoillvl-1)*ix*iy+1:nsoillvl*ix*iy) ! last level
-  else
-    ! interpolate
-    xfrac = ( soildepth_ccam(k) - soildepth_in(ksearch-1) ) / ( soildepth_in(ksearch) - soildepth_in(ksearch-1) )
-    datatemp(:) = (1.-xfrac)*datan((ksearch-2)*ix*iy+1:(ksearch-1)*ix*iy) &
-                +      xfrac*datan((ksearch-1)*ix*iy+1:ksearch*ix*iy)
+  ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
+  if ( ier/=nf_noerr ) then
+    ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)    
   end if
-  call sintp16(datatemp(:),ix,iy,dataout(:,:,k),glon,glat,sdiag,il)
-end do
-deallocate( datatemp )
+  if ( ier==nf_noerr ) then
+    where ( datan==fill_float )
+      datan = 1.e10
+    end where
+  else
+    where ( datan==0. )
+      datan = 1.e10  
+    end where
+  end if    
+  call filldat(datan,ix,iy,1)
+  ier = nf_noerr  
+  
+  do k = 4,6
+    call sintp16(datan,ix,iy,dataout(:,:,k),glon,glat,sdiag,il)      
+  end do  
+  deallocate( datan ) 
+    
+else if ( varname=="wfg" ) then  
+  
+  allocate( datan(ix*iy) ) 
+  start(1) = 1
+  start(2) = 1
+  start(3) = 1
+  start(4) = iarchi
+  ncount(1) = ix
+  ncount(2) = iy
+  ncount(3) = 1
+  ncount(4) = 1
+  ier = nf_get_att_real(ncid,idvar,'add_offset',addoff)
+  if ( ier/=nf_noerr ) addoff = 0.
+  ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
+  if ( ier/=nf_noerr ) sf = 1.
+  ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
+  call netcdferror(ier)
+  datan(1:ix*iy) = sf*real(datan(1:ix*iy)) + addoff 
+  
+  ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
+  if ( ier/=nf_noerr ) then
+    ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)    
+  end if
+  if ( ier==nf_noerr ) then
+    where ( datan==fill_float )
+      datan = 1.e10
+    end where
+  else
+    where ( datan>=1. .or. datan<=0. )
+      datan = 1.e10  
+    end where
+  end if    
+  call filldat(datan,ix,iy,1)
+  ier = nf_noerr  
+  
+  il = size(dataout,1)
+  do k = 1,3
+    call sintp16(datan,ix,iy,dataout(:,:,k),glon,glat,sdiag,il)      
+  end do  
+  
+  ier = nf_inq_varid(ncid,"wfb",idvar)  
+  if ( ier/=0 ) then
+    write(6,*) "ERROR: wfb must be present when reading wfg soil data"
+    call finishbanner
+    stop -1
+  end if
+  ier = nf_get_att_real(ncid,idvar,'add_offset',addoff)
+  if ( ier/=nf_noerr ) addoff = 0.
+  ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
+  if ( ier/=nf_noerr ) sf = 1.
+  ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
+  call netcdferror(ier)
+  datan(1:ix*iy) = sf*real(datan(1:ix*iy)) + addoff 
+  
+  ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
+  if ( ier/=nf_noerr ) then
+    ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)    
+  end if
+  if ( ier==nf_noerr ) then
+    where ( datan==fill_float )
+      datan = 1.e10
+    end where
+  else
+    where ( datan>=1. .or. datan<=0. )
+      datan = 1.e10  
+    end where
+  end if    
+  call filldat(datan,ix,iy,1)
+  ier = nf_noerr  
+  
+  do k = 4,6
+    call sintp16(datan,ix,iy,dataout(:,:,k),glon,glat,sdiag,il)      
+  end do  
+  deallocate( datan ) 
+    
+else
+
+  ! read lev
+  ier = nf_inq_dimid(ncid,'soil_lvl',idsoillvl)
+  if ( ier/=nf_noerr ) then
+    write(6,*) "ERROR: Cannot real dimension soil_lvl when reading ",trim(varname)
+    call finishbanner
+    stop -1 
+  end if
+  ier = nf_inq_dimlen(ncid,idsoillvl,new_nsoillvl)
+  if ( .not.allocated(soildepth_in) ) then
+    nsoillvl = new_nsoillvl
+    ier = nf_inq_varid(ncid,'soil_lvl',ivsoillvl)
+    if ( ier==nf_noerr ) then
+      ier = nf_inq_dimid(ncid,'soil_lvl',idsoillvl)
+      ier = nf_inq_dimlen(ncid,idsoillvl,nsoillvl)
+      allocate( soildepth_in(nsoillvl) )
+      ier = nf_get_var_real(ncid,ivsoillvl,soildepth_in)
+    end if   
+  else
+    if ( new_nsoillvl/=nsoillvl ) then
+      write(6,*) "ERROR: Change in number of soil levels"
+      call finishbanner
+      stop -1
+    end if
+  end if
+
+  ! read data
+  allocate( datan(ix*iy*nsoillvl) )
+  start(1) = 1
+  start(2) = 1
+  start(3) = 1
+  start(4) = iarchi
+  ncount(1) = ix
+  ncount(2) = iy
+  ncount(3) = nsoillvl
+  ncount(4) = 1
+  ier = nf_get_att_real(ncid,idvar,'add_offset',addoff)
+  if ( ier/=nf_noerr ) addoff = 0.
+  ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
+  if ( ier/=nf_noerr ) sf = 1.
+  ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
+  call netcdferror(ier)
+  datan(1:ix*iy*nsoillvl) = sf*real(datan(1:ix*iy*nsoillvl)) + addoff      
+
+  ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
+  if ( ier/=nf_noerr ) then
+    ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)    
+  end if
+  if ( ier==nf_noerr ) then
+    where ( datan==fill_float )
+      datan = 1.e10
+    end where
+    call filldat(datan,ix,iy,nsoillvl)
+  end if
+  ier = nf_noerr
+    
+  ! interpolate to CCAM soil levels
+  il = size(dataout,1)
+  allocate( datatemp(ix*iy) )
+  ksearch = 2
+  do k = 1,6
+    write(6,*)"************************************************k=",k  
+    do ktest = ksearch,nsoillvl
+      if ( soildepth_in(ktest)>soildepth_ccam(k) ) exit
+    end do
+    ksearch = max( min( ktest, nsoillvl ), 2 )
+    if ( soildepth_ccam(k)<soildepth_in(ksearch-1) ) then
+      ! extrapolate
+      datatemp(:) = datan(1:ix*iy) ! 1st level
+    else if ( soildepth_ccam(k)>soildepth_in(ksearch) ) then
+      ! extrapolate
+      datatemp(:) = datan((nsoillvl-1)*ix*iy+1:nsoillvl*ix*iy) ! last level
+    else
+      ! interpolate
+      xfrac = ( soildepth_ccam(k) - soildepth_in(ksearch-1) ) / ( soildepth_in(ksearch) - soildepth_in(ksearch-1) )
+      datatemp(:) = (1.-xfrac)*datan((ksearch-2)*ix*iy+1:(ksearch-1)*ix*iy) &
+                  +      xfrac*datan((ksearch-1)*ix*iy+1:ksearch*ix*iy)
+    end if
+    call sintp16(datatemp(:),ix,iy,dataout(:,:,k),glon,glat,sdiag,il)
+  end do
+  deallocate( datatemp )
+  deallocate( datan )
+  
+end if
 
 deallocate( glon, glat )
-deallocate( datan )
 
 return
 end subroutine readsoil
