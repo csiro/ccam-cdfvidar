@@ -40,6 +40,7 @@ endif
 
 ifeq ($(MAUI),yes)
 FC = ftn
+HOST = -xSKYLAKE-AVX512
 FFLAGS = -qopenmp $(HOST) -fp-model precise -traceback
 PPFLAG90 = -fpp
 PPFLAG77 = -fpp
