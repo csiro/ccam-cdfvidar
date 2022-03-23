@@ -227,6 +227,14 @@
       write(6,nml=gnml)
 !####################### read namelist ############################
 
+      if ( (t_file==" ").and.(inf==" ") ) then
+        write(6,*) "ERROR: either inf or t_file must be specified"
+        call finishbanner
+        stop -1
+      end if
+
+      if ( inf == " " ) inf=t_file
+
       if ( t_file == " " ) t_file=inf
       if ( rh_file == " " ) rh_file=inf
       if ( u_file == " " ) u_file=inf
