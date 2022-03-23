@@ -38,6 +38,14 @@ PPFLAG77 = -eZ
 DEBUGFLAG =
 endif
 
+ifeq ($(MAUI),yes)
+FC = ftn
+FFLAGS = -qopenmp $(HOST) -fp-model precise -traceback
+PPFLAG90 = -fpp
+PPFLAG77 = -fpp
+DEBUGFLAG = -check all -debug all -traceback -fpe0
+endif
+
 # Testing - I/O and fpmodel
 ifeq ($(TEST),yes)
 FFLAGS += $(DEBUGFLAG)

@@ -696,20 +696,20 @@ c always linear interpolate rh and mix.ratio
                   ts1=tp(i,lev+1)+(tp(i,lev+1)-tp(i,lev))*fap
 c convert back to sensible temperature
                   ts(i,k)=ts1*0.622*(1.0+rs(i,k))/(0.622+rs(i,k))
-	            !-------------------------------------------------------
-	            ! MJT suggestion
-	            if (ts(i,k).gt.350.) then
+                    !-------------------------------------------------------
+                    ! MJT suggestion
+                    if (ts(i,k).gt.350.) then
                     print *,"bad ts at ",i,k,ts(i,k)
                     ts(i,k)=tpold(i,lev+1)
      &                 +(tpold(i,lev+1)-tpold(i,lev))*fap
                     print *,"new ts at ",i,k,ts(i,k)
-	            end if
-	            !-------------------------------------------------------
+                    end if
+                    !-------------------------------------------------------
                 endif ! not splinet
         
                 exit
-		
-              end if		
+
+              end if
 
 c end of pressure loop
             enddo ! lev=1,nplevsm ! (=nplevs-1)
