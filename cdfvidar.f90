@@ -812,6 +812,9 @@
 
       call readsst(ts_ncid,lsm_ncid,'tss',kdate,ktime,iarch,sdiag,lsm_m,twodim,0,ier)
       if ( ier/=nf_noerr ) then
+        call readsst(ts_ncid,lsm_ncid,'ts',kdate,ktime,iarch,sdiag,lsm_m,twodim,0,ier)  
+      end if
+      if ( ier/=nf_noerr ) then
         call readsst(ts_ncid,lsm_ncid,'tos',kdate,ktime,iarch,sdiag,lsm_m,twodim,0,ier)  
       end if
       if ( ier/=nf_noerr ) then
@@ -826,6 +829,10 @@
       if ( ier==nf_noerr ) then
         sfct = reshape( twodim, (/ ifull /) )
         sfct = min( max( sfct, 100. ), 425. )
+      else
+        write(6,*) "ERROR: Cannot locate suface temperature"
+	call finishbanner
+	stop -1	
       end if  
 
       call prt_pan(sfct,il,jl,2,'tss')
