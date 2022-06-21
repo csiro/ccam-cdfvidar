@@ -1,1 +1,1 @@
-      character(len=*), parameter :: version ='CDFVIDAR r5193:5197M'
+      character(len=*), parameter :: version ='CDFVIDAR r5198M'

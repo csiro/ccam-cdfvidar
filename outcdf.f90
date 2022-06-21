@@ -25,8 +25,12 @@ private
 public outcdf
 public readvar, readsst, readsoil
 public netcdferror, readpress, datefix
+public driving_model_id, driving_model_ensemble_number, driving_experiment_name
 
 integer ixp, iyp, idlev, idnt
+character(len=256), save :: driving_model_id = " "
+character(len=256), save :: driving_model_ensemble_number = " "
+character(len=256), save :: driving_experiment_name = " "
 
 interface readvar
   module procedure readvar3d, readvar2d, readvarinv
@@ -285,6 +289,25 @@ if ( iarch.eq.1 ) then
   if(ier.ne.0)write(6,*)"ncapt real idnc,ier=",idnc,ier
   ier = nf_put_att_text(idnc,nf_global,'date_header',10,rundate)
   if(ier.ne.0)write(6,*)"ncaptc date idnc,ier=",idnc,ier
+  
+  if ( driving_model_id /= " " ) then
+    write(6,*) "Found driving_model_id ",trim(driving_model_id)
+    ier = nf_put_att_text(idnc,nf_global,'driving_model_id',len_trim(driving_model_id),driving_model_id)
+    if(ier.ne.0)write(6,*)"ncaptc date idnc,ier=",idnc,ier
+  end if
+  if ( driving_model_ensemble_number /= " " ) then
+    write(6,*) "Found driving_model_ensemble_number ",trim(driving_model_ensemble_number)
+    ier = nf_put_att_text(idnc,nf_global,'driving_model_ensemble_number',len_trim(driving_model_ensemble_number), &
+            driving_model_ensemble_number)
+    if(ier.ne.0)write(6,*)"ncaptc date idnc,ier=",idnc,ier
+  end if
+  if ( driving_experiment_name /= " " ) then
+    write(6,*) "Found driving_experiment_name ",trim(driving_experiment_name)
+    ier = nf_put_att_text(idnc,nf_global,'driving_experiment_name',len_trim(driving_experiment_name), &
+          driving_experiment_name)
+    if(ier.ne.0)write(6,*)"ncaptc date idnc,ier=",idnc,ier
+  end if
+  
         
 endif ! ( iarch=1 ) then
 
@@ -296,8 +319,6 @@ call openhist(idnc,iarch,itype,dim,sig,kdate,ktime,time,mtimer,il,kl, &
 ier = nf_sync(idnc)
 if(ier.ne.0)write(6,*)"ncsnc idnc,ier=",idnc,ier
       
-!ier = nf_close(idnc)
-
 if ( itype.eq.1 ) then
 ! itype=1 outfile
   idnc1=idnc
@@ -570,7 +591,8 @@ call prt_pan(zs,il,jl,2,'zs(m)')
 call prt_pan(zsi_m,il,jl,2,'zs*g(m2/s2)')
 
 call histwrt3(zsi_m,'zht',idnc,iarch,il)   ! always from 13/9/02
-call histwrt3(lsm_m*65.e3,'soilt',idnc,iarch,il)
+aa = lsm_m*65.e3
+call histwrt3(aa,'soilt',idnc,iarch,il)
 
 if(xpmsl.lt.500.)then
   write(6,*)"call mslp(ps,pmsl,zs,ts,sig,ifull,ifull,kl)"

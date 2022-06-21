@@ -162,7 +162,9 @@
                    ,moistvar,kl,llrng                               &
                    ,t_file,rh_file,u_file,v_file,z_file             &
                    ,lsm_file,zs_file,ps_file,psl_file,ts_file       &
-                   ,sic_file,snod_file,soiltemp_file,soilmois_file
+                   ,sic_file,snod_file,soiltemp_file,soilmois_file  &
+                   ,driving_model_id,driving_model_ensemble_number  &
+                   ,driving_experiment_name
 
       data khin/0/,kuin/0/,kvin/0/,ktin/0/,krin/0/
       data igd/1/,jgd/1/,id/1/,jd/1/,mtimer/0/

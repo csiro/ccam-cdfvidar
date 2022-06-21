@@ -113,3 +113,4 @@ jimcc_m.o : jimcc_m.f90 parm_m.o precis_m.o xyzinfo_m.o
 jimco_m.o : jimco_m.f90 precis_m.o jim_utils.o nfft_m.o 
 jim_utils.o : jim_utils.f90 precis_m.o 
 nfft_m.o : nfft_m.f90 precis_m.o 
+outcdf.o : sigdata_m.o
