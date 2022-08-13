@@ -287,8 +287,8 @@ if ( iarch.eq.1 ) then
   if(ier.ne.0)write(6,*)"ncapt int idnc,ier=",idnc,ier
   ier = nf_put_att_real(idnc,nf_global,'real_header',nf_float,nrhead,ahead)
   if(ier.ne.0)write(6,*)"ncapt real idnc,ier=",idnc,ier
-  ier = nf_put_att_text(idnc,nf_global,'date_header',10,rundate)
-  if(ier.ne.0)write(6,*)"ncaptc date idnc,ier=",idnc,ier
+  !ier = nf_put_att_text(idnc,nf_global,'date_header',10,rundate)
+  !if(ier.ne.0)write(6,*)"ncaptc date idnc,ier=",idnc,ier
   
   if ( driving_model_id /= " " ) then
     write(6,*) "Found driving_model_id ",trim(driving_model_id)
