@@ -134,7 +134,7 @@
       real, dimension(6), parameter :: soildepth_ccam = (/ 0.011, 0.051, 0.157, 0.4385, 1.1855, 3.164 /)
       real, dimension(6), parameter :: soilthick_ccam = (/ 0.022, 0.058, 0.154, 0.409,  1.085,  2.872 /)
       real, parameter :: rhowater = 1000.
-      real fill_float
+      real fill_float, tmsl
 
       character(len=1) in_type
       character(len=2) moist_var
@@ -693,13 +693,13 @@
 
       call readvar(psl_ncid,'mslp',kdate,ktime,iarch,sdiag,twodim,ier)
       if ( ier/=nf_noerr ) then
-        call readvar(psl_ncid,'psl',kdate,ktime,iarch,sdiag,twodim,ier)  
+        call readvar(psl_ncid,'psl',kdate,ktime,iarch,sdiag,twodim,ier)
       end if
       if ( ier/=nf_noerr ) then
-        call readvar(psl_ncid,'pmsl',kdate,ktime,iarch,sdiag,twodim,ier)  
+        call readvar(psl_ncid,'pmsl',kdate,ktime,iarch,sdiag,twodim,ier)
       end if
       if ( ier/=nf_noerr ) then
-        call readvar(psl_ncid,'msl',kdate,ktime,iarch,sdiag,twodim,ier)  
+        call readvar(psl_ncid,'msl',kdate,ktime,iarch,sdiag,twodim,ier)
       end if
       if ( ier==nf_noerr ) then
         pmsl = reshape( twodim, (/ ifull /) )
@@ -809,6 +809,17 @@
       end if ! ier
 
       call prt_pan(psg_m,il,jl,2,'psg_m')
+
+      if ( all(pmsl==0.) ) then
+        do j = 1,jl
+          do i = 1,il
+            iq = i + (j-1)*il
+            k = nplev + 1 - nint(validlevcc(iq))
+            tmsl = temp(i,j,k) + zsi_m(iq)*0.0065
+            pmsl(iq) = psg_m(iq)/100./((1.-0.0065*zsi_m(iq)/tmsl)**(9.80665/(0.0065*287.04)))
+          end do  
+        end do
+      end if
 
       write(6,*)"================================================tss"
 

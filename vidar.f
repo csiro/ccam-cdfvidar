@@ -503,7 +503,6 @@ c calculate surface pressure
           end if
           
           rem2 = max( min( rem2, 60. ), -60. ) ! MJT suggestion for single precision
-
           ps(i)=pr*exp(-rem2)
 
 !         if ( i.eq.idiag .or. zs(i).gt.2000. ) then
