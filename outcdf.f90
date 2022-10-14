@@ -1744,6 +1744,7 @@ logical, save :: olsm_gbl
 logical, intent(in) :: sdiag
 character(len=*), intent(in) :: varname
 character(len=*), intent(inout), optional :: units
+character(len=60) :: varunits
 character(len=60) timorg, cu
 character(len=20) in_calendar
 
@@ -1753,8 +1754,9 @@ if ( ier/=nf_noerr ) then
   return 
 end if
 
+ier = nf_get_att_text(ncid,idvar,'units',varunits)
 if ( present(units) ) then
-  ier = nf_get_att_text(ncid,idvar,'units',units)  
+  units = varunits      
 end if
 
 ! check date
@@ -1858,6 +1860,11 @@ if ( ier/=nf_noerr ) sf = 1.
 !    call finishbanner
 !    stop -1
 !end select
+
+if ( varunits=="degC" ) then
+  write(6,*) "Convert degC to K"      
+  datan(1:ix*iy) = datan(1:ix*iy) + 273.16
+end if
 
 spval = -1.e10
 if ( sstmode==0 ) then
@@ -1990,6 +1997,10 @@ if ( .not.allocated(lsm_gbl) ) then
     where (lsm_gbl(1:ix*iy)==-1.)
       lsm_gbl(1:ix*iy)=1.
     end where
+    if ( maxval(lsm_gbl(1:ix*iy))==100. ) then
+      write(6,*) "Adjust 100 to 1 for land-sea mask"      
+      lsm_gbl(1:ix*iy) = lsm_gbl(1:ix*iy)/100.
+    end if
   else  
     write(6,*) "WARN: Cannot locate land-sea mask"  
     olsm_gbl = .false.

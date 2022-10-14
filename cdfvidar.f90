@@ -635,7 +635,7 @@
         call finishbanner
         stop -1
       end if
-      
+
       write(6,*)"================================================rh/q"
 
       call readvar(rh_ncid,"rh",kdate,ktime,iarch,sdiag,in_type,plev(1:nplev),rh(:,:,1:nplev),ier)
@@ -793,7 +793,7 @@
          end if
          ! remove levels below surface
          if ( .not.osig_in ) then
-           do iq = 1,size(psg_m)
+           do iq = 1,ifull
              do k = 1,nplev
                if ( psg_m(iq)>plev(k) ) then
                  validlevcc(iq) = real(k)
@@ -844,8 +844,8 @@
         sfct = min( max( sfct, 100. ), 425. )
       else
         write(6,*) "ERROR: Cannot locate suface temperature"
-	call finishbanner
-	stop -1	
+        call finishbanner
+        stop -1
       end if  
 
       call prt_pan(sfct,il,jl,2,'tss')
