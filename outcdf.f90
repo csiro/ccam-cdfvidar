@@ -1,6 +1,6 @@
 ! Conformal Cubic Atmospheric Model
     
-! Copyright 2015-2022 Commonwealth Scientific Industrial Research Organisation (CSIRO)
+! Copyright 2015-2023 Commonwealth Scientific Industrial Research Organisation (CSIRO)
     
 ! This file is part of the Conformal Cubic Atmospheric Model (CCAM)
 !
@@ -959,6 +959,8 @@ end select
 call datefix(in_kdate,in_ktime,in_time,in_calendar)
 if ( kdate/=in_kdate .or. in_ktime/=ktime ) then
   write(6,*) "ERROR: Inconsistent time units with ",trim(varname)
+  write(6,*) "Expecting ",kdate,ktime
+  write(6,*) "Found     ",in_kdate,in_ktime
   call finishbanner
   stop -1
 end if
@@ -1158,6 +1160,8 @@ end select
 call datefix(in_kdate,in_ktime,in_time,in_calendar)
 if ( kdate/=in_kdate .or. in_ktime/=ktime ) then
   write(6,*) "ERROR: Inconsistent time units with ",trim(varname)
+  write(6,*) "Expecting ",kdate,ktime
+  write(6,*) "Found     ",in_kdate,in_ktime
   call finishbanner
   stop -1
 end if
@@ -1441,6 +1445,8 @@ end select
 call datefix(in_kdate,in_ktime,in_time,in_calendar)
 if ( kdate/=in_kdate .or. in_ktime/=ktime ) then
   write(6,*) "ERROR: Inconsistent time units with ",trim(varname)
+  write(6,*) "Expecting ",kdate,ktime
+  write(6,*) "Found     ",in_kdate,in_ktime
   call finishbanner
   stop -1
 end if
@@ -1742,9 +1748,10 @@ real(kind=8), dimension(:), allocatable :: dvar
 real(kind=8) in_time
 logical, save :: olsm_gbl
 logical, intent(in) :: sdiag
+logical found_fill_float
 character(len=*), intent(in) :: varname
 character(len=*), intent(inout), optional :: units
-character(len=60) :: varunits
+character(len=60) varunits
 character(len=60) timorg, cu
 character(len=20) in_calendar
 
@@ -1756,7 +1763,7 @@ end if
 
 ier = nf_get_att_text(ncid,idvar,'units',varunits)
 if ( present(units) ) then
-  units = varunits      
+  units = varunits
 end if
 
 ! check date
@@ -1794,6 +1801,8 @@ end select
 call datefix(in_kdate,in_ktime,in_time,in_calendar)
 if ( kdate/=in_kdate .or. in_ktime/=ktime ) then
   write(6,*) "ERROR: Inconsistent time units with ",trim(varname)
+  write(6,*) "Expecting ",kdate,ktime
+  write(6,*) "Found     ",in_kdate,in_ktime
   call finishbanner
   stop -1
 end if
@@ -1836,35 +1845,29 @@ ier = nf_get_att_real(ncid,idvar,'add_offset',addoff)
 if ( ier/=nf_noerr ) addoff = 0.
 ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
 if ( ier/=nf_noerr ) sf = 1.
-!ier = nf_inq_vartype(ncid,idvar,itype)
-!call netcdferror(ier)
-!select case(itype)
-!  case ( nf_short )
-!    allocate( ivar(ix*iy) )
-!    ier = nf_get_vara_int(ncid,idvar,start,ncount,ivar)
-!    call netcdferror(ier)
-!    datan(1:ix*iy) = sf*real(ivar(1:ix*iy)) + addoff
-!    deallocate( ivar )
-!  case ( nf_float )
-    ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
-    call netcdferror(ier)
-    datan(1:ix*iy) = sf*real(datan(1:ix*iy)) + addoff      
-!  case ( nf_double )
-!    allocate( dvar(ix*iy) )
-!    ier = nf_get_vara_double(ncid,idvar,start,ncount,dvar)
-!    call netcdferror(ier)
-!    datan(1:ix*iy) = sf*real(dvar(1:ix*iy)) + addoff
-!    deallocate( dvar )      
-!  case default
-!    write(6,*) "Variable is unkown"
-!    call finishbanner
-!    stop -1
-!end select
+ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
+if ( ier/=nf_noerr ) then
+  ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)    
+end if
+found_fill_float = ier==nf_noerr
+spval = -1.e10
+
+ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
+call netcdferror(ier)
+if ( found_fill_float ) then
+  where ( datan(1:ix*iy)/=fill_float )  
+    datan(1:ix*iy) = sf*real(datan(1:ix*iy)) + addoff  
+  elsewhere
+    datan(1:ix*iy) = spval
+  end where  
+else
+  datan(1:ix*iy) = sf*real(datan(1:ix*iy)) + addoff
+end if
 
 if ( varunits=="degC" ) then
-  write(6,*) "Convert degC to K"      
+  write(6,*) "Convert degC to K"
   datan(1:ix*iy) = datan(1:ix*iy) + 273.16
-end if
+end if  
 
 spval = -1.e10
 if ( sstmode==0 ) then
@@ -1878,17 +1881,17 @@ if ( sstmode==0 ) then
   end if
 end if  
 
-ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
-if ( ier/=nf_noerr ) then
-  ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)    
-end if
-if ( ier==nf_noerr ) then
-  where ( datan==fill_float )
-    datan = spval
-  end where
-  call fill(datan(1:ix*iy),ix,iy,.1*spval,datan_tmp)
-end if
-ier =  nf_noerr ! reset error even if fillvalue is not located
+!ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
+!if ( ier/=nf_noerr ) then
+!  ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)    
+!end if
+!if ( ier==nf_noerr ) then
+!  where ( datan==fill_float )
+!    datan = spval
+!  end where
+!  call fill(datan(1:ix*iy),ix,iy,.1*spval,datan_tmp)
+!end if
+!ier =  nf_noerr ! reset error even if fillvalue is not located
 
 ! read land-sea mask
 if ( .not.allocated(lsm_gbl) ) then
@@ -1998,7 +2001,7 @@ if ( .not.allocated(lsm_gbl) ) then
       lsm_gbl(1:ix*iy)=1.
     end where
     if ( maxval(lsm_gbl(1:ix*iy))==100. ) then
-      write(6,*) "Adjust 100 to 1 for land-sea mask"      
+      write(6,*) "Adjust 100 to 1 for land-sea mask"
       lsm_gbl(1:ix*iy) = lsm_gbl(1:ix*iy)/100.
     end if
   else  
