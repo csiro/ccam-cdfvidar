@@ -1,6 +1,6 @@
 ! Conformal Cubic Atmospheric Model
     
-! Copyright 2015-2022 Commonwealth Scientific Industrial Research Organisation (CSIRO)
+! Copyright 2015-2023 Commonwealth Scientific Industrial Research Organisation (CSIRO)
     
 ! This file is part of the Conformal Cubic Atmospheric Model (CCAM)
 !
@@ -197,10 +197,6 @@
       write(6,*) "============================================================================="
       write(6,*) version
 
-#ifndef stacklimit
-      ! For linux only - removes stacklimit on all processors
-      call setstacklimit(-1)
-#endif 
    
       slon=0.
       slat=90.
@@ -635,7 +631,7 @@
         call finishbanner
         stop -1
       end if
-
+      
       write(6,*)"================================================rh/q"
 
       call readvar(rh_ncid,"rh",kdate,ktime,iarch,sdiag,in_type,plev(1:nplev),rh(:,:,1:nplev),ier)
@@ -693,13 +689,13 @@
 
       call readvar(psl_ncid,'mslp',kdate,ktime,iarch,sdiag,twodim,ier)
       if ( ier/=nf_noerr ) then
-        call readvar(psl_ncid,'psl',kdate,ktime,iarch,sdiag,twodim,ier)
+        call readvar(psl_ncid,'psl',kdate,ktime,iarch,sdiag,twodim,ier)  
       end if
       if ( ier/=nf_noerr ) then
-        call readvar(psl_ncid,'pmsl',kdate,ktime,iarch,sdiag,twodim,ier)
+        call readvar(psl_ncid,'pmsl',kdate,ktime,iarch,sdiag,twodim,ier)  
       end if
       if ( ier/=nf_noerr ) then
-        call readvar(psl_ncid,'msl',kdate,ktime,iarch,sdiag,twodim,ier)
+        call readvar(psl_ncid,'msl',kdate,ktime,iarch,sdiag,twodim,ier)  
       end if
       if ( ier==nf_noerr ) then
         pmsl = reshape( twodim, (/ ifull /) )
@@ -793,7 +789,7 @@
          end if
          ! remove levels below surface
          if ( .not.osig_in ) then
-           do iq = 1,ifull
+           do iq = 1,size(psg_m)
              do k = 1,nplev
                if ( psg_m(iq)>plev(k) ) then
                  validlevcc(iq) = real(k)
@@ -809,15 +805,15 @@
       end if ! ier
 
       call prt_pan(psg_m,il,jl,2,'psg_m')
-
+      
       if ( all(pmsl==0.) ) then
         do j = 1,jl
           do i = 1,il
-            iq = i + (j-1)*il
-            k = nplev + 1 - nint(validlevcc(iq))
-            tmsl = temp(i,j,k) + zsi_m(iq)*0.0065
+            iq = i + (j-1)*il  
+            k = nplev+1-nint(validlevcc(iq))  
+            tmsl = temp(i,j,k)  + zsi_m(iq)*0.0065
             pmsl(iq) = psg_m(iq)/100./((1.-0.0065*zsi_m(iq)/tmsl)**(9.80665/(0.0065*287.04)))
-          end do  
+          end do
         end do
       end if
 
@@ -843,9 +839,9 @@
         sfct = reshape( twodim, (/ ifull /) )
         sfct = min( max( sfct, 100. ), 425. )
       else
-        write(6,*) "ERROR: Cannot locate suface temperature"
+        write(6,*) "ERROR: Cannot locate surface temperature"
         call finishbanner
-        stop -1
+        stop -1	
       end if  
 
       call prt_pan(sfct,il,jl,2,'tss')

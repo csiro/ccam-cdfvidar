@@ -1,6 +1,6 @@
 ! Conformal Cubic Atmospheric Model
     
-! Copyright 2015 Commonwealth Scientific Industrial Research Organisation (CSIRO)
+! Copyright 2015-2019 Commonwealth Scientific Industrial Research Organisation (CSIRO)
     
 ! This file is part of the Conformal Cubic Atmospheric Model (CCAM)
 !
@@ -23,6 +23,8 @@
 
       logical splineu,splinev,splinet,zerowinds,osig_in
 
+      logical use_dryadj
+
       character*1024 zsfil,tsfil,smfil,vfil
 
       common / vi / ntimes,spline,mxcyc,nvsig,nrh,                       &
@@ -31,4 +33,5 @@
      &              iout,oform,osig_in,                                  &
      &              inzs,zsfil,ints,tsfil,insm,smfil,                    &
      &              vfil,                                                &
-     &              splineu,splinev,splinet,zerowinds
+     &              splineu,splinev,splinet,zerowinds,                   &
+     &              use_dryadj

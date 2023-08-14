@@ -1,6 +1,6 @@
 ! Conformal Cubic Atmospheric Model
     
-! Copyright 2015-2019 Commonwealth Scientific Industrial Research Organisation (CSIRO)
+! Copyright 2015-2022 Commonwealth Scientific Industrial Research Organisation (CSIRO)
     
 ! This file is part of the Conformal Cubic Atmospheric Model (CCAM)
 !
@@ -401,6 +401,8 @@ c convert sensible temp to virt. temp
      &          "k","pm(hPa)","zp(m)","tp(K) (1)","(npts) "
      &                           ," rp (g/g) (1)","(npts)"
       tpold=tp ! MJT suggestion
+      print *,"A tpold ",tpold(1,1:nplevs)
+      print *,"A tp    ",tp(1,1:nplevs)
       do k=1,nplevs
         do i=1,npts
           tp(i,k)=tp(i,k)*(rp(i,k)+.622)/(.622*(1.+rp(i,k)))
@@ -503,6 +505,7 @@ c calculate surface pressure
           end if
           
           rem2 = max( min( rem2, 60. ), -60. ) ! MJT suggestion for single precision
+
           ps(i)=pr*exp(-rem2)
 
 !         if ( i.eq.idiag .or. zs(i).gt.2000. ) then
@@ -574,7 +577,7 @@ c end of npts (xy) loop
        enddo ! i
 !$omp  END PARALLEL DO 
       endif ! if ( have_gp ) then       
-      print *,'calc ps(1),(npts)=',ps(1),ps(npts)
+      write(6,*) 'calc ps(1),(npts)=',ps(1),ps(npts)
       call amap ( ps, imt, jmt, 'calculated ps', 4., 1.e3 )
       call prt_pan(ps,il,jl,2,'ps(Pa)')
       call prt_pan(pmsl,il,jl,2,'pmsl(hPa)')
@@ -622,13 +625,13 @@ c assumes constant values above top input pressure
               write(6,'("sig index,sigp=",i3,f12.3)')k,sigp
             endif
 	    
-	  else if ( sigp>prx ) then ! sigp below bot press
+	    else if ( sigp>prx ) then ! sigp below bot press
             hs(i,k)=hp(i,nplevs) ! set to lowest data value 
             rs(i,k)=rp(i,nplevs)
 c assumes 6.5 deg/km lapse below lowest input press.
 c            ts(i,k)=tp(i,nplevs)-6.5e-3*(alog(prx/sigp))
 c     .                *(rrr*tp(i,nplevs))/grav
-            ts1=tp(i,nplevs)-6.5e-3*(alog(prx/sigp))
+            ts1=tp(i,nplevs)-6.5e-3*alog(prx/sigp)
      .                *(rrr*tp(i,nplevs))/grav
 c convert back to sensible temperature
             ts(i,k)=ts1*0.622*(1.0+rs(i,k))/(0.622+rs(i,k))
@@ -647,7 +650,7 @@ c uses lowest input level winds
               write(6,'("bot index,pbot=",i3,f12.3)')nplevs,prx
             endif
           
-	  else
+	    else
   
 c pressure level loop ( top down )
             do lev=1,nplevsm ! (=nplevs-1)
@@ -693,22 +696,25 @@ c always linear interpolate rh and mix.ratio
 
                 if ( .not. splinet ) then
                   ts1=tp(i,lev+1)+(tp(i,lev+1)-tp(i,lev))*fap
+                  if ( i==1 ) then
+                   print *,"tp,ts ",k,tp(i,lev),ts1,sgml(k)*ps(i),prest
+                  end if
 c convert back to sensible temperature
                   ts(i,k)=ts1*0.622*(1.0+rs(i,k))/(0.622+rs(i,k))
-                    !-------------------------------------------------------
-                    ! MJT suggestion
-                    if (ts(i,k).gt.350.) then
+	            !-------------------------------------------------------
+	            ! MJT suggestion
+	            if (ts(i,k).gt.350.) then
                     print *,"bad ts at ",i,k,ts(i,k)
                     ts(i,k)=tpold(i,lev+1)
      &                 +(tpold(i,lev+1)-tpold(i,lev))*fap
                     print *,"new ts at ",i,k,ts(i,k)
-                    end if
-                    !-------------------------------------------------------
+	            end if
+	            !-------------------------------------------------------
                 endif ! not splinet
         
                 exit
-
-              end if
+		
+              end if		
 
 c end of pressure loop
             enddo ! lev=1,nplevsm ! (=nplevs-1)
@@ -719,9 +725,17 @@ c end of sigma loop
         enddo ! k=1,lm
 
 c end of x/y loop
-      enddo ! i=1,npts
+        enddo ! i=1,npts
 !$omp END PARALLEL DO
 
+
+
+
+
+      print *,"B tpold ",tpold(1,1:nplevs)
+      print *,"B ts    ",ts(1,:)
+
+      
 c***********************************************************************
 c  vertical interpolation with spline as linear p
         write(6,'(3x,"vertical interp.: spline (with heights of"
@@ -757,7 +771,11 @@ c convert back to sensible temperature
             end do ! i=1,npts
           end do ! k=1,lm
 
-        endif ! ( splinet ) then
+      endif ! ( splinet ) then
+
+
+      print *,"C tpold ",tpold(1,1:nplevs)
+      print *,"C ts    ",ts(1,:)
 
 c u component of the wind
         if(splineu)then
@@ -802,6 +820,7 @@ c           dry adiab on first pass
 c  ncoun  = counts # of grid points (actually layers) in vertical
 c           at each horiz gridpoint where lapse exceeded dry adiab
 c***********************************************************************
+
       if ( debug ) then
       write(6,96)
  96   format(3x,'start temperature adjustment for dry adiabats')
@@ -817,6 +836,10 @@ c***********************************************************************
 c     write(6,5310)lcoun
 c5310 format(3x,'gridpoints where temp lapse rate exceeded dry'
 c    .  ,'adiabatic=',i6)
+
+      
+      print *,"D tpold ",tpold(1,1:nplevs)
+      print *,"D ts    ",ts(1,:)
 
 c***********************************************************************
 
