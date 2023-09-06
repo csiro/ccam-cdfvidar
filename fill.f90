@@ -27,9 +27,11 @@ implicit none
 
 ! routine fills in interior of an array which has undefined points
 integer, intent(in) :: il, jl
+integer i, j, neighb, nbs
 real, dimension(il,jl), intent(inout) :: a ! input and output array
 real, intent(in) :: value                  ! array value denoting undefined
 real, dimension(il,jl) :: b
+real av
 ! specifies neighbours
 integer, dimension(8), parameter :: in = (/ -1,-1,-1,0,1,1, 1, 0 /)
 integer, dimension(8), parameter :: jn = (/ -1, 0, 1,1,1,0,-1,-1 /)
