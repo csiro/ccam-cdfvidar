@@ -1,1 +1,1 @@
-      character(len=*), parameter :: version ='CDFVIDAR Date:   Wed Feb 8 19:23:59 2023 +1100 commit edf863bf4b5d2f76e384b419cd1fb9e00ed44dec'
+      character(len=*), parameter :: version ='CDFVIDAR Date:   Tue Aug 15 08:51:28 2023 +1000 commit 2c30b5fbad65f63ebad38d1667d2e6414991d4eb'

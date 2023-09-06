@@ -1,6 +1,6 @@
 ! Conformal Cubic Atmospheric Model
     
-! Copyright 2015 Commonwealth Scientific Industrial Research Organisation (CSIRO)
+! Copyright 2015-2023 Commonwealth Scientific Industrial Research Organisation (CSIRO)
     
 ! This file is part of the Conformal Cubic Atmospheric Model (CCAM)
 !
@@ -121,68 +121,20 @@
 
         enddo ! jg=1,ng2-1
 
-!        if ( y.lt.-900. ) stop
-
-!        if(i.eq.idiag.and.j.gt.jdiag) then
-!        write(30,'("iq,i,j,xlon,rlat(iq),x,y=",3i5,4f10.2)')
-!     &              iq,i,j,xlon,rlat(iq),x,y
-!        endif
 
 !***********************************************************************
 ! acutal interpolation to a point
 
-        !opdiag=imod.eq.il/2.and.il.lt.jmod.and.jmod.lt.2*il
-        !opdiag=(jmod.eq.1.5*il)
-        !opdiag=imod.eq.idiag.and.jmod.eq.jdiag
-        !opdiag=.false.
 
         call intp16(gdat,ng1,ng2,x,y,rdat(iq),opdiag)
 
 !***********************************************************************
 
-        !if (odiag.and.(imod.eq.idiag.and.jmod.eq.jdiag)) then
-        !  write(6,*)"iq,imod,jmod=",iq,imod,jmod
-        !  write(6,*)"xlon,rlong,rlat=",xlon,rlong(iq),rlat(iq)
-        !  write(6,*)"jg,glon(jg),jgp",jg,glon(jg),glon(jgp)
-        !  write(6,*)"inc,glat(jg),jgp",inc,glat(jg),glat(jgp)
-        !endif
-
-! bilinear interp
-!       m=int(x)
-!       n=int(y)
-!       dx=x-m
-!       dy=y-n
-!       mn=m+(n-1)*ng1
-!       mpn=m+1+(n-1)*ng1
-!       mnp=m+(n-1+1)*ng1
-!       mpnp=m+1+(n-1+1)*ng1
-!       d1 = dx*gdat(mpn)+(1-dx)*gdat(mn)
-!       d2 = dx*gdat(mpnp)+(1-dx)*gdat(mnp)
-!       rdat(iq) = dy*d2+(1-dy)*d1
-!       if(iq.eq.20+(70-1)*il)then
-!        write(6,*)"dx,dy,rdat(iq)",dx,dy,rdat(iq)
-!        write(6,*)"m,n,mn,mpn,mnp,mpnp",m,n,mn,mpn,mnp,mpnp
-!        write(6,*)"gdat(mpn),gdat(mn),gdat(mpnp),gdat(mnp)"
-!        write(6,*)gdat(mpn),gdat(mn),gdat(mpnp),gdat(mnp)
-!       endif
-!         ig=x
-!         jg=y
-!         ig1=ig+(jg-1)*ng1
-!         ig2=ig+1+(jg-1)*ng1
-!         ig3=ig+(jg-1+1)*ng1
-!         ig4=ig+1+(jg-1+1)*ng1
-!         write(30,'("ig,jg,gdat=",2i4,5f10.2)') ig,jg,gdat(ig1)
-!    &      ,gdat(ig2),gdat(ig3),gdat(ig4),rdat(iq)
-!       endif
-!       call intp16(globex,ng1+2,ng2,rlong(iq),91.-rlat(iq),
-!    &              rdat(iq),.true.)
 
 !***********************************************************************
 
 ! prevent extremes greater than global data ???
         rdat(iq)=min(gdx,max(gdn,rdat(iq)))
-        !dn=min(dn,rdat(iq))
-        !dx=max(dx,rdat(iq))
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
       enddo ! iq

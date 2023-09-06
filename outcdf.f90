@@ -393,32 +393,7 @@ if(iarch.eq.1) then
   write(6,*)"expdesc=",expdesc," ier=",ier
         
 ! Sigma levels
-! write(6,*)'sig=',sig
   ier = nf_put_att_real(idnc,nf_global,'sigma',nf_float,kl,sig)
-
-  !lname = 'year-month-day at start of run'
-  !ier = nf_def_var(idnc,'kdate',nf_int,1,dim(4:4),idkdate)
-  !ier = nf_put_att_text(idnc,idkdate,'long_name',len_trim(lname),lname)
-
-  !lname = 'hour-minute at start of run'
-  !ier = nf_def_var(idnc,'ktime',nf_int,1,dim(4:4),idktime)
-  !ier = nf_put_att_text(idnc,idktime,'long_name',len_trim(lname),lname)
-
-  !lname = 'timer (hrs)'
-  !ier = nf_def_var(idnc,'timer',nf_float,1,dim(4:4),idnter)
-  !ier = nf_put_att_text(idnc,idnter,'long_name',len_trim(lname),lname)
-
-  !lname = 'mtimer (mins)'
-  !ier = nf_def_var(idnc,'mtimer',nf_int,1,dim(4:4),idmtimer)
-  !ier = nf_put_att_text(idnc,idmtimer,'long_name',len_trim(lname),lname)
-
-  !lname = 'timeg (UTC)'
-  !ier = nf_def_var(idnc,'timeg',nf_float,1,dim(4:4),idnteg)
-  !ier = nf_put_att_text(idnc,idnteg,'long_name',len_trim(lname),lname)
-
-  !lname = 'number of time steps from start'
-  !ier = nf_def_var(idnc,'ktau',nf_int,1,dim(4:4),idktau)
-  !ier = nf_put_att_text(idnc,idktau,'long_name',len_trim(lname),lname)
 
   ier = nf_def_var(idnc,'sigma',nf_float,1,dim(3:3),idv)
   ier = nf_put_att_text(idnc,idv,'positive',4,'down')
@@ -432,14 +407,8 @@ if(iarch.eq.1) then
   call attrib(idnc,idim2,3,'pmsl',lname,'hPa',800.,1200.)
   lname = 'Surface geopotential'
   call attrib(idnc,idim2,2,'zht',lname,'m2/s2',-2.e3,128.e3) ! MJT lsmask
-  lname = 'Soil type'                                               ! MJT lsmask
+  lname = 'Soil type'                                        ! MJT lsmask
   call attrib(idnc,idim2,2,'soilt',lname,'none',0.,65.e3)    ! MJT lsmask
-
-! For time invariant surface fields
-!  lname = 'clon'
-!  call attrib(idnc,idim2,2,'clon',lname,'none',-360.,360.)
-!  lname = 'clat'
-!  call attrib(idnc,idim2,2,'clat',lname,'none',-90.,90.)
 
 ! For time varying surface fields
   lname = 'Surface temperature'
@@ -546,28 +515,10 @@ start = iarch
 ier = nf_put_var1_double(idnc,idv,start,time)
 write(6,*)"int(time)=",int(time,8)
 
-!ier = nf_inq_varid(idnc,'kdate',idv)
-!ier = nf_put_var1_int(idnc,idv,start,kdate)
-!ier = nf_inq_varid(idnc,'ktime',idv)
-!ier = nf_put_var1_int(idnc,idv,start,ktime)
-!ier = nf_inq_varid(idnc,'timer',idv)
-!ier = nf_put_var1_real(idnc,idv,start,timer)   
-!ier = nf_inq_varid(idnc,'mtimer',idv)
-!ier = nf_put_var1_int(idnc,idv,start,nint(time)) ! MJT quick fix
-!ier = nf_inq_varid(idnc,'timeg',idv)
-!ier = nf_put_var1_real(idnc,idv,start,timeg)
-!ier = nf_inq_varid(idnc,'ktau',idv)
-!ier = nf_put_var1_int(idnc,idv,start,ktau)      
-
 write(6,*)'kdate,ktime,ktau=',kdate,ktime,ktau
 write(6,*)'timer,timeg=',timer,timeg
 
 write(6,*)'now write out variables'
-
-!if(ktau.eq.0.or.itype.eq.-1)then  ! also for restart file
-!  call histwrt3(clon,'clon',idnc,iarch,il)
-!  call histwrt3(clat,'clat',idnc,iarch,il)
-!endif ! (ktau.eq.0) 
 
 do iq=1,ifull
   aa(iq)=log(ps(iq)/1.e5)
@@ -716,16 +667,10 @@ implicit none
       
 integer il,jl,ifull
 integer iarch
-
-!include 'newmpar.h'
-!include 'parm.h'
-
 integer mid, start(3), count(3)
 integer imn, imx, jmn, jmx
 integer i, j, ndims
-!integer(kind=2), dimension(:,:), allocatable :: ipack ! was integer*2 
 character(len=*), intent(in) :: sname
-!character*8 sname
 integer(kind=2) minv, maxv, missval ! was integer*2 
 parameter(minv = -32500, maxv = 32500, missval = -32501)
 real addoff, scale_f
@@ -895,7 +840,7 @@ integer ix, iy, il, khout, khin
 integer idpres, ivpres, ivtim, nplev, idvar
 integer in_iyr, in_imn, in_idy, in_ihr, in_imi
 integer itype
-integer in_kdate, in_ktime, i
+integer in_kdate, in_ktime, i, k, is, ie
 integer, dimension(4) :: start, ncount
 integer, dimension(:), allocatable :: ivar
 real, dimension(:,:,:), intent(out) :: dataout
@@ -903,7 +848,7 @@ real, dimension(:), intent(in) :: in_plev
 real, dimension(:), allocatable :: glon, glat
 real, dimension(:), allocatable :: datan
 real, dimension(size(in_plev)) :: plev, plev_b
-real fill_float, addoff, sf
+real fill_float, addoff, sf, spval
 real(kind=8), dimension(:), allocatable :: dvar
 real(kind=8) in_time
 logical orev, osig_in
@@ -1010,6 +955,8 @@ if ( any( abs(plev(1:nplev)-in_plev)>1.e-4 ) ) then
   stop -1
 end if
 
+spval = -1.e10
+
 ! read data
 allocate( datan(ix*iy*nplev) )
 start(1) = 1
@@ -1024,63 +971,50 @@ ier = nf_get_att_real(ncid,idvar,'add_offset',addoff)
 if ( ier/=nf_noerr ) addoff = 0.
 ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
 if ( ier/=nf_noerr ) sf = 1.
-!ier = nf_inq_vartype(ncid,idvar,itype)
-!call netcdferror(ier)
-!select case(itype)
-!  case ( nf_short )
-!    allocate( ivar(ix*iy*nplev) )
-!    ier = nf_get_vara_int(ncid,idvar,start,ncount,ivar)
-!    call netcdferror(ier)
-!    datan(1:ix*iy*nplev) = sf*real(ivar(1:ix*iy*nplev)) + addoff
-!    deallocate( ivar )
-!  case ( nf_float )
-    ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
-    call netcdferror(ier)
-    datan(1:ix*iy*nplev) = sf*real(datan(1:ix*iy*nplev)) + addoff      
-!  case ( nf_double )
-!    allocate( dvar(ix*iy*nplev) )
-!    ier = nf_get_vara_double(ncid,idvar,start,ncount,dvar)
-!    call netcdferror(ier)
-!    datan(1:ix*iy*nplev) = sf*real(dvar(1:ix*iy*nplev)) + addoff
-!    deallocate( dvar )      
-!  case default
-!    write(6,*) "Variable is unkown"
-!    call finishbanner
-!    stop -1
-!end select
+write(6,*) "-> Read data"
+ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
+call netcdferror(ier)
+datan(1:ix*iy*nplev) = sf*datan(1:ix*iy*nplev) + addoff      
 
+write(6,*) "-> Replace missing values"
 ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
 if ( ier/=nf_noerr ) then
   ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)    
 end if
 if ( ier==nf_noerr ) then
   where ( datan==fill_float )
-    datan = 1.e10
+    datan(:) = spval
   end where
-  !call getvalidlev(validlevhost,datan,ix,iy,nplev)
-  call filldat(datan,ix,iy,nplev)
+  !$OMP PARALLEL DO SCHEDULE(STATIC) PRIVATE(k,is,ie)  
+  do k = 1,nplev
+    is = 1 + ix*iy*(k-1)
+    ie = ix*iy*k
+    call fill(datan(is:ie),ix,iy,.1*spval)
+  end do 
+  !$OMP END PARALLEL DO  
 end if
 ier =  nf_noerr ! reset error even if fillvalue is not located
   
 ! interpolate data to cc grid
+write(6,*) "-> Interpolate to CC grid"
 il = size(dataout,1)
 call amap(datan(1:ix*iy),ix,iy,varname,0.,0.)
 call amap(datan(1+ix*iy*(nplev-1):ix*iy*nplev),ix,iy,varname,0.,0.)
 ! vertical pressure levels are reversed just before cdfvidar
 if ( orev ) then
-!$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) SHARED(nplev,datan,ix,iy,dataout,glon,glat,sdiag,il) PRIVATE(khin,khout)
+  !$OMP PARALLEL DO SCHEDULE(STATIC) PRIVATE(khin,khout)    
   do khin = 1,nplev    
     khout = khin  
     call sintp16(datan(1+ix*iy*(khin-1):ix*iy*khin),ix,iy,dataout(:,:,khout),glon,glat,sdiag,il)  
   end do
-!$OMP END PARALLEL DO 
+  !$OMP END PARALLEL DO  
 else
-!$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) SHARED(nplev,datan,ix,iy,dataout,glon,glat,sdiag,il) PRIVATE(khin,khout)
+  !$OMP PARALLEL DO SCHEDULE(STATIC) PRIVATE(khin,khout)        
   do khin = 1,nplev    
     khout = nplev + 1 - khin  
     call sintp16(datan(1+ix*iy*(khin-1):ix*iy*khin),ix,iy,dataout(:,:,khout),glon,glat,sdiag,il)  
   end do
-!$OMP END PARALLEL DO  
+  !$OMP END PARALLEL DO  
 end if
 
 deallocate( glon, glat )
@@ -1107,7 +1041,7 @@ integer in_kdate, in_ktime, i
 real, dimension(:,:), intent(out) :: dataout
 real, dimension(:), allocatable, save :: glon, glat
 real, dimension(:), allocatable :: datan
-real sf, addoff, fill_float
+real sf, addoff, fill_float, spval
 real(kind=8), dimension(:), allocatable :: dvar
 real(kind=8) in_time
 logical, intent(in) :: sdiag
@@ -1191,6 +1125,8 @@ ier = nf_inq_dimlen(ncid,latid,iy)
 allocate( glat(iy) )
 ier = nf_get_var_real(ncid,idv,glat)
 
+spval = -1.e10
+
 ! read data
 allocate( datan(ix*iy) )
 start(1) = 1
@@ -1203,44 +1139,26 @@ ier = nf_get_att_real(ncid,idvar,'add_offset',addoff)
 if ( ier/=nf_noerr ) addoff = 0.
 ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
 if ( ier/=nf_noerr ) sf = 1.
-!ier = nf_inq_vartype(ncid,idvar,itype)
-!call netcdferror(ier)
-!select case(itype)
-!  case ( nf_short )
-!    allocate( ivar(ix*iy) )
-!    ier = nf_get_vara_int(ncid,idvar,start,ncount,ivar)
-!    call netcdferror(ier)
-!    datan(1:ix*iy) = sf*real(ivar(1:ix*iy)) + addoff
-!    deallocate( ivar )
-!  case ( nf_float )
-    ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
-    call netcdferror(ier)
-    datan(1:ix*iy) = sf*real(datan(1:ix*iy)) + addoff      
-!  case ( nf_double )
-!    allocate( dvar(ix*iy) )
-!    ier = nf_get_vara_double(ncid,idvar,start,ncount,dvar)
-!    call netcdferror(ier)
-!    datan(1:ix*iy) = sf*real(dvar(1:ix*iy)) + addoff
-!    deallocate( dvar )      
-!  case default
-!    write(6,*) "Variable is unkown"
-!    call finishbanner
-!    stop -1
-!end select
+write(6,*) "-> Read data"
+ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
+call netcdferror(ier)
+datan(1:ix*iy) = sf*datan(1:ix*iy) + addoff      
   
+write(6,*) "-> Replace missing values"
 ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
 if ( ier/=nf_noerr ) then
   ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)    
 end if
 if ( ier==nf_noerr ) then
   where ( datan==fill_float )
-    datan = 1.e10
+    datan = spval
   end where
-  call filldat(datan,ix,iy,1)
+  call fill(datan(1:ix*iy),ix,iy,.1*spval)
 end if
 ier =  nf_noerr ! reset error even if fillvalue is not located  
   
 ! interpolation
+write(6,*) "-> Interpolate to CC grid"
 il = size(dataout,1)
 call amap( datan(1:ix*iy), ix, iy, varname, 0., 0. )
 call sintp16(datan(1:ix*iy),ix,iy,dataout,glon,glat,sdiag,il)
@@ -1325,32 +1243,13 @@ ier = nf_get_att_real(ncid,idvar,'add_offset',addoff)
 if ( ier/=nf_noerr ) addoff = 0.
 ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
 if ( ier/=nf_noerr ) sf = 1.
-!ier = nf_inq_vartype(ncid,idvar,itype)
-!call netcdferror(ier)
-!select case(itype)
-!  case ( nf_short )
-!    allocate( ivar(ix*iy) )
-!    ier = nf_get_vara_int(ncid,idvar,start,ncount,ivar)
-!    call netcdferror(ier)
-!    datan(1:ix*iy) = sf*real(ivar(1:ix*iy)) + addoff
-!    deallocate( ivar )
-!  case ( nf_float )
-    ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
-    call netcdferror(ier)
-    datan(1:ix*iy) = sf*real(datan(1:ix*iy)) + addoff      
-!  case ( nf_double )
-!    allocate( dvar(ix*iy) )
-!    ier = nf_get_vara_double(ncid,idvar,start,ncount,dvar)
-!    call netcdferror(ier)
-!    datan(1:ix*iy) = sf*real(dvar(1:ix*iy)) + addoff
-!    deallocate( dvar )      
-!  case default
-!    write(6,*) "Variable is unkown"
-!    call finishbanner
-!    stop -1
-!end select
+write(6,*) "-> Read data"
+ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
+call netcdferror(ier)
+datan(1:ix*iy) = sf*datan(1:ix*iy) + addoff      
   
 ! interpolation
+write(6,*) "-> Interpolate to CC grid"
 il = size(dataout,1)
 if ( is_land ) then
    where ( abs(datan)>=1.e10 ) ! quick fix for land_mask
@@ -1382,17 +1281,17 @@ integer idsoillvl, ivsoillvl, ivtim, new_nsoillvl
 integer k, ksearch, ktest
 integer in_iyr, in_imn, in_idy, in_ihr, in_imi
 integer itype
-integer in_kdate, in_ktime, i
+integer in_kdate, in_ktime, i, is, ie
 integer, save :: nsoillvl
 integer, dimension(4) :: start, ncount
 integer, dimension(:), allocatable :: ivar
 real, dimension(:), intent(in) :: soildepth_ccam
 real, dimension(:,:,:), intent(out) :: dataout
 real, dimension(:), allocatable :: glon, glat
-real, dimension(:), allocatable :: datan, datatemp
+real, dimension(:), allocatable :: datan
+real, dimension(:,:), allocatable :: datatemp
 real, dimension(:), allocatable, save :: soildepth_in
-real fill_float, xfrac
-real addoff, sf
+real fill_float, xfrac, addoff, sf, spval
 real(kind=8), dimension(:), allocatable :: dvar
 real(kind=8) in_time
 logical, intent(in) :: sdiag
@@ -1476,6 +1375,8 @@ ier = nf_inq_dimlen(ncid,latid,iy)
 allocate( glat(iy) )
 ier = nf_get_var_real(ncid,idv,glat)
 
+spval = -1.e10
+
 if ( varname=="tb3" ) then
   
   allocate( datan(ix*iy) ) 
@@ -1491,31 +1392,34 @@ if ( varname=="tb3" ) then
   if ( ier/=nf_noerr ) addoff = 0.
   ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
   if ( ier/=nf_noerr ) sf = 1.
+  write(6,*) "-> Read data"
   ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
   call netcdferror(ier)
-  datan(1:ix*iy) = sf*real(datan(1:ix*iy)) + addoff 
+  datan(1:ix*iy) = sf*datan(1:ix*iy) + addoff 
   
-  print *,"datan1 ",minval(datan),maxval(datan)
-  
+  write(6,*) "-> Replace missing values"
   ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
   if ( ier/=nf_noerr ) then
     ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)    
   end if
   if ( ier==nf_noerr ) then
     where ( datan==fill_float )
-      datan = 1.e10
+      datan = spval
     end where
   else
     where ( datan==0. )
-      datan = 1.e10  
+      datan = spval  
     end where
   end if    
-  call filldat(datan,ix,iy,1)
+  call fill(datan(1:ix*iy),ix,iy,.1*spval)
+  
   ier = nf_noerr 
   
+  write(6,*) "-> Interpolate to CC grid"
   il = size(dataout,1)
-  do k = 1,3
-    call sintp16(datan,ix,iy,dataout(:,:,k),glon,glat,sdiag,il)      
+  call sintp16(datan,ix,iy,dataout(:,:,1),glon,glat,sdiag,il)
+  do k = 2,3
+    dataout(:,:,k) = dataout(:,:,1)
   end do  
 
   ier = nf_inq_varid(ncid,"tb2",idvar)  
@@ -1528,28 +1432,33 @@ if ( varname=="tb3" ) then
   if ( ier/=nf_noerr ) addoff = 0.
   ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
   if ( ier/=nf_noerr ) sf = 1.
+  write(6,*) "-> Read data"
   ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
   call netcdferror(ier)
-  datan(1:ix*iy) = sf*real(datan(1:ix*iy)) + addoff 
+  datan(1:ix*iy) = sf*datan(1:ix*iy) + addoff 
 
+  write(6,*) "-> Replace missing values"
   ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
   if ( ier/=nf_noerr ) then
     ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)    
   end if
   if ( ier==nf_noerr ) then
     where ( datan==fill_float )
-      datan = 1.e10
+      datan = spval
     end where
   else
     where ( datan==0. )
-      datan = 1.e10  
+      datan = spval  
     end where
   end if    
-  call filldat(datan,ix,iy,1)
+  call fill(datan(1:ix*iy),ix,iy,.1*spval)
   ier = nf_noerr  
   
-  do k = 4,6
-    call sintp16(datan,ix,iy,dataout(:,:,k),glon,glat,sdiag,il)      
+  write(6,*) "-> Interpolate to CC grid"
+  il = size(dataout,1)
+  call sintp16(datan,ix,iy,dataout(:,:,4),glon,glat,sdiag,il)
+  do k = 5,6
+    dataout(:,:,k) = dataout(:,:,4)
   end do  
   deallocate( datan ) 
     
@@ -1568,29 +1477,33 @@ else if ( varname=="wfg" ) then
   if ( ier/=nf_noerr ) addoff = 0.
   ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
   if ( ier/=nf_noerr ) sf = 1.
+  write(6,*) "-> Read data"
   ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
   call netcdferror(ier)
-  datan(1:ix*iy) = sf*real(datan(1:ix*iy)) + addoff 
+  datan(1:ix*iy) = sf*datan(1:ix*iy) + addoff 
   
+  write(6,*) "-> Replace missing values"
   ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
   if ( ier/=nf_noerr ) then
     ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)    
   end if
   if ( ier==nf_noerr ) then
     where ( datan==fill_float )
-      datan = 1.e10
+      datan = spval
     end where
   else
     where ( datan>=1. .or. datan<=0. )
-      datan = 1.e10  
+      datan = spval  
     end where
   end if    
-  call filldat(datan,ix,iy,1)
+  call fill(datan(1:ix*iy),ix,iy,.1*spval)
   ier = nf_noerr  
   
+  write(6,*) "-> Interpolate to CC grid"
   il = size(dataout,1)
-  do k = 1,3
-    call sintp16(datan,ix,iy,dataout(:,:,k),glon,glat,sdiag,il)      
+  call sintp16(datan,ix,iy,dataout(:,:,1),glon,glat,sdiag,il)
+  do k = 2,3
+    dataout(:,:,k) = dataout(:,:,1)
   end do  
   
   ier = nf_inq_varid(ncid,"wfb",idvar)  
@@ -1603,28 +1516,33 @@ else if ( varname=="wfg" ) then
   if ( ier/=nf_noerr ) addoff = 0.
   ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
   if ( ier/=nf_noerr ) sf = 1.
+  write(6,*) "-> Read data"
   ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
   call netcdferror(ier)
   datan(1:ix*iy) = sf*real(datan(1:ix*iy)) + addoff 
   
+  write(6,*) "-> Replace missing values"
   ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
   if ( ier/=nf_noerr ) then
     ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)    
   end if
   if ( ier==nf_noerr ) then
     where ( datan==fill_float )
-      datan = 1.e10
+      datan = spval
     end where
   else
     where ( datan>=1. .or. datan<=0. )
-      datan = 1.e10  
+      datan = spval  
     end where
   end if    
-  call filldat(datan,ix,iy,1)
+  call fill(datan(1:ix*iy),ix,iy,.1*spval)
   ier = nf_noerr  
-  
-  do k = 4,6
-    call sintp16(datan,ix,iy,dataout(:,:,k),glon,glat,sdiag,il)      
+
+  write(6,*) "-> Interpolate to CC grid"
+  il = size(dataout,1)
+  call sintp16(datan,ix,iy,dataout(:,:,4),glon,glat,sdiag,il)      
+  do k = 5,6
+    dataout(:,:,k) = dataout(:,:,4)
   end do  
   deallocate( datan ) 
     
@@ -1669,46 +1587,57 @@ else
   if ( ier/=nf_noerr ) addoff = 0.
   ier = nf_get_att_real(ncid,idvar,'scale_factor',sf)
   if ( ier/=nf_noerr ) sf = 1.
+  write(6,*) "-> Read data"
   ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
   call netcdferror(ier)
-  datan(1:ix*iy*nsoillvl) = sf*real(datan(1:ix*iy*nsoillvl)) + addoff      
+  datan(1:ix*iy*nsoillvl) = sf*datan(1:ix*iy*nsoillvl) + addoff      
 
+  write(6,*) "-> Replace missing values"
   ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
   if ( ier/=nf_noerr ) then
     ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)    
   end if
   if ( ier==nf_noerr ) then
     where ( datan==fill_float )
-      datan = 1.e10
+      datan = spval
     end where
-    call filldat(datan,ix,iy,nsoillvl)
+!$OMP PARALLEL DO SCHEDULE(STATIC) PRIVATE(k,is,ie)    
+    do k = 1,nsoillvl
+      is = 1 + ix*iy*(k-1)
+      ie = ix*iy*k
+      call fill(datan(is:ie),ix,iy,.1*spval)
+    end do    
+!$OMP END PARALLEL DO    
+    
   end if
   ier = nf_noerr
     
   ! interpolate to CCAM soil levels
+  write(6,*) "-> Interpolate to CC grid"
   il = size(dataout,1)
-  allocate( datatemp(ix*iy) )
-  ksearch = 2
+  allocate( datatemp(ix*iy,6) )
+!$OMP PARALLEL DO SCHEDULE(STATIC) PRIVATE(k,ktest,ksearch,xfrac)  
   do k = 1,6
     write(6,*)"************************************************k=",k  
-    do ktest = ksearch,nsoillvl
+    do ktest = 2,nsoillvl
       if ( soildepth_in(ktest)>soildepth_ccam(k) ) exit
     end do
     ksearch = max( min( ktest, nsoillvl ), 2 )
     if ( soildepth_ccam(k)<soildepth_in(ksearch-1) ) then
       ! extrapolate
-      datatemp(:) = datan(1:ix*iy) ! 1st level
+      datatemp(:,k) = datan(1:ix*iy) ! 1st level
     else if ( soildepth_ccam(k)>soildepth_in(ksearch) ) then
       ! extrapolate
-      datatemp(:) = datan((nsoillvl-1)*ix*iy+1:nsoillvl*ix*iy) ! last level
+      datatemp(:,k) = datan((nsoillvl-1)*ix*iy+1:nsoillvl*ix*iy) ! last level
     else
       ! interpolate
       xfrac = ( soildepth_ccam(k) - soildepth_in(ksearch-1) ) / ( soildepth_in(ksearch) - soildepth_in(ksearch-1) )
-      datatemp(:) = (1.-xfrac)*datan((ksearch-2)*ix*iy+1:(ksearch-1)*ix*iy) &
-                  +      xfrac*datan((ksearch-1)*ix*iy+1:ksearch*ix*iy)
+      datatemp(:,k) = (1.-xfrac)*datan((ksearch-2)*ix*iy+1:(ksearch-1)*ix*iy) &
+                    +      xfrac*datan((ksearch-1)*ix*iy+1:ksearch*ix*iy)
     end if
-    call sintp16(datatemp(:),ix,iy,dataout(:,:,k),glon,glat,sdiag,il)
+    call sintp16(datatemp(:,k),ix,iy,dataout(:,:,k),glon,glat,sdiag,il)
   end do
+!$OMP END PARALLEL DO  
   deallocate( datatemp )
   deallocate( datan )
   
@@ -1852,16 +1781,17 @@ end if
 found_fill_float = ier==nf_noerr
 spval = -1.e10
 
+write(6,*) "-> Read data"
 ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
 call netcdferror(ier)
 if ( found_fill_float ) then
   where ( datan(1:ix*iy)/=fill_float )  
-    datan(1:ix*iy) = sf*real(datan(1:ix*iy)) + addoff  
+    datan(1:ix*iy) = sf*datan(1:ix*iy) + addoff  
   elsewhere
     datan(1:ix*iy) = spval
   end where  
 else
-  datan(1:ix*iy) = sf*real(datan(1:ix*iy)) + addoff
+  datan(1:ix*iy) = sf*datan(1:ix*iy) + addoff
 end if
 
 if ( varunits=="degC" ) then
@@ -1873,25 +1803,13 @@ spval = -1.e10
 if ( sstmode==0 ) then
   write(6,*)"spval=",spval
   if (any(datan(1:ix*iy)<100..or.datan(1:ix*iy)>400.)) then
-    write(6,*) "Missing data found in sfc temp"
+    write(6,*) "-> Replace missing values"
     where (datan(1:ix*iy)<100..or.datan(1:ix*iy)>400.)
       datan(1:ix*iy)=spval
     end where
-    call fill(datan(1:ix*iy),ix,iy,.1*spval,datan_tmp)
+    call fill(datan(1:ix*iy),ix,iy,.1*spval)
   end if
 end if  
-
-!ier = nf_get_att_real(ncid,idvar,'_FillValue',fill_float)
-!if ( ier/=nf_noerr ) then
-!  ier = nf_get_att_real(ncid,idvar,'missing_value',fill_float)    
-!end if
-!if ( ier==nf_noerr ) then
-!  where ( datan==fill_float )
-!    datan = spval
-!  end where
-!  call fill(datan(1:ix*iy),ix,iy,.1*spval,datan_tmp)
-!end if
-!ier =  nf_noerr ! reset error even if fillvalue is not located
 
 ! read land-sea mask
 if ( .not.allocated(lsm_gbl) ) then
@@ -1969,30 +1887,10 @@ if ( .not.allocated(lsm_gbl) ) then
     if ( ier/=nf_noerr ) addoff = 0.
     ier = nf_get_att_real(lsm_ncid,idvar,'scale_factor',sf)
     if ( ier/=nf_noerr ) sf = 1.
-    !ier = nf_inq_vartype(lsm_ncid,idvar,itype)
-    !call netcdferror(ier)
-    !select case(itype)
-    !  case ( nf_short )
-    !    allocate( ivar(ix*iy) )
-    !    ier = nf_get_vara_int(lsm_ncid,idvar,start,ncount,ivar)
-    !    call netcdferror(ier)
-    !    lsm_gbl(1:ix*iy) = sf*real(ivar(1:ix*iy)) + addoff
-    !    deallocate( ivar )
-    !  case ( nf_float )
-        ier = nf_get_vara_real(lsm_ncid,idvar,start,ncount,datan_tmp)
-        call netcdferror(ier)
-        lsm_gbl(1:ix*iy) = sf*real(datan_tmp(1:ix*iy)) + addoff     
-    !  case ( nf_double )
-    !    allocate( dvar(ix*iy) )
-    !    ier = nf_get_vara_double(lsm_ncid,idvar,start,ncount,dvar)
-    !    call netcdferror(ier)
-    !    lsm_gbl(1:ix*iy) = sf*real(dvar(1:ix*iy)) + addoff
-    !    deallocate( dvar )      
-    !  case default
-    !    write(6,*) "Variable is unkown"
-    !    call finishbanner
-    !    stop -1
-    !end select
+    write(6,*) "-> Read data"
+    ier = nf_get_vara_real(lsm_ncid,idvar,start,ncount,datan_tmp)
+    call netcdferror(ier)
+    lsm_gbl(1:ix*iy) = sf*real(datan_tmp(1:ix*iy)) + addoff     
     ! MJT quick fix 
     where (abs(lsm_gbl(1:ix*iy))>=1.e10)
       lsm_gbl(1:ix*iy)=0.
@@ -2035,32 +1933,36 @@ if ( olsm_gbl ) then
   enddo ! iy
 endif!(olsm_gbl)then
 
+write(6,*) "-> Replace missing values and interpolate to CC grid"
 write(6,*)"two global arrays with spval=", spval
 write(6,*)"fill in missing values nlpnts,nopnts=",nlpnts,nopnts
 
-write(6,*)"=======> for land array, fill in ocean values"
-call fill(datan(1:ix*iy),ix,iy,.1*spval,datan_tmp)
 
-if ( olsm_gbl .and. nopnts>0 ) then
-   write(6,*)"=======> for ocean array, fill in land values"
-   call fill(datan_ocn,ix,iy,.1*spval,datan_tmp)
-endif!(olsm_gbl)then
-
-! interpolation
 il = size(sfct,1)
+!$OMP PARALLEL SECTIONS
+
+!$OMP SECTION
+write(6,*)"=======> for land array, fill in ocean values"
+call fill(datan(1:ix*iy),ix,iy,.1*spval)
 write(6,*)"=========================> now interp. land data"
 call sintp16(datan(1:ix*iy),ix,iy,sfct,glon,glat,sdiag,il) ! land
 !sfct = min( max( sfct, 100. ), 425. )
 
-if(olsm_gbl .and. nopnts.gt.0)then
+!$OMP SECTION
+if ( olsm_gbl .and. nopnts>0 ) then
+   write(6,*)"=======> for ocean array, fill in land values"
+   call fill(datan_ocn,ix,iy,.1*spval)
    write(6,*)"=========================> now interp. ocean data"
    call sintp16(datan_ocn,ix,iy,sfcto_m,glon,glat,sdiag,il)   ! ocean
    !sfcto_m = min( max( sfcto_m, 100. ), 425. )
 endif!(olsm_gbl)then
 
+!$OMP END PARALLEL SECTIONS
+
+
 ! recombine
 if (olsm_gbl) then
-  write(6,*)"now recombine two (land/ocean) fields"    
+  write(6,*) "now recombine two (land/ocean) fields"    
   do j=1,6*il
     do i=1,il
       iq=i+(j-1)*il

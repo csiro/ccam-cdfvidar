@@ -7,7 +7,7 @@ LIBS += -lnetcdff
 endif
 HOST = -xHost
 ifeq ($(CASCADELAKE),yes)
-HOST = -xCASCADELAKE
+HOST = -O3 -xCASCADELAKE -align array64byte -fimf-use-svml
 endif
 ifeq ($(ZEN3),yes)
 HOST = -axCORE-AVX2

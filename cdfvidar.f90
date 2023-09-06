@@ -21,6 +21,10 @@
     
       program cdfvidar
 
+#ifdef _OPENMP
+      use omp_lib, only : omp_get_max_threads
+#endif      
+      
       use ccinterp
       use cll_m
       use comsig_m      
@@ -197,6 +201,11 @@
       write(6,*) "============================================================================="
       write(6,*) version
 
+      
+#ifdef _OPENMP
+      write(6,*) "Running with OMP threads = ",omp_get_max_threads()
+#endif
+      
    
       slon=0.
       slat=90.
@@ -1128,91 +1137,6 @@
       end
 !***********************************************************************
       
-      subroutine filldat(datan,ix,iy,plev)
-      
-      implicit none
-      
-      integer, intent(in) :: ix,iy,plev
-      integer i,j,k,is,ie,iqk,iqn
-      integer ncount
-      real, dimension(ix*iy*plev), intent(inout) :: datan
-      real, dimension(ix*iy) :: datatemp
-      real datasum
-
-      if ( any(datan(:)>9.e9) ) then
-        write(6,*) "Using filldat to remove missing values"
-      end if
-      
-!$OMP PARALLEL DO SCHEDULE(STATIC) DEFAULT(NONE) SHARED(plev,ix,iy,datan) PRIVATE(k,is,ie,datatemp,i,j,iqk,ncount,datasum,iqn)
-      do k = 1,plev
-          
-        is = ix*iy*(k-1) + 1
-        ie = ix*iy*k
-        if (all(datan(is:ie)>9.E9)) then
-          write(6,*) "ERROR: No valid data on level"
-          call finishbanner
-          stop -1
-        end if
-        
-        datatemp(:) = datan(is:ie)  
-        
-        do while ( any(datatemp(:)>9.E9) )
-          
-          do j = 1,iy
-            do i = 1,ix
-                
-              iqk = i + ix*(j-1) ! no vertical dimension for datatemp
-              if (datatemp(iqk)>9.e9) then
-                ncount = 0
-                datasum = 0.
-                if ( j<iy ) then
-                  iqn = i + ix*j + ix*iy*(k-1)
-                  if ( datan(iqn)<=9.e9 ) then
-                    datasum = datasum + datan(iqn)
-                    ncount = ncount + 1
-                  end if
-                end if
-                if ( j>1 ) then
-                  iqn = i + ix*(j-2) + ix*iy*(k-1)
-                  if ( datan(iqn)<=9.e9 ) then
-                    datasum = datasum + datan(iqn)
-                    ncount = ncount + 1
-                  end if
-                end if
-                if ( i<ix ) then
-                  iqn = i + 1 + ix*(j-1) + ix*iy*(k-1)
-                else
-                  iqn = 1 + ix*(j-1) + ix*iy*(k-1)	
-                end if
-                if ( datan(iqn)<=9.e9 ) then
-                  datasum = datasum + datan(iqn)
-                  ncount = ncount + 1
-                end if
-                if ( i>1 ) then
-                  iqn = i - 1 + ix*(j-1) + ix*iy*(k-1)
-                else
-                  iqn = ix + ix*(j-1) + ix*iy*(k-1)
-                end if
-                if ( datan(iqn)<=9.e9 ) then
-                  datasum = datasum + datan(iqn)
-                  ncount = ncount + 1
-                end if
-                if ( ncount>0 ) then
-                  datatemp(iqk) = datasum/real(ncount)
-                end if
-              end if
-            end do
-          end do
-          
-          datan(is:ie) = datatemp(:)
-          
-        end do
-      end do
-!$OMP END PARALLEL DO
-      
-      return
-      end subroutine filldat
-
 subroutine processdatestring(datestring,yyyy,mm,dd,hh,mt)
 
 implicit none
