@@ -2,9 +2,6 @@
 ifneq ($(CUSTOM),yes)
 FC = ifort
 LIBS = -L $(NETCDF_ROOT)/lib -lnetcdf
-ifneq ($(NCCLIB),yes)
-LIBS += -lnetcdff
-endif
 HOST = -xHost
 ifeq ($(CASCADELAKE),yes)
 HOST = -O3 -xCASCADELAKE -align array64byte -fimf-use-svml
@@ -52,10 +49,6 @@ ifeq ($(TEST),yes)
 FFLAGS += $(DEBUGFLAG)
 endif
 
-ifeq ($(NCCLIB),yes)
-FFLAGS += -Dncclib
-endif
-
 
 OBJ2= dryadj.o findxn.o filt.o sintp16.o vidar.o invert.o\
       cdfvidar.o vispl.o esmtrv.o amap.o mslp.o \
@@ -90,7 +83,7 @@ cdfvidar.o sintp16.o setxyz.o: latlong_m.o
 cdfvidar.o vidar.o : comsig_m.o
 cdfvidar.o outcdf.o : cll_m.o
 cdfvidar.o vidar.o : sigdata_m.o
-cdfvidar.o : ccinterp.o version.h
+cdfvidar.o : ccinterp.o outcdf.o version.h
 cdfvidar.o vispl.o dryadj.o : lmax.h
 cdfvidar.o vidar.o vispl.o : nplevs.h
 cdfvidar.o vidar.o : vidar.h
