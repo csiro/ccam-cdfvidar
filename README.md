@@ -15,7 +15,7 @@ For documentation, see our website at
 
 CDFvidar requires the NetCDF C library.
 
-## Building aeroemiss
+## Building CDFvidar
 
 To build CDFvidar with intel, gnu and cray fortran compiler use
 
