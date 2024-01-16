@@ -1,6 +1,6 @@
 ! Conformal Cubic Atmospheric Model
     
-! Copyright 2015-2023 Commonwealth Scientific Industrial Research Organisation (CSIRO)
+! Copyright 2015-2024 Commonwealth Scientific Industrial Research Organisation (CSIRO)
     
 ! This file is part of the Conformal Cubic Atmospheric Model (CCAM)
 !
@@ -608,9 +608,29 @@ if ( any( snod > 1.e-8 ) ) then
 end if
       
 write(6,*)'netcdf save of 3d variables'
+if ( any(ts<100.) .or. any(ts>350.) .or. any(ts/=ts) ) then
+  write(6,*) "ERROR: Invalid temperature data for ts"
+  call finishbanner
+  stop -1
+end if
 call histwrt4(ts,'temp',idnc,iarch,il,kl)
+if ( any(abs(us)>100.) .or. any(us/=us) ) then
+  write(6,*) "ERROR: Invalid wind data for us"
+  call finishbanner
+  stop -1
+end if
 call histwrt4(us,'u',idnc,iarch,il,kl)
+if ( any(abs(vs)>100.) .or. any(vs/=vs) ) then
+  write(6,*) "ERROR: Invalid wind data for vs"
+  call finishbanner
+  stop -1
+end if
 call histwrt4(vs,'v',idnc,iarch,il,kl)
+if ( any(rs<0.) .or. any(rs>0.05) .or. any(rs/=rs) ) then
+  write(6,*) "ERROR: Invalid mixing ratio data for rs"
+  call finishbanner
+  stop -1
+end if
 call histwrt4(rs,'mixr',idnc,iarch,il,kl)
       
 return ! subroutine openhist(idnc,iarch,itype,dim,sig
