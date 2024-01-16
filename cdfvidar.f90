@@ -1,6 +1,6 @@
 ! Conformal Cubic Atmospheric Model
     
-! Copyright 2015-2023 Commonwealth Scientific Industrial Research Organisation (CSIRO)
+! Copyright 2015-2024 Commonwealth Scientific Industrial Research Organisation (CSIRO)
     
 ! This file is part of the Conformal Cubic Atmospheric Model (CCAM)
 !
@@ -168,7 +168,7 @@
                    ,lsm_file,zs_file,ps_file,psl_file,ts_file       &
                    ,sic_file,snod_file,soiltemp_file,soilmois_file  &
                    ,driving_model_id,driving_model_ensemble_number  &
-                   ,driving_experiment_name
+                   ,driving_experiment_name,driving_institution_id
 
       data khin/0/,kuin/0/,kvin/0/,ktin/0/,krin/0/
       data igd/1/,jgd/1/,id/1/,jd/1/,mtimer/0/
@@ -633,7 +633,7 @@
         call readvar(t_ncid,"air_temp",kdate,ktime,iarch,sdiag,in_type,plev(1:nplev),temp(:,:,1:nplev),ier)        
       end if
       if ( ier/=nf_noerr ) then
-        call readvar(t_ncid,"t",kdate,ktime,iarch,sdiag,in_type,plev(1:nplev),temp(:,:,1:nplev),ier)        
+        call readvar(t_ncid,"t",kdate,ktime,iarch,sdiag,in_type,plev(1:nplev),temp(:,:,1:nplev),ier)
       end if
       if ( ier/=nf_noerr ) then
         write(6,*) "ERROR: Cannot read temp"

@@ -26,11 +26,13 @@ public outcdf
 public readvar, readsst, readsoil
 public netcdferror, readpress, datefix
 public driving_model_id, driving_model_ensemble_number, driving_experiment_name
+public driving_institution_id
 
 integer ixp, iyp, idlev, idnt
 character(len=256), save :: driving_model_id = " "
 character(len=256), save :: driving_model_ensemble_number = " "
 character(len=256), save :: driving_experiment_name = " "
+character(len=256), save :: driving_institution_id = " "
 
 interface readvar
   module procedure readvar3d, readvar2d, readvarinv
@@ -130,7 +132,7 @@ write(6,'("outcdf itype,idnc,iarch,cdffile=",3i5," ",a80)') itype,idnc,iarch,cdf
 if ( iarch.lt.1 ) then
   write(6,*) "wrong iarch in outcdf"
   call finishbanner
-  stop
+  stop -1
 end if
 if ( iarch.eq.1 ) then
         
@@ -139,15 +141,15 @@ if ( iarch.eq.1 ) then
   cdffile = trim(cdffile_in)  
   write(6,*)'nccre of ',cdffile
         
-#ifdef usenc3
-#ifdef no64bit_offset
-  ier = nf_create(cdffile,NF_CLOBBER,idnc)
-#else
-  ier = nf_create(cdffile,NF_64BIT_OFFSET,idnc)
-#endif
-#else
+!#ifdef usenc3
+!#ifdef no64bit_offset
+!  ier = nf_create(cdffile,NF_CLOBBER,idnc)
+!#else
+!  ier = nf_create(cdffile,NF_64BIT_OFFSET,idnc)
+!#endif
+!#else
   ier = nf_create(cdffile,NF_NETCDF4,idnc)
-#endif
+!#endif
   write(6,*)'idnc,ier=',idnc,ier
   ! Turn off the data filling
   ier = nf_set_fill(idnc,nf_nofill,oldmode)
@@ -290,6 +292,7 @@ if ( iarch.eq.1 ) then
   !ier = nf_put_att_text(idnc,nf_global,'date_header',10,rundate)
   !if(ier.ne.0)write(6,*)"ncaptc date idnc,ier=",idnc,ier
   
+  ! Include GCM metadata if avalible
   if ( driving_model_id /= " " ) then
     write(6,*) "Found driving_model_id ",trim(driving_model_id)
     ier = nf_put_att_text(idnc,nf_global,'driving_model_id',len_trim(driving_model_id),driving_model_id)
@@ -307,6 +310,13 @@ if ( iarch.eq.1 ) then
           driving_experiment_name)
     if(ier.ne.0)write(6,*)"ncaptc date idnc,ier=",idnc,ier
   end if
+  if ( driving_institution_id /= " " ) then
+    write(6,*) "Found driving_institution_id ",trim(driving_institution_id)
+    ier = nf_put_att_text(idnc,nf_global,'driving_institution_id',len_trim(driving_institution_id), &
+          driving_institution_id)
+    if(ier.ne.0)write(6,*)"ncaptc date idnc,ier=",idnc,ier
+  end if
+  
   
         
 endif ! ( iarch=1 ) then
@@ -704,8 +714,6 @@ integer(kind=2), dimension(il,6*il) :: ipack
 jl=6*il
 ifull=il*jl
       
-!allocate( ipack(il,6*il) )
-
 write(6,*)"histwrt3 sname=",sname," iarch=",iarch," idnc=",idnc
 
 ! find variable index
@@ -753,9 +761,7 @@ if(ier.ne.0) then
 end if  
 
 write(6,'("histwrt3:",a7," nt=",i4," n=",f12.4," ij=",2i4," x=",f12.4," ij=",2i4)') sname,iarch,varn,imn,jmn,varx,imx,jmx
-
-!deallocate( ipack )
-      
+     
 return
 end subroutine histwrt3
 !=======================================================================
@@ -766,12 +772,8 @@ use netcdf_m
       
 integer il,jl,kl,ifull
 
-!include 'newmpar.h'
-!include 'parm.h'
-
 integer mid, start(4), count(4)
 character(len=*), intent(in) :: sname
-!character*8 sname
 integer*2 minv, maxv, missval ! was integer*2 
 parameter(minv = -32500, maxv = 32500, missval = -32501)
 real addoff, scale_f
@@ -781,9 +783,7 @@ integer(kind=2), dimension(il,6*il,kl) :: ipack
 
 jl=6*il
 ifull=il*jl
-
-!allocate( ipack(il,6*il,kl) )
-      
+     
 write(6,*)"histwrt4 sname=",sname," iarch=",iarch," idnc=",idnc
 
 
@@ -838,8 +838,6 @@ ier = nf_put_vara_int2(idnc, mid, start(1:4), count(1:4), ipack)
 write(6,'("histwrt4:",a7," nt=",i4," n=",f12.4," ijk=",3i4," x=",f12.4," ijk=",3i4)') &
     sname,iarch,varn,imn,jmn,kmn,varx,imx,jmx,kmx
 
-!deallocate( ipack )
-      
 return
 end subroutine histwrt4
      
