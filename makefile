@@ -67,10 +67,10 @@ clean:
 .SUFFIXES:.f90
 
 version.h: FORCE
-	rm -f brokenver tmpver
-	echo "      character(len=*), parameter :: version ='CDFVIDAR '" > brokenver
-	echo "      character(len=*), parameter :: version ='CDFVIDAR `git log | head -3 | tail -1`" "`git log | head -1`'" > tmpver
-	cmp tmpver brokenver || cmp tmpver version.h || mv tmpver version.h
+	rm -f tmpver
+	echo "character(len=*), parameter :: version= &" > tmpver
+	echo "'CDFVIDAR `git log | head -3 | tail -1`" "`git log | head -1`' " >> tmpver
+	cmp tmpver version.h || mv tmpver version.h
 FORCE:
 
 .f.o:
