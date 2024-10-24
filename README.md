@@ -9,7 +9,7 @@ Models to the conformal cubic grid used by CCAM.
 
 For documentation, see our website at
 
-[https://confluence.csiro.au/display/CCAM/CCAM]
+[https://research.csiro.au/ccam/]
 
 ## Dependencies
 
