@@ -618,8 +618,11 @@ if ( any( snod > 1.e-8 ) ) then
 end if
       
 write(6,*)'netcdf save of 3d variables'
-if ( any(ts<100.) .or. any(ts>350.) .or. any(ts/=ts) ) then
+if ( any(ts<100.) .or. any(ts>370.) .or. any(ts/=ts) ) then
   write(6,*) "ERROR: Invalid temperature data for ts"
+  write(6,*) "ts min = ",minval(ts)
+  write(6,*) "ts max = ",maxval(ts)
+  write(6,*) "ts NAN = ",any(ts/=ts)
   call finishbanner
   stop -1
 end if
@@ -1820,9 +1823,11 @@ end if
 spval = -1.e10
 if ( sstmode==0 ) then
   write(6,*)"spval=",spval
-  if (any(datan(1:ix*iy)<100..or.datan(1:ix*iy)>400.)) then
+  if (any(datan(1:ix*iy)<100..or.datan(1:ix*iy)>400..or. &
+          datan(1:ix*iy)/=datan(1:ix*iy))) then
     write(6,*) "-> Replace missing values"
-    where (datan(1:ix*iy)<100..or.datan(1:ix*iy)>400.)
+    where (datan(1:ix*iy)<100..or.datan(1:ix*iy)>400..or. &
+           datan(1:ix*iy)/=datan(1:ix*iy))
       datan(1:ix*iy)=spval
     end where
     call fill(datan(1:ix*iy),ix,iy,.1*spval)

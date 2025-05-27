@@ -1,10 +1,10 @@
 
 ifneq ($(CUSTOM),yes)
-FC = ifort
+FC = ifx
 LIBS = -L $(NETCDF_ROOT)/lib -lnetcdf
 HOST = -xHost
 ifeq ($(CASCADELAKE),yes)
-HOST = -O3 -xCASCADELAKE -align array64byte -fimf-use-svml
+HOST = -O3 -xCASCADELAKE -align array64byte
 endif
 ifeq ($(ZEN3),yes)
 HOST = -axCORE-AVX2
