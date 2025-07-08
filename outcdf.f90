@@ -627,13 +627,13 @@ if ( any(ts<100.) .or. any(ts>370.) .or. any(ts/=ts) ) then
   stop -1
 end if
 call histwrt4(ts,'temp',idnc,iarch,il,kl)
-if ( any(abs(us)>250.) .or. any(us/=us) ) then
+if ( any(abs(us)>300.) .or. any(us/=us) ) then
   write(6,*) "ERROR: Invalid wind data for us"
   call finishbanner
   stop -1
 end if
 call histwrt4(us,'u',idnc,iarch,il,kl)
-if ( any(abs(vs)>250.) .or. any(vs/=vs) ) then
+if ( any(abs(vs)>300.) .or. any(vs/=vs) ) then
   write(6,*) "ERROR: Invalid wind data for vs"
   call finishbanner
   stop -1
