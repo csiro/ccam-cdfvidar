@@ -1,6 +1,6 @@
 ! Conformal Cubic Atmospheric Model
     
-! Copyright 2015-2024 Commonwealth Scientific Industrial Research Organisation (CSIRO)
+! Copyright 2015-2025 Commonwealth Scientific Industrial Research Organisation (CSIRO)
     
 ! This file is part of the Conformal Cubic Atmospheric Model (CCAM)
 !
@@ -26,13 +26,14 @@ public outcdf
 public readvar, readsst, readsoil
 public netcdferror, readpress, datefix
 public driving_model_id, driving_model_ensemble_number, driving_experiment_name
-public driving_institution_id
+public driving_institution_id, mip_era
 
 integer ixp, iyp, idlev, idnt
 character(len=256), save :: driving_model_id = " "
+character(len=256), save :: driving_institution_id = " "
 character(len=256), save :: driving_model_ensemble_number = " "
 character(len=256), save :: driving_experiment_name = " "
-character(len=256), save :: driving_institution_id = " "
+character(len=256), save :: mip_era = " "
 
 interface readvar
   module procedure readvar3d, readvar2d, readvarinv
@@ -298,6 +299,12 @@ if ( iarch.eq.1 ) then
     ier = nf_put_att_text(idnc,nf_global,'driving_model_id',len_trim(driving_model_id),driving_model_id)
     if(ier.ne.0)write(6,*)"ncaptc date idnc,ier=",idnc,ier
   end if
+  if ( driving_institution_id /= " " ) then
+    write(6,*) "Found driving_institution_id ",trim(driving_institution_id)
+    ier = nf_put_att_text(idnc,nf_global,'driving_institution_id',len_trim(driving_institution_id), &
+          driving_institution_id)
+    if(ier.ne.0)write(6,*)"ncaptc date idnc,ier=",idnc,ier
+  end if
   if ( driving_model_ensemble_number /= " " ) then
     write(6,*) "Found driving_model_ensemble_number ",trim(driving_model_ensemble_number)
     ier = nf_put_att_text(idnc,nf_global,'driving_model_ensemble_number',len_trim(driving_model_ensemble_number), &
@@ -310,14 +317,12 @@ if ( iarch.eq.1 ) then
           driving_experiment_name)
     if(ier.ne.0)write(6,*)"ncaptc date idnc,ier=",idnc,ier
   end if
-  if ( driving_institution_id /= " " ) then
-    write(6,*) "Found driving_institution_id ",trim(driving_institution_id)
-    ier = nf_put_att_text(idnc,nf_global,'driving_institution_id',len_trim(driving_institution_id), &
-          driving_institution_id)
+  if ( mip_era /= " " ) then
+    write(6,*) "Found mip_era ",trim(mip_era)
+    ier = nf_put_att_text(idnc,nf_global,'mip_era',len_trim(mip_era), &
+          mip_era)
     if(ier.ne.0)write(6,*)"ncaptc date idnc,ier=",idnc,ier
-  end if
-  
-  
+  end if  
         
 endif ! ( iarch=1 ) then
 

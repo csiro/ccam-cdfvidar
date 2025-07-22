@@ -1,6 +1,6 @@
 ! Conformal Cubic Atmospheric Model
     
-! Copyright 2015-2024 Commonwealth Scientific Industrial Research Organisation (CSIRO)
+! Copyright 2015-2025 Commonwealth Scientific Industrial Research Organisation (CSIRO)
     
 ! This file is part of the Conformal Cubic Atmospheric Model (CCAM)
 !
@@ -168,7 +168,8 @@
                    ,lsm_file,zs_file,ps_file,psl_file,ts_file       &
                    ,sic_file,snod_file,soiltemp_file,soilmois_file  &
                    ,driving_model_id,driving_model_ensemble_number  &
-                   ,driving_experiment_name,driving_institution_id
+                   ,driving_experiment_name,driving_institution_id  &
+                   ,mip_era
 
       data khin/0/,kuin/0/,kvin/0/,ktin/0/,krin/0/
       data igd/1/,jgd/1/,id/1/,jd/1/,mtimer/0/
@@ -263,7 +264,8 @@
       ier = nf_open(t_file,nf_nowrite,t_ncid)
       write(6,*)'ncid=',t_ncid
       if(ier.ne.0) then
-        write(6,*)' cannot open netCDF file; error code ',ier
+        write(6,*)' cannot open netCDF file ',trim(t_file)
+        write(6,*) 'error code ',ier
         call finishbanner
         stop -1
       end if
