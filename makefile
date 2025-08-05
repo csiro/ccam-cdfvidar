@@ -7,6 +7,7 @@ ifeq ($(CASCADELAKE),yes)
 HOST = -O3 -xCASCADELAKE -align array64byte
 endif
 ifeq ($(ZEN3),yes)
+FC = ifort
 HOST = -axCORE-AVX2
 endif
 INC = -I $(NETCDF_ROOT)/include

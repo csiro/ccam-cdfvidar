@@ -404,7 +404,7 @@ if(iarch.eq.1) then
 
 ! Experiment description
   expdesc = 'CCAM model run'
-  ier = nf_put_att_text(idnc,nf_global,'expdesc',50,expdesc)
+  ier = nf_put_att_text(idnc,nf_global,'expdesc',7,expdesc)
   write(6,*)"expdesc=",expdesc," ier=",ier
         
 ! Sigma levels
