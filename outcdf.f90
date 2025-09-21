@@ -204,7 +204,9 @@ if ( iarch.eq.1 ) then
   write(6,*)'grdtim=',grdtim
   ier = nf_put_att_text(idnc,idnt,'units',33,grdtim)
 
-  if ( calendar/="" ) then
+  if ( calendar=="" ) then
+    ier = nf_put_att_text(idnc,idnt,'calendar',9,"gregorian")  
+  else    
     ier = nf_put_att_text(idnc,idnt,'calendar',len_trim(calendar),calendar)
   end if  
   
