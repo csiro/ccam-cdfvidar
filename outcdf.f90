@@ -2038,12 +2038,15 @@ integer(kind=8) mdays_save
 integer(kind=8), parameter :: minsday = 1440
 character(len=*), intent(in) :: calendar
 
-leap_l = 1
+leap_l = 1 ! leap or gregorian
 if ( calendar(1:7)=="365_day" ) then
   leap_l = 0
 end if
 if ( calendar(1:6)=="noleap" ) then
   leap_l = 0
+end if
+if ( calendar(1:7)=="360_day" ) then
+  leap_l = 2
 end if
 
 mtimer_r = int(time,8)
@@ -2057,12 +2060,16 @@ write(6,*) 'entering datefix'
 write(6,*) 'iyr,imo,iday:       ',iyr,imo,iday
 write(6,*) 'ihr,imins,mtimer_r: ',ihr,imins,mtimer_r
 
-mdays(2)=28_8
-if ( leap_l==1 ) then
-  if ( mod(iyr,4_8)==0   ) mdays(2)=29_8
-  if ( mod(iyr,100_8)==0 ) mdays(2)=28_8
-  if ( mod(iyr,400_8)==0 ) mdays(2)=29_8
-end if
+if ( leap_l==2 ) then
+  mdays(:) = 30_8
+else
+  mdays(2)=28_8
+  if ( leap_l==1 ) then
+    if ( mod(iyr,4_8)==0   ) mdays(2)=29_8
+    if ( mod(iyr,100_8)==0 ) mdays(2)=28_8
+    if ( mod(iyr,400_8)==0 ) mdays(2)=29_8
+  end if
+emd of  
 do while ( mtimer_r>minsday*mdays(imo) )
   mtimer_r=mtimer_r-minsday*mdays(imo)
   imo=imo+1_8
