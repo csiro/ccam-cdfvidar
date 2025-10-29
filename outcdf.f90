@@ -2069,7 +2069,7 @@ else
     if ( mod(iyr,100_8)==0 ) mdays(2)=28_8
     if ( mod(iyr,400_8)==0 ) mdays(2)=29_8
   end if
-emd of  
+end if  
 do while ( mtimer_r>minsday*mdays(imo) )
   mtimer_r=mtimer_r-minsday*mdays(imo)
   imo=imo+1_8
