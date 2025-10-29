@@ -19,7 +19,7 @@ endif
 
 ifeq ($(GFORTRAN),yes)
 FC = gfortran
-FFLAGS = -O2 -mtune=native -march=native -fopenmp -I $(NETCDF_ROOT)/include
+FFLAGS = -O2 -fallow-argument-mismatch -mtune=native -march=native -fopenmp -I $(NETCDF_ROOT)/include
 ifeq ($(ZEN3),yes)
 FFLAGS = -O2 -fallow-argument-mismatch -mtune=native -march=native -fopenmp -I $(NETCDF_ROOT)/include
 endif
