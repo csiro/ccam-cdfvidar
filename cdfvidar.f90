@@ -354,7 +354,7 @@
         end if
         iernc=nf_get_att_real(lncid,nf_global,"lat0",rlat0)
         iernc=nf_get_att_real(lncid,nf_global,"schmidt",schmidt)
-        if ( schmidt<0. .or. schmidt>1. ) then
+        if ( schmidt<=0. .or. schmidt>1. ) then
           write(6,*) "ERROR schmidt is out-of-range in input zsfil file"
           write(6,*) "schmidt should be between 0 and 1, but currently"
           write(6,*) "schmidt = ",schmidt," in zsfil ",trim(zsfil)
