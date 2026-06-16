@@ -62,7 +62,8 @@
       integer jk,imidpan2
       integer ilatn,if2,inlsavn
       integer inzsavn,ints,inzs
-      integer io_out,igd,jgd
+      integer igd,jgd
+      integer io_out ! depreciated
       
       real ptop,grdx,grdy
       real g,pi,rlonx,rlatx
@@ -1063,7 +1064,7 @@
 
 !#######################################################################
       call vidar(nplev,hgt,temp,u,v,rh,validlevcc,iyr,imn,idy,ihr,iarch,time,mtimer,cplev,bplev, &
-                 io_out,il,kl,minlon,maxlon,minlat,maxlat,llrng,moist_var,calendar,rlong0,rlat0, &
+                 il,kl,minlon,maxlon,minlat,maxlat,llrng,moist_var,calendar,rlong0,rlat0, &
                  schmidt)
 !#######################################################################
 

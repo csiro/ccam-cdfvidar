@@ -1,6 +1,6 @@
 ! Conformal Cubic Atmospheric Model
     
-! Copyright 2015-2022 Commonwealth Scientific Industrial Research Organisation (CSIRO)
+! Copyright 2015-2024 Commonwealth Scientific Industrial Research Organisation (CSIRO)
     
 ! This file is part of the Conformal Cubic Atmospheric Model (CCAM)
 !
@@ -21,7 +21,7 @@
       
       subroutine vidar(nplevs,zp,tp,up,vp,hp,validlevcc
      &                ,iyr,imon,idy,ihr,nt,time,mtimer,pm,pm_b
-     &                ,io_out,il,kl
+     &                ,il,kl
      &                ,minlon,maxlon,minlat,maxlat,llrng
      &                ,moist_var,calendar,rlong0,rlat0,schmidt)
      
@@ -401,8 +401,6 @@ c convert sensible temp to virt. temp
      &          "k","pm(hPa)","zp(m)","tp(K) (1)","(npts) "
      &                           ," rp (g/g) (1)","(npts)"
       tpold=tp ! MJT suggestion
-      print *,"A tpold ",tpold(1,1:nplevs)
-      print *,"A tp    ",tp(1,1:nplevs)
       do k=1,nplevs
         do i=1,npts
           tp(i,k)=tp(i,k)*(rp(i,k)+.622)/(.622*(1.+rp(i,k)))
@@ -696,9 +694,6 @@ c always linear interpolate rh and mix.ratio
 
                 if ( .not. splinet ) then
                   ts1=tp(i,lev+1)+(tp(i,lev+1)-tp(i,lev))*fap
-                  if ( i==1 ) then
-                   print *,"tp,ts ",k,tp(i,lev),ts1,sgml(k)*ps(i),prest
-                  end if
 c convert back to sensible temperature
                   ts(i,k)=ts1*0.622*(1.0+rs(i,k))/(0.622+rs(i,k))
 	            !-------------------------------------------------------
@@ -728,13 +723,6 @@ c end of x/y loop
         enddo ! i=1,npts
 !$omp END PARALLEL DO
 
-
-
-
-
-      print *,"B tpold ",tpold(1,1:nplevs)
-      print *,"B ts    ",ts(1,:)
-
       
 c***********************************************************************
 c  vertical interpolation with spline as linear p
@@ -762,20 +750,13 @@ c and ts(lm) = bottom level sigma
               ts(i,k)=tp(i,nplevs)-6.5e-3*(alog(prx/sigp))
      .               *(rrr*tp(i,nplevs))/grav
             endif ! p>pm
-           end do ! i=1,npts
-          end do ! k=1,lm
 c convert back to sensible temperature
-          do k=1,lm
-            do i=1,npts
               ts(i,k)=ts(i,k)*.622*(1.+rs(i,k))/(.622+rs(i,k))
             end do ! i=1,npts
           end do ! k=1,lm
 
       endif ! ( splinet ) then
 
-
-      print *,"C tpold ",tpold(1,1:nplevs)
-      print *,"C ts    ",ts(1,:)
 
 c u component of the wind
         if(splineu)then
@@ -837,9 +818,6 @@ c     write(6,5310)lcoun
 c5310 format(3x,'gridpoints where temp lapse rate exceeded dry'
 c    .  ,'adiabatic=',i6)
 
-      
-      print *,"D tpold ",tpold(1,1:nplevs)
-      print *,"D ts    ",ts(1,:)
 
 c***********************************************************************
 
@@ -936,12 +914,12 @@ c read replacement sfct if ints>0
         
         print *,"*** ",maxval(ts),minval(ts)
 
-c write out file
-        if ( io_out .eq. 3 ) then
-           write(6,*)"io_out=3 no longer supported!!!!!!!!!!"
-           call finishbanner
-           stop -1
-        else
+! write out file
+!        if ( io_out .eq. 3 ) then
+!           write(6,*)"io_out=3 no longer supported!!!!!!!!!!"
+!           call finishbanner
+!           stop -1
+!        else
            call invert1(sgml,kl)
            call invert3(ts,il,kl)
            call invert3(rs,il,kl)
@@ -955,7 +933,7 @@ c write out file
 
            call invert1(sgml,kl)
 
-        endif
+!        endif
         
         deallocate( rp )
         deallocate( alpm )
