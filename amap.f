@@ -104,12 +104,12 @@ c-----------------------------------------------------------------------
          if ( max(wmax,abs(wmin)).ge.c1e5
      .        .or. min(wmax,abs(wmin)).lt.c1) then
             write(6,1) label, wmax, nmax, wmin, nmin, cint, base
-    1       format(1h0,a32,/,' max=',1p,e10.2,' at',i6,' min='
-     .           ,e10.2,' at',i6,' cint=',e10.2,' base=',e10.2)
+    1       format(1h0,a32,/,' max=',1p,e11.2,' at ',i8,' min='
+     .           ,e11.2,' at ',i8,' cint=',e11.2,' base=',e11.2)
          else
             write(6,2) label, wmax, nmax, wmin, nmin, cint, base
-    2       format(1h0,a32,/,' max=',f10.2,' at',i6,' min='
-     .           ,f10.2,' at',i6,' cint=',f10.2,' base=',f10.2)
+    2       format(1h0,a32,/,' max=',f11.2,' at ',i8,' min='
+     .           ,f11.2,' at ',i8,' cint=',f11.2,' base=',f11.2)
          endif
       else
 c-----------------------------------------------------------------------
