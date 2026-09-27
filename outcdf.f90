@@ -899,6 +899,9 @@ end if
 
 ! check date
 ier = nf_inq_varid(ncid,'time',ivtim)
+if ( ier /= nf_noerr ) then
+  ier = nf_inq_varid(ncid,'valid_time',ivtim)  
+end if
 call netcdferror(ier)
 ier = nf_get_att_text(ncid,ivtim,'units',timorg)
 call netcdferror(ier)
@@ -1089,6 +1092,9 @@ end if
 
 ! check date
 ier = nf_inq_varid(ncid,'time',ivtim)
+if ( ier /= nf_noerr ) then
+  ier = nf_inq_varid(ncid,'valid_time',ivtim)  
+end if
 call netcdferror(ier)
 ier = nf_get_att_text(ncid,ivtim,'units',timorg)
 call netcdferror(ier)
@@ -1339,6 +1345,9 @@ end if
 
 ! check date
 ier = nf_inq_varid(ncid,'time',ivtim)
+if ( ier /= nf_noerr ) then
+  ier = nf_inq_varid(ncid,'valid_time',ivtim)  
+end if
 call netcdferror(ier)
 ier = nf_get_att_text(ncid,ivtim,'units',timorg)
 call netcdferror(ier)
@@ -1725,6 +1734,9 @@ end if
 
 ! check date
 ier = nf_inq_varid(ncid,'time',ivtim)
+if ( ier /= nf_noerr ) then
+  ier = nf_inq_varid(ncid,'valid_time',ivtim)  
+end if
 call netcdferror(ier)
 ier = nf_get_att_text(ncid,ivtim,'units',timorg)
 call netcdferror(ier)
@@ -1813,6 +1825,13 @@ write(6,*) "-> Read data"
 ier = nf_get_vara_real(ncid,idvar,start,ncount,datan)
 call netcdferror(ier)
 if ( found_fill_float ) then
+  if ( fill_float /= fill_float ) then
+    write(6,*) "Fix fill_float=NaN"
+    fill_float = 9.96921e+36
+    where ( datan(1:ix*iy)/=datan(1:ix*iy) )
+      datan(1:ix*iy) = fill_float
+    end where  
+  end if
   where ( datan(1:ix*iy)/=fill_float )  
     datan(1:ix*iy) = sf*datan(1:ix*iy) + addoff  
   elsewhere
@@ -1917,10 +1936,11 @@ if ( .not.allocated(lsm_gbl) ) then
     if ( ier/=nf_noerr ) addoff = 0.
     ier = nf_get_att_real(lsm_ncid,idvar,'scale_factor',sf)
     if ( ier/=nf_noerr ) sf = 1.
-    write(6,*) "-> Read data"
+    write(6,*) "-> Read lsm data"
     ier = nf_get_vara_real(lsm_ncid,idvar,start,ncount,datan_tmp)
     call netcdferror(ier)
     lsm_gbl(1:ix*iy) = sf*real(datan_tmp(1:ix*iy)) + addoff     
+    write(6,*) "Initial max= ",maxval(lsm_gbl)," min= ",minval(lsm_gbl)
     ! MJT quick fix 
     where (abs(lsm_gbl(1:ix*iy))>=1.e10)
       lsm_gbl(1:ix*iy)=0.
@@ -1932,6 +1952,7 @@ if ( .not.allocated(lsm_gbl) ) then
       write(6,*) "Adjust 100 to 1 for land-sea mask"
       lsm_gbl(1:ix*iy) = lsm_gbl(1:ix*iy)/100.
     end if
+    write(6,*) "Final   max= ",maxval(lsm_gbl)," min= ",minval(lsm_gbl)
   else  
     write(6,*) "WARN: Cannot locate land-sea mask"  
     olsm_gbl = .false.
@@ -1969,16 +1990,16 @@ write(6,*)"fill in missing values nlpnts,nopnts=",nlpnts,nopnts
 
 
 il = size(sfct,1)
-!$OMP PARALLEL SECTIONS
+!!$OMP PARALLEL SECTIONS
 
-!$OMP SECTION
+!!$OMP SECTION
 write(6,*)"=======> for land array, fill in ocean values"
 call fill(datan(1:ix*iy),ix,iy,.1*spval)
 write(6,*)"=========================> now interp. land data"
 call sintp16(datan(1:ix*iy),ix,iy,sfct,glon,glat,sdiag,il) ! land
 !sfct = min( max( sfct, 100. ), 425. )
 
-!$OMP SECTION
+!!$OMP SECTION
 if ( olsm_gbl .and. nopnts>0 ) then
    write(6,*)"=======> for ocean array, fill in land values"
    call fill(datan_ocn,ix,iy,.1*spval)
@@ -1987,7 +2008,7 @@ if ( olsm_gbl .and. nopnts>0 ) then
    !sfcto_m = min( max( sfcto_m, 100. ), 425. )
 endif!(olsm_gbl)then
 
-!$OMP END PARALLEL SECTIONS
+!!$OMP END PARALLEL SECTIONS
 
 
 ! recombine
@@ -2173,6 +2194,12 @@ if ( ier/=nf_noerr ) then
   write(6,*) "-> Testing level"  
   ier = nf_inq_varid(ncid,'level',ivpres)
   ier = nf_inq_dimid(ncid,'level',idpres)
+  in_type="p"
+end if
+if ( ier/=nf_noerr ) then
+  write(6,*) "-> Testing pressure_level"  
+  ier = nf_inq_varid(ncid,'pressure_level',ivpres)
+  ier = nf_inq_dimid(ncid,'pressure_level',idpres)
   in_type="p"
 end if
 if ( ier/=nf_noerr ) then

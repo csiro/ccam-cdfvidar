@@ -481,14 +481,26 @@
 !########## get number of times in input netcdf file ###########
 
       ier = nf_inq_dimid(t_ncid,'time',idtim)
+      if ( ier /= nf_noerr ) then
+        ier = nf_inq_dimid(t_ncid,'valid_time',idtim)  
+      end if
       write(6,*)"ier=",ier," idtim=",idtim
+      if ( ier /= nf_noerr ) then
+        write(6,*) "ERROR: Cannot locate time dimension"
+      end if  
 
       ier= nf_inq_dimlen(t_ncid,idtim,narch)
       write(6,*)"ier=",ier," narch=",narch
       narch=min(narch,ntimes)
 
       ier = nf_inq_varid(t_ncid,'time',ivtim)
+      if ( ier /= nf_noerr ) then
+        ier = nf_inq_varid(t_ncid,'valid_time',ivtim)  
+      end if
       write(6,*)"ier=",ier," ivtim=",ivtim
+      if ( ier /= nf_noerr ) then
+        write(6,*) "ERROR: Cannot locate time variable"
+      end if  
 
       ier = nf_get_att_text(t_ncid,ivtim,'units',timorg)
       write(6,*)"ier=",ier," timorg=",trim(timorg)
@@ -531,6 +543,15 @@
       sdiag=.false.
 
       ier = nf_inq_varid(t_ncid,'time',ivtim)
+      if ( ier /= nf_noerr ) then
+        write(6,*) "Failed to local time, attempting to locate valid_time"   
+        ier = nf_inq_varid(t_ncid,'valid_time',ivtim)
+      end if
+      if ( ier /= nf_noerr ) then
+        write(6,*) "ERROR: Cannot locate time variable"
+        call finishbanner
+        stop -1
+      end if    
       start = iarch
       ier = nf_get_var1_double(t_ncid,ivtim,start,time)
       nt=1
@@ -550,16 +571,16 @@
           stop -1
       end select
 
-      write(6,*)"time=",time
+      write(6,*) "time=",time
       
       kdate = iyr*10000 + imn*100 + idy
       ktime = ihr*100 + imi
       newtime = time
       call datefix(kdate,ktime,newtime,calendar)
       
-      write(6,*)" input levels are bottom-up"
-      write(6,*)" model levels in vidar are top-down"
-      write(6,*)" nplev=",nplev
+      write(6,*) " input levels are bottom-up"
+      write(6,*) " model levels in vidar are top-down"
+      write(6,*) " nplev=",nplev
 
       if ( have_gp ) then
         write(6,*)"==================================================hgt"
@@ -579,6 +600,7 @@
           if ( geopotunits=="m**2 s**-2" ) then
             write(6,*) "Converting from m**2 s**-2 to gpm"
             hgt(:,:,1:nplev) = hgt(:,:,1:nplev)/g
+            geopotunits="gpm"
           end if
         else  
           write(6,*) "ERROR: Could not read geopotential height with have_gp=.true. in namelist"
